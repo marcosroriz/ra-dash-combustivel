@@ -18,8 +18,66 @@ class CombustivelPorLinhaService:
     def __init__(self, pgEngine):
         self.pgEngine = pgEngine
 
+    def normaliza_modelos(self, df):
+        # Faz um DE / PARA para os seguintes elementos
+        de_para_dict = {
+            "IVECO/MASCA ": "IVECO",
+            "IVECO/MASCA GRAN VIA U": "IVECO",
+            "VW 17230 APACHE VIP-SC": "VW 17230",
+            "VW 17230 APACHE VIP-SC ": "VW 17230",
+            "VW 22.260 CAIO INDUSCAR APACHE U": "VW 22260",
+            "MB OF 1721 L59 E6 MPOLO TORINO U": "MB 1721",
+            "MB OF 1721 MPOLO TORINO U": "MB 1721",
+            "ELETRA INDUSCAR MILLENNIUM": "INDUSCAR",
+            "Induscar": "INDUSCAR",
+        }
+
+        # Aplica
+        df["vec_model"] = df["vec_model"].replace(de_para_dict)
+
+        return df
+
+    def get_percentual_encontros_linha(
+        self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior
+    ):
+        """
+        Funçao que otem o percentual de encontros por linha que nosso modelo achou
+        """
+
+        # Extraí a data inicial e final
+        data_inicio_str, data_fim_str = datas[0], datas[1]
+
+        # Subqueries
+        subquery_modelos = subquery_modelos_combustivel(lista_modelos)
+        subquery_sentido = subquery_sentido_combustivel(lista_sentido)
+
+        query = f"""
+            SELECT 
+                rmtc_linha_prevista,
+                COUNT(*) FILTER (WHERE encontrou_linha IS FALSE) AS nao_encontrou,
+                COUNT(*) AS total_por_linha,
+                ROUND(100.0 * COUNT(*) FILTER (WHERE encontrou_linha IS FALSE) / COUNT(*), 2) AS percentual_nao_encontrou
+            FROM 
+                rmtc_viagens_analise
+            WHERE 
+                "encontrou_numero_linha" = '{linha}'
+                AND "dia" >= '{data_inicio_str}'
+                AND "dia" <= '{data_fim_str}'
+                AND "km_por_litro" >= {limite_km_l_menor}
+                AND "km_por_litro" <= {limite_km_l_maior}
+                {subquery_modelos}
+                {subquery_sentido}
+            GROUP BY 
+                rmtc_linha_prevista
+                rmtc_viagens_analise rva 
+        """
+
+        df = pd.read_sql(query, self.pgEngine)
+
+        return df
+
     def get_combustivel_por_linha(
-        self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, periodo_agrupar="30T"
+        self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior
     ):
         """
         Função para obter os dados do combustível por linha (que será usado para gerar o gráfico)
@@ -42,13 +100,17 @@ class CombustivelPorLinhaService:
             AND "encontrou_linha"
             AND "dia" >= '{data_inicio_str}'
             AND "dia" <= '{data_fim_str}'
-            AND "km_por_litro" >= 0
+            AND "km_por_litro" >= {limite_km_l_menor}
+            AND "km_por_litro" <= {limite_km_l_maior}
             {subquery_modelos}
             {subquery_sentido}
         """
 
         print(query)
         df_linha = pd.read_sql(query, self.pgEngine)
+
+        # Normaliza os modelos
+        df_linha = self.normaliza_modelos(df_linha)
 
         # Filtra os dados de acordo com os dias da semana
         df_linha_filtrado = self.filtra_combustivel_por_dia_semana(df_linha, lista_dia_semana)

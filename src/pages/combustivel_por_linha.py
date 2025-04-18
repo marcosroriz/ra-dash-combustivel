@@ -95,37 +95,100 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 
 
 @callback(
-    Output("graph-combustivel-linha-por-hora", "figure"),
+    Output("dash-combustivel-por-linha-store", "data"),
     [
         Input("input-intervalo-datas-combustivel-linha", "value"),
         Input("input-select-modelos-combustivel-linha", "value"),
         Input("input-select-linhas-combustivel", "value"),
         Input("input-select-sentido-da-linha-combustivel", "value"),
         Input("input-select-dia-linha-combustivel", "value"),
+        Input("input-linha-combustivel-remover-outliers-menor-que", "value"),
+        Input("input-linha-combustivel-remover-outliers-maior-que", "value"),
     ],
 )
-def plota_grafico_combustivel_linha_por_hora(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
+def computa_dados_combustivel_por_linha(
+    datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+):
     # Valida input
+    print("Resultado de input válido:", input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana))
     if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
+        return {
+            "valid": False,
+            "dados": [],
+        }
+
+    if limite_km_l_menor is None or limite_km_l_menor < 0:
+        limite_km_l_menor = 0
+
+    if limite_km_l_maior is None or limite_km_l_maior < 0:
+        limite_km_l_maior = 10
+
+    # Obtém os dados
+    df = comb_por_linha_service.get_combustivel_por_linha(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    )
+
+    # Retorna os dados
+    return {
+        "valid": True,
+        "dados": df.to_dict(orient="records"),
+    }
+
+
+@callback(
+    [
+        Output("indicador-quantidade-de-viagens-comb-linha", "children"),
+        Output("indicador-quantidade-de-veiculos-diferentes-comb-linha", "children"),
+        Output("indicador-quantidade-de-modelos-diferentes-comb-linha", "children"),
+    ],
+    Input("dash-combustivel-por-linha-store", "data"),
+)
+def atualiza_indicadores_combustivel_por_linha(payload_linhas):
+    if not payload_linhas["valid"]:
+        return ["", "", ""]
+
+    # Obtém os dados
+    df = pd.DataFrame(payload_linhas["dados"])
+
+    # Verifica se o dataframe está vazio
+    if df.empty:
+        return ["0", "0", "0"]
+
+    # Calcula os indicadores
+    num_viagens = df.shape[0]
+    num_veiculos = df["vec_num_id"].nunique()
+    num_modelos = df["vec_model"].nunique()
+
+
+    return [f"{num_viagens}", f"{num_veiculos}", f"{num_modelos}"]
+
+
+@callback(
+    Output("graph-combustivel-linha-por-hora", "figure"),
+    Input("dash-combustivel-por-linha-store", "data"),
+)
+def plota_grafico_combustivel_linha_por_hora(payload_linhas):
+    # Valida
+    if not payload_linhas["valid"]:
         return go.Figure()
 
     # Obtém os dados
-    print("Datas:", datas)
-    print("Lista de Modelos:", lista_modelos)
-    print("Linha:", linha)
-    print("Lista de Sentido:", lista_sentido)
-    print("Lista de Dias da Semana:", lista_dias_semana)
-    df = comb_por_linha_service.get_combustivel_por_linha(datas, lista_modelos, linha, lista_sentido, lista_dias_semana)
+    df = pd.DataFrame(payload_linhas["dados"])
+
+    # Verifica se o dataframe está vazio
+    if df.empty:
+        return go.Figure()
 
     # Prepara os dados para agrupa pelo período de análise (30 minutos é o padrão)
     df["rmtc_timestamp_inicio"] = pd.to_datetime(df["rmtc_timestamp_inicio"])
     df["time_bin"] = df["rmtc_timestamp_inicio"].dt.floor("30T")
-
     df["time_bin_only_time"] = df["time_bin"].dt.time
     # df_agg = df.groupby("time_bin_only_time")["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
-    
+
     # Agrupa por modelo e período
-    df_agg = df.groupby(["time_bin_only_time","vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
+    df_agg = (
+        df.groupby(["time_bin_only_time", "vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
+    )
     df_agg["time_bin_formatado"] = pd.to_datetime(df_agg["time_bin_only_time"].astype(str), format="%H:%M:%S")
 
     # Arredonda os valores
@@ -149,6 +212,7 @@ dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-l
 ##############################################################################
 layout = dbc.Container(
     [
+        dcc.Store(id="dash-combustivel-por-linha-store"),
         dbc.Row(
             [
                 dbc.Col(
@@ -229,6 +293,10 @@ layout = dbc.Container(
                                     ),
                                     md=6,
                                 ),
+                            ]
+                        ),
+                        dbc.Row(
+                            [
                                 dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
@@ -286,6 +354,10 @@ layout = dbc.Container(
                                     ),
                                     md=6,
                                 ),
+                            ]
+                        ),
+                        dbc.Row(
+                            [
                                 dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
@@ -293,11 +365,11 @@ layout = dbc.Container(
                                             html.Div(
                                                 [
                                                     dbc.Label("Dias"),
-                                                    dcc.Checklist(
+                                                    dbc.Checklist(
                                                         id="input-select-dia-linha-combustivel",
                                                         options=[
                                                             {
-                                                                "label": "SEGUNDA A SEXTA",
+                                                                "label": "Seg-Sexta",
                                                                 "value": "SEG_SEX",
                                                             },
                                                             {
@@ -314,22 +386,72 @@ layout = dbc.Container(
                                                             },
                                                         ],
                                                         value=["SEG_SEX"],
-                                                        inputStyle={"margin-right": "6px"},
-                                                        labelStyle={
-                                                            "display": "inline-block",
-                                                            "margin-right": "20px",
-                                                            "font-weight": "500",
-                                                            "cursor": "pointer",
-                                                        },
-                                                        style={"padding": "10px"},
+                                                        inline=True,
                                                     ),
                                                 ],
-                                                className="dash-bootstrap",
+                                                className="dash-bootstrap h-100",
                                             ),
                                         ],
+                                        className="h-100",
                                         body=True,
                                     ),
-                                    md=12,
+                                    md=6,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Label("Excluir km/L menor que"),
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="input-linha-combustivel-remover-outliers-menor-que",
+                                                                type="number",
+                                                                placeholder="km/L",
+                                                                value=1,
+                                                                step=0.1,
+                                                                min=0,
+                                                            ),
+                                                            dbc.InputGroupText("km/L"),
+                                                        ]
+                                                    ),
+                                                ],
+                                                className="dash-bootstrap h-100",
+                                            ),
+                                        ],
+                                        className="h-100",
+                                        body=True,
+                                    ),
+                                    md=3,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Label("Excluir km/L maior que"),
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="input-linha-combustivel-remover-outliers-maior-que",
+                                                                type="number",
+                                                                placeholder="km/L",
+                                                                value=10,
+                                                                step=0.1,
+                                                                min=0,
+                                                            ),
+                                                            dbc.InputGroupText("km/L"),
+                                                        ]
+                                                    ),
+                                                ],
+                                                className="dash-bootstrap h-100",
+                                            ),
+                                        ],
+                                        className="h-100",
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
                             ]
                         ),

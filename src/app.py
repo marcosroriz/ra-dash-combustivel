@@ -88,9 +88,9 @@ pio.templates.default = "tema"
 
 # Dash
 app = Dash(
-    "Dashboard de OSs",
-    # assets_folder="/var/www/ra-retrabalho/src/assets",
-    # pages_folder="/var/www/ra-retrabalho/src/pages",
+    "Análise de Combustível",
+    # assets_folder="/var/www/ra-dash-combustivel/src/assets",
+    # pages_folder="/var/www/ra-dash-combustivel/src/pages",
     external_stylesheets=stylesheets,
     external_scripts=scripts,
     use_pages=True,
@@ -117,7 +117,7 @@ header = dmc.Group(
             [
                 dmc.Burger(id="burger-button", opened=False, hiddenFrom="md"),
                 html.Img(src=app.get_asset_url("logo.png"), height=40),
-                dmc.Text(["Retrabalho (RA-UFG)"], size="2.3rem", fw=700),
+                dmc.Text(["Combustível (RA-UFG)"], size="2.3rem", fw=700),
             ]
         ),
         dmc.Group(

@@ -45,7 +45,7 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
                 fill="toself",
                 fillcolor=i_cor_rgba,
                 line=dict(color="rgba(0,0,0,0)"),  # Sem borda
-                name="Intervalo Min-Max " + modelo,
+                name="Intervalo " + modelo,
             )
         )
 
