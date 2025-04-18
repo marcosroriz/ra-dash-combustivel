@@ -37,7 +37,7 @@ from modules.entities_utils import get_linhas_possui_info_combustivel, get_model
 # Imports específicos
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
 import modules.combustivel_por_linha.graficos as combustivel_graficos
-import modules.combustivel.tabela as combustivel_linha_tabela
+import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
 
 
 ##############################################################################
@@ -117,13 +117,22 @@ def plota_grafico_combustivel_linha_por_hora(datas, lista_modelos, linha, lista_
     print("Lista de Dias da Semana:", lista_dias_semana)
     df = comb_por_linha_service.get_combustivel_por_linha(datas, lista_modelos, linha, lista_sentido, lista_dias_semana)
 
-    # Agrupa os dados pelo período de análise (30 minutos é o padrão)
+    # Prepara os dados para agrupa pelo período de análise (30 minutos é o padrão)
     df["rmtc_timestamp_inicio"] = pd.to_datetime(df["rmtc_timestamp_inicio"])
     df["time_bin"] = df["rmtc_timestamp_inicio"].dt.floor("30T")
+
     df["time_bin_only_time"] = df["time_bin"].dt.time
-    df_agg = df.groupby("time_bin_only_time")["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
+    # df_agg = df.groupby("time_bin_only_time")["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
+    
+    # Agrupa por modelo e período
+    df_agg = df.groupby(["time_bin_only_time","vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
     df_agg["time_bin_formatado"] = pd.to_datetime(df_agg["time_bin_only_time"].astype(str), format="%H:%M:%S")
 
+    # Arredonda os valores
+    df_agg["mean"] = df_agg["mean"].round(2)
+    df_agg["std"] = df_agg["std"].round(2)
+    df_agg["min"] = df_agg["min"].round(2)
+    df_agg["max"] = df_agg["max"].round(2)
 
     # Gera o gráfico
     fig = combustivel_graficos.gerar_grafico_consumo_combustivel_por_linha(df_agg)
