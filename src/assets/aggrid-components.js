@@ -1,45 +1,45 @@
-// assets/aggrid-components.js
-
 var dagcomponentfuncs = window.dashAgGridComponentFunctions = window.dashAgGridComponentFunctions || {};
 
-dagcomponentfuncs.MultiButtonRenderer = function (props) {
-    let items = [];
+dagcomponentfuncs.DMC_Button = function (props) {
+    const {setData, data} = props;
 
-    try {
-        let trips = props.value;
-        if (typeof trips === "string") {
-            trips = JSON.parse(trips);
-        }
-
-        const vehicleId = props.data.vehicle_id;
-
-        items = trips.map((trip, idx) =>
-            React.createElement(
-                "button",
-                {
-                    key: idx,
-                    type: "button",
-                    className: "btn btn-sm btn-" + trip.color + " me-1",
-                    "data-value": trip.value,
-                    "data-vehicle-id": vehicleId,
-                    onclick: (e) => {
-                        // Trigger AG Grid's cellClicked event manually
-                        if (props.api) {
-                            props.api.dispatchEvent({
-                                type: 'cellClicked',
-                                data: props.data,
-                                colDef: props.colDef,
-                                event: e
-                            });
-                        }
-                    }
-                },
-                `${trip.value} km/l`
-            )
-        );
-    } catch (e) {
-        items = [React.createElement("span", {}, "invalid format")];
+    function onClick() {
+        setData();
     }
-
-    return React.createElement("div", {}, items);
+    console.log("Left icon", props.leftIcon)
+    console.log("Right icon", props.rightIcon)
+    console.log("DASH ICONIFY", window.dash_iconify)
+    
+    let leftIcon, rightIcon;
+    if (props.leftIcon) {
+        leftIcon = React.createElement(window.dash_iconify.DashIconify, {
+            icon: props.leftIcon,
+        });
+    }
+    if (props.rightIcon) {
+        rightIcon = React.createElement(window.dash_iconify.DashIconify, {
+            icon: props.rightIcon,
+            width: 32
+        });
+    }
+    return React.createElement(
+        window.dash_mantine_components.Button,
+        {
+            onClick,
+            variant: props.variant,
+            color: props.color,
+            leftSection: leftIcon,
+            leftIcon,
+            rightIcon,
+            radius: props.radius,
+            style: {
+                margin: props.margin,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+            },
+        },
+        props.value
+    );
 };
+

@@ -9,6 +9,7 @@
 # Bibliotecas básicas
 from datetime import date
 import pandas as pd
+import json
 
 # Importar bibliotecas do dash básicas e plotly
 import dash
@@ -22,7 +23,9 @@ import dash_ag_grid as dag
 
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
+import dash_iconify
 from dash_iconify import DashIconify
+
 
 # Importar nossas constantes e funções utilitárias
 import tema
@@ -95,6 +98,7 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 # Callbacks para os gráficos #################################################
 ##############################################################################
 
+
 # Callback para detectar clique
 @callback(Output("output", "children"), Input("badge-grid", "cellClicked"))
 def show_button_click(event):
@@ -115,11 +119,66 @@ def show_button_click(event):
 ##############################################################################
 dash.register_page(__name__, name="Home (Monitoramento)", path="/")
 
+
+@callback(
+    Output("custom-component-dmc-btn-value-changed", "children"),
+    Input("custom-component-dmc-btn-grid", "cellRendererData"),
+)
+def showChange(n):
+    return json.dumps(n)
+
+
+data = {
+    "ticker": ["AAPL", "MSFT", "AMZN", "GOOGL"],
+    "price": [154.99, 268.65, 100.47, 96.75],
+    "buy": ["Buy" for _ in range(4)],
+    "sell": ["Sell" for _ in range(4)],
+    "watch": ["Watch" for _ in range(4)],
+}
+df = pd.DataFrame(data)
+
+columnDefs = [
+    {
+        "headerName": "Stock Ticker",
+        "field": "ticker",
+    },
+    {
+        "headerName": "Last Close Price",
+        "type": "rightAligned",
+        "field": "price",
+        "valueFormatter": {"function": """d3.format("($,.2f")(params.value)"""},
+    },
+    {
+        "field": "buy",
+        "cellRenderer": "DMC_Button",
+        "cellRendererParams": {"variant": "outline", "leftIcon": "ic:baseline-shopping-cart", "color": "green", "radius": "xl"},
+    },
+    {
+        "field": "sell",
+        "cellRenderer": "DMC_Button",
+        "cellRendererParams": {"variant": "light", "margin": "2em", "leftIcon": "ic:baseline-shopping-cart", "color": "red", "radius": "xl"},
+    },
+    {
+        "field": "watch",
+        "cellRenderer": "DMC_Button",
+        "cellRendererParams": {
+            "rightIcon": "ph:eye",
+        },
+    },
+]
+
+
+grid = dag.AgGrid(
+    id="custom-component-dmc-btn-grid", columnDefs=columnDefs, rowData=df.to_dict("records"), columnSize="autoSize", defaultColDef={"minWidth": 125}
+)
+
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
 layout = dbc.Container(
     [
+        DashIconify(icon="mdi:gas-station", width=45),
         dcc.Store(id="dash-monitoramento-por-linha-store"),
         dbc.Row(
             [
@@ -509,18 +568,20 @@ layout = dbc.Container(
             align="center",
         ),
         dmc.Space(h=20),
-        dag.AgGrid(
-            enableEnterpriseModules=True,
-            id="tabela-combustivel",
-            columnDefs=monitoramento_tabela.tbl_detalhamento_viagens_monitoramento,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
+        grid,
+        html.Div(id="custom-component-dmc-btn-value-changed"),
+        # dag.AgGrid(
+        #     id="tabela-combustivel",
+        #     dangerously_allow_code=True,
+        #     columnDefs=column_defs,
+        #     rowData=data,
+        #     defaultColDef={"filter": True, "floatingFilter": True},
+        #     columnSize="autoSize",
+        #     dashGridOptions={
+        #         "localeText": locale_utils.AG_GRID_LOCALE_BR,
+        #     },
+        #     style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        # ),
         dmc.Space(h=40),
         dbc.Row(
             [

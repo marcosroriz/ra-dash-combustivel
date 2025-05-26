@@ -95,6 +95,7 @@ app = Dash(
     external_scripts=scripts,
     use_pages=True,
     suppress_callback_exceptions=True,
+    preloaded_libraries=['dash_iconify', 'dash_mantine_components']
 )
 
 # Server
