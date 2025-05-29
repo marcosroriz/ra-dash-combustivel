@@ -134,6 +134,16 @@ data = {
     "buy": ["Buy" for _ in range(4)],
     "sell": ["Sell" for _ in range(4)],
     "watch": ["Watch" for _ in range(4)],
+    "trips": [
+        json.dumps(
+            [
+                {"value": 5.2, "linha": 263, "color": "success"},
+                {"value": 4.3, "linha": 262, "color": "danger"},
+                {"value": 4.3, "linha": 260, "color": "danger"},
+            ]
+        )
+        for _ in range(4)
+    ],
 }
 df = pd.DataFrame(data)
 
@@ -150,13 +160,24 @@ columnDefs = [
     },
     {
         "field": "buy",
-        "cellRenderer": "DMC_Button",
-        "cellRendererParams": {"variant": "outline", "leftIcon": "ic:baseline-shopping-cart", "color": "green", "radius": "xl"},
+        "cellRenderer": "DMC_Viagens",
+        "cellRendererParams": {
+            # "variant": "outline",
+            "leftIcon": "ic:baseline-shopping-cart",
+            "color": "green",
+            "radius": "xl",
+        },
     },
     {
         "field": "sell",
         "cellRenderer": "DMC_Button",
-        "cellRendererParams": {"variant": "light", "margin": "2em", "leftIcon": "ic:baseline-shopping-cart", "color": "red", "radius": "xl"},
+        "cellRendererParams": {
+            "variant": "light",
+            "margin": "2em",
+            "leftIcon": "ic:baseline-shopping-cart",
+            "color": "red",
+            "radius": "xl",
+        },
     },
     {
         "field": "watch",
@@ -169,7 +190,11 @@ columnDefs = [
 
 
 grid = dag.AgGrid(
-    id="custom-component-dmc-btn-grid", columnDefs=columnDefs, rowData=df.to_dict("records"), columnSize="autoSize", defaultColDef={"minWidth": 125}
+    id="custom-component-dmc-btn-grid",
+    columnDefs=columnDefs,
+    rowData=df.to_dict("records"),
+    columnSize="autoSize",
+    defaultColDef={"minWidth": 125},
 )
 
 
