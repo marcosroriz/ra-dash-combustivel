@@ -40,6 +40,8 @@ from modules.entities_utils import get_linhas_possui_info_combustivel, get_model
 # Imports específicos
 from modules.monitoramento.monitoramento_service import MonitoramentoService
 import modules.monitoramento.tabela as monitoramento_tabela
+import modules.monitoramento.graficos as monitoramento_graficos
+
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
 import modules.combustivel_por_linha.graficos as combustivel_graficos
 import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
@@ -58,12 +60,12 @@ monitoramento_service = MonitoramentoService(pgEngine)
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
 lista_todas_linhas = df_todas_linhas.to_dict(orient="records")
+lista_todas_linhas.insert(0, {"LABEL": "TODAS"})
 
 # Modelos de veículos
 df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
-
 
 ##############################################################################
 # CALLBACKS ##################################################################
@@ -94,9 +96,84 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
     return True
 
 
+@callback(
+    Output("input-select-veiculos-monitoramento", "options"),
+    [
+        Input("input-intervalo-datas-monitorameto", "value"),
+        Input("input-select-modelos-monitoramento", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-select-dia-linha-combustivel", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento", "value"),
+    ],
+)
+def atualiza_veiculos_dia(dia, modelos, linha, dias_marcados, excluir_km_l_menor_que, excluir_km_l_maior_que):
+    if dia is None:
+        return []
+
+    df = monitoramento_service.get_veiculos_rodaram_no_dia(dia)
+
+    return [{"label": veiculo["label"], "value": veiculo["value"]} for veiculo in df.to_dict(orient="records")]
+
+
+##############################################################################
+# Callbacks para as tabelas ##################################################
+##############################################################################
+
+
+@callback(
+    Output("tabela-perc-viagens-monitoramento", "rowData"),
+    [
+        Input("input-intervalo-datas-monitorameto", "value"),
+        Input("input-select-modelos-monitoramento", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-quantidade-de-viagens-monitoramento", "value"),
+        Input("input-select-dia-linha-combustivel", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento", "value"),
+    ],
+)
+def atualiza_tabela_perc_viagens_monitoramento(
+    dia, modelos, linha, quantidade_de_viagens, dias_marcados, excluir_km_l_menor_que, excluir_km_l_maior_que
+):
+    print("Datas: ", dia)
+    print("Modelos: ", modelos)
+    print("Linha: ", linha)
+    print("Quantidade de viagens: ", quantidade_de_viagens)
+    print("Dias marcados: ", dias_marcados)
+    print("Excluir km/L menor que: ", excluir_km_l_menor_que)
+    print("Excluir km/L maior que: ", excluir_km_l_maior_que)
+
+    df = monitoramento_service.get_estatistica_veiculos(dia, linha, dias_marcados)
+
+    return df.to_dict(orient="records")
+
+
 ##############################################################################
 # Callbacks para os gráficos #################################################
 ##############################################################################
+
+
+# Callback para gráfico de combustível por veículo ao longo do dia
+@callback(
+    Output("graph-monitoramento-viagens-veiculo", "figure"),
+    [
+        Input("input-select-veiculos-monitoramento", "value"),
+        Input("input-intervalo-datas-monitorameto", "value"),
+        Input("input-select-detalhamento-monitoramento-grafico-viagens", "value"),
+    ],
+)
+def atualiza_grafico_monitoramento_viagens_veiculo(veiculo, dia, opcoes_detalhamento):
+    if veiculo is None or dia is None:
+        return go.Figure()
+
+    # Pega as viagens do veículo
+    df = monitoramento_service.get_viagens_do_veiculo(dia, veiculo)
+
+    # Gera o gráfico
+    fig = monitoramento_graficos.gerar_grafico_monitoramento_viagens_veiculo(df, opcoes_detalhamento)
+
+    return fig
 
 
 # Callback para detectar clique
@@ -203,7 +280,6 @@ grid = dag.AgGrid(
 ##############################################################################
 layout = dbc.Container(
     [
-        DashIconify(icon="mdi:gas-station", width=45),
         dcc.Store(id="dash-monitoramento-por-linha-store"),
         dbc.Row(
             [
@@ -242,6 +318,29 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
+                                                    dbc.Label("Data"),
+                                                    dmc.DatePicker(
+                                                        id="input-intervalo-datas-monitorameto",
+                                                        # allowSingleDateInRange=True,
+                                                        minDate=date(2025, 1, 1),
+                                                        maxDate=date.today(),
+                                                        # type="range",
+                                                        # value=[date.today() - pd.DateOffset(days=5), date.today()],
+                                                        value=date.today() - pd.DateOffset(days=5),
+                                                    ),
+                                                ],
+                                                className="dash-bootstrap",
+                                            ),
+                                        ],
+                                        body=True,
+                                    ),
+                                    md=6,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            html.Div(
+                                                [
                                                     dbc.Label("Modelos"),
                                                     dcc.Dropdown(
                                                         id="input-select-modelos-monitoramento",
@@ -262,7 +361,7 @@ layout = dbc.Container(
                                         ],
                                         body=True,
                                     ),
-                                    md=12,
+                                    md=6,
                                 ),
                             ]
                         ),
@@ -284,7 +383,7 @@ layout = dbc.Container(
                                                             }
                                                             for linha in lista_todas_linhas
                                                         ],
-                                                        value="021",
+                                                        value="TODAS",
                                                         placeholder="Selecione a linha",
                                                     ),
                                                 ],
@@ -333,7 +432,7 @@ layout = dbc.Container(
                                             html.Div(
                                                 [
                                                     dbc.Label("Dias"),
-                                                    dbc.Checklist(
+                                                    dbc.RadioItems(
                                                         id="input-select-dia-linha-combustivel",
                                                         options=[
                                                             {
@@ -353,7 +452,7 @@ layout = dbc.Container(
                                                                 "value": "FERIADO",
                                                             },
                                                         ],
-                                                        value=["SEG_SEX"],
+                                                        value="SEG_SEX",
                                                         inline=True,
                                                     ),
                                                 ],
@@ -547,7 +646,6 @@ layout = dbc.Container(
             ],
             align="center",
         ),
-        dcc.Graph(id="graph-combustivel-linha-por-hora"),
         dmc.Space(h=40),
         dbc.Row(
             [
@@ -593,6 +691,99 @@ layout = dbc.Container(
             align="center",
         ),
         dmc.Space(h=20),
+        dag.AgGrid(
+            id="tabela-perc-viagens-monitoramento",
+            columnDefs=monitoramento_tabela.tbl_perc_viagens_monitoramento,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
+        dmc.Space(h=20),
+        # Detalhamaento por Veículo
+        dbc.Row(
+            [
+                dbc.Col(DashIconify(icon="mdi:bus-wrench", width=45), width="auto"),
+                dbc.Col(
+                    dbc.Row(
+                        [
+                            html.H4(
+                                "Detalhamento por veículo ",
+                                className="align-self-center",
+                            ),
+                        ]
+                    ),
+                    width=True,
+                ),
+            ],
+            align="center",
+        ),
+        dmc.Space(h=20),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            html.Div(
+                                [
+                                    dbc.Label("Veículo"),
+                                    dcc.Dropdown(
+                                        id="input-select-veiculos-monitoramento",
+                                        options=[],
+                                        placeholder="Veículo",
+                                        value="",
+                                    ),
+                                ],
+                                className="dash-bootstrap",
+                            ),
+                        ],
+                        className="h-100",
+                        body=True,
+                    ),
+                    md=6,
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            html.Div(
+                                [
+                                    dbc.Label("Anotações"),
+                                    dbc.RadioItems(
+                                        id="input-select-detalhamento-monitoramento-grafico-viagens",
+                                        options=[
+                                            {
+                                                "label": "Padrão",
+                                                "value": "PADRÃO",
+                                            },
+                                            {
+                                                "label": "Motorista",
+                                                "value": "MOTORISTA",
+                                            },
+                                            {
+                                                "label": "Linha",
+                                                "value": "LINHA",
+                                            },
+                                        ],
+                                        value="PADRÃO",
+                                        inline=True,
+                                    ),
+                                ],
+                                className="dash-bootstrap h-100",
+                            ),
+                        ],
+                        className="h-100",
+                        body=True,
+                    ),
+                    md=6,
+                ),
+            ],
+            className="dash-bootstrap",
+        ),
+        dcc.Graph(id="graph-monitoramento-viagens-veiculo"),
         grid,
         html.Div(id="custom-component-dmc-btn-value-changed"),
         # dag.AgGrid(
