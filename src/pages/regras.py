@@ -41,6 +41,7 @@ import modules.monitoramento.tabela as monitoramento_tabela
 import modules.monitoramento.graficos as monitoramento_graficos
 
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
+from modules.regras.regras_service import RegrasService
 import modules.combustivel_por_linha.graficos as combustivel_graficos
 import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
 
@@ -55,6 +56,8 @@ from modules.entities_utils import get_linhas_possui_info_combustivel, get_model
 pgDB = PostgresSingleton.get_instance()
 pgEngine = pgDB.get_engine()
 
+
+regra_service = RegrasService(pgEngine)
 # Cria o serviço
 comb_por_linha_service = CombustivelPorLinhaService(pgEngine)
 
@@ -70,7 +73,44 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 ##############################################################################
 # Callbacks para dados ######################################################
 ##############################################################################
+@callback(
+    Output("tabela-regras-viagens-monitoramento", "rowData"),
+    [
+        Input("input-periodo-dias-monitoramento-regra", "value"),
+        Input("input-modelos-monitoramento-regra", "value"),
+        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-select-dia-linha-combustivel-regra", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
+        Input("select-mediana", "value"),
+        Input("select-baixa-performace-suspeita", "value"),
+        Input("select-baixa-performace-indicativo", "value"),
+        Input("select-erro-telemetria", "value"),
+    ],
+)
+def atualiza_tabela_regra_viagens_monitoramento(
+    dia, modelos, linha,
+    quantidade_de_viagens, dias_marcados, 
+    excluir_km_l_menor_que, excluir_km_l_maior_que,
+    mediana_viagem, suspeita_performace,
+    indicativo_performace, erro_telemetria
+):
+    print("Datas: ", dia)
+    print("Modelos: ", modelos)
+    print("Linha: ", linha)
+    print("Quantidade de viagens: ", quantidade_de_viagens)
+    print("Dias marcados: ", dias_marcados)
+    print("Excluir km/L menor que: ", excluir_km_l_menor_que)
+    print("Excluir km/L maior que: ", excluir_km_l_maior_que)
+    print("Mediana: ", excluir_km_l_maior_que)
+    print("suspeita: ", excluir_km_l_maior_que)
+    print("indicativo: ", excluir_km_l_maior_que)
+    print("erro telemetria: ", excluir_km_l_maior_que)
 
+    df = regra_service.get_estatistica_veiculos(dia, linha, dias_marcados)
+
+    return df.to_dict(orient="records")
 
 ##############################################################################
 # Callbacks para switch ######################################################
@@ -364,12 +404,11 @@ layout = dbc.Container(
                                                     dmc.Space(h=10),
                                                     html.Div(
                                                             dmc.NumberInput(
-                                                                id="input-mediana",
+                                                                id="select-mediana",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=10,
                                                                 max=100,
                                                                 step=1,
-                                                                value=10,
                                                                 suffix="%"
                                                             ),
                                                         id="container-mediana",
@@ -398,7 +437,6 @@ layout = dbc.Container(
                                                                 min=10,
                                                                 max=100,
                                                                 step=1,
-                                                                value=10,
                                                                 suffix="%"
                                                             ),
                                                         id="container-baixa-performace-suspeita",
@@ -427,7 +465,6 @@ layout = dbc.Container(
                                                                 min=10,
                                                                 max=100,
                                                                 step=1,
-                                                                value=10,
                                                                 suffix="%"
                                                             ),
                                                         id="container-baixa-performace-indicativo",
@@ -456,7 +493,6 @@ layout = dbc.Container(
                                                                 min=10,
                                                                 max=100,
                                                                 step=1,
-                                                                value=10,
                                                                 suffix="%"
                                                             ),
                                                         id="container-erro-telemetria",
@@ -478,6 +514,20 @@ layout = dbc.Container(
                 ),
             ]
         ),
+        dmc.Space(h=20),
+        dag.AgGrid(
+            id="tabela-regras-viagens-monitoramento",
+            columnDefs=monitoramento_tabela.tbl_perc_viagens_monitoramento,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
+        dmc.Space(h=20),
     ]
 )
 
