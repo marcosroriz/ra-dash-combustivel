@@ -97,6 +97,9 @@ class MonitoramentoService:
             encontrou_numero_sublinha,
             encontrou_sentido_linha,
             slot_horario,
+            COUNT(*) as n_amostras,
+            AVG(km_por_litro) as quartil_media,
+            stddev_pop(km_por_litro) as quartil_desvpadrao, 
             PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY km_por_litro) AS q1,
             PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY km_por_litro) AS mediana,
             PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY km_por_litro) AS q3
@@ -107,6 +110,9 @@ class MonitoramentoService:
         ),
         classificados AS (
         SELECT a.*,
+                q.n_amostras,
+                q.quartil_media,
+                q.quartil_desvpadrao,
                 q.q1,
                 q.q3,
                 q.mediana,
@@ -292,6 +298,9 @@ class MonitoramentoService:
                 encontrou_numero_sublinha,
                 encontrou_sentido_linha,
                 slot_horario,
+                COUNT(*) as n_amostras,
+                AVG(km_por_litro) as quartil_media,
+                stddev_pop(km_por_litro) as quartil_desvpadrao, 
                 PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY km_por_litro) AS q1,
                 PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY km_por_litro) AS mediana,
                 PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY km_por_litro) AS q3
@@ -300,6 +309,9 @@ class MonitoramentoService:
         ),
         classificados AS (
             SELECT a.*,
+                    q.n_amostras,
+                    q.quartil_media,
+                    q.quartil_desvpadrao,
                     q.q1,
                     q.q3,
                     q.mediana,
@@ -413,6 +425,23 @@ class MonitoramentoService:
         # Converte o slot_horario para datetime
         df["slot_horario_dt"] = pd.to_datetime(df["slot_horario"], format="%H:%M:%S")
         df["time_bin_formatado"] = df["slot_horario_dt"]
+
+        # Calcula o tempo da viagem em minutos
+        df["tempo_minutos"] = (df["encontrou_tempo_viagem_segundos"] / 60).round(1)
+
+        # Adiciona os labels para hora de inicio e fim da viagem
+        df["encontrou_timestamp_inicio_dt"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+        df["encontrou_timestamp_fim_dt"] = pd.to_datetime(df["encontrou_timestamp_fim"]) - pd.Timedelta(hours=3)
+        df["hora_inicio"] = df["encontrou_timestamp_inicio_dt"].dt.strftime("%H:%M")
+        df["hora_fim"] = df["encontrou_timestamp_fim_dt"].dt.strftime("%H:%M")
+
+        # Adiciona o dia da semana, mas como label em cima do dia
+        df["dia_semana"] = df["encontrou_timestamp_inicio_dt"].dt.dayofweek
+        df["dia_semana_label"] = df["dia_semana"].map({0: "Domingo", 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta", 6: "Sábado"})
+        df["dia_label"] = df["dia_semana_label"] + " - " + df["encontrou_timestamp_inicio_dt"].dt.strftime("%d/%m/%Y")
+
+        # Arredonda o consumo para 2 casas decimais
+        df["km_redondo"] = df["km_por_litro"].round(2)
 
         return df
 
