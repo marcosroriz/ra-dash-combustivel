@@ -148,6 +148,22 @@ def input_erro_telemetria(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
+@callback(
+    Output("container-kml-maior", "style"),
+    Input("switch-kml-maior", "checked"),
+)
+def input_kml_maior(ativado):
+    # Se ativado (True): display block; se desativado: none
+    return {"display": "block"} if ativado else {"display": "none"}
+
+@callback(
+    Output("container-kml-menor", "style"),
+    Input("switch-kml-menor", "checked"),
+)
+def input_kml_menor(ativado):
+    # Se ativado (True): display block; se desativado: none
+    return {"display": "block"} if ativado else {"display": "none"}
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
@@ -338,60 +354,56 @@ layout = dbc.Container(
                                     md=6,
                                 ),
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L menor que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-excluir-km-l-menor-que-monitoramento-regra",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=1,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                    dbc.Card([
+                                        dmc.Switch(
+                                            id="switch-kml-menor",
+                                            label="Excluir km/L menor que",
+                                            checked=False
+                                        ),
+                                        dmc.Space(h=10),
+                                        html.Div(
+                                            dbc.InputGroup([
+                                                dbc.Input(
+                                                    id="input-excluir-km-l-menor-que-monitoramento-regra",
+                                                    type="number",
+                                                    min=0,
+                                                    step=0.1,
+                                                    value=1,
+                                                ),
+                                                dbc.InputGroupText("km/L")
+                                            ]),
+                                            id="container-kml-menor",
+                                            style={"display": "none", "marginTop": "10px"}
+                                        )
+                                    ], body=True),
+                                    md=3
                                 ),
+
+                                # Coluna MAIOR QUE
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L maior que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-excluir-km-l-maior-que-monitoramento-regra",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=10,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                    dbc.Card([
+                                        dmc.Switch(
+                                            id="switch-kml-maior",
+                                            label="Excluir km/L maior que",
+                                            checked=False
+                                        ),
+                                        dmc.Space(h=10),
+                                        html.Div(
+                                            dbc.InputGroup([
+                                                dbc.Input(
+                                                    id="input-excluir-km-l-maior-que-monitoramento-regra",
+                                                    type="number",
+                                                    min=0,
+                                                    step=0.1,
+                                                    value=1,
+                                                ),
+                                                dbc.InputGroupText("km/L")
+                                            ]),
+                                            id="container-kml-maior",
+                                            style={"display": "none", "marginTop": "10px"}
+                                        )
+                                    ], body=True),
+                                    md=3
                                 ),
                                 dmc.Space(h=10),
 
