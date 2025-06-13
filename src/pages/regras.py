@@ -408,116 +408,107 @@ layout = dbc.Container(
                                 dmc.Space(h=10),
 
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
+                                    dbc.Card([
+                                        html.Div([
+                                            dmc.Switch(id="switch-mediana", label="Viagens abaixo da mediana ", checked=False),
+                                            dmc.Space(h=10),
                                             html.Div(
-                                                [
-                                                    dmc.Switch(id="switch-mediana", label="Viagens abaixo da mediana ", checked=False),
-                                                    dmc.Space(h=10),
-                                                    html.Div(
-                                                            dmc.NumberInput(
-                                                                id="select-mediana",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                                suffix="%"
-                                                            ),
-                                                        id="container-mediana",
-                                                        style={"display": "none"}  # inicialmente escondido
-                                                    )
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                                dbc.InputGroup([
+                                                    dbc.Input(
+                                                        id="select-mediana",
+                                                        type="number",
+                                                        placeholder="Digite a porcentagem",
+                                                        min=10,
+                                                        max=100,
+                                                        step=1,
+                                                        value=10,
+                                                    ),
+                                                    dbc.InputGroupText("%")
+                                                ]),
+                                                id="container-mediana",
+                                                style={"display": "none", "marginTop": "10px"}
+                                            )
+                                        ])
+                                    ], body=True),
+                                    md=3
                                 ),
+
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
+                                    dbc.Card([
+                                        html.Div([
+                                            dmc.Switch(id="switch-baixa-performace-suspeita", label="Viagens suspeita baixa performance", checked=False),
+                                            dmc.Space(h=10),
                                             html.Div(
-                                                [
-                                                    dmc.Switch(id="switch-baixa-performace-suspeita", label="Viagens suspeita baixa perfomance ", checked=False),
-                                                    dmc.Space(h=10),
-                                                    html.Div(
-                                                        dmc.NumberInput(
-                                                                id="select-baixa-performace-suspeita",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                                suffix="%"
-                                                            ),
-                                                        id="container-baixa-performace-suspeita",
-                                                        style={"display": "none"}  # inicialmente escondido
-                                                    )
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                                dbc.InputGroup([
+                                                    dbc.Input(
+                                                        id="select-baixa-performace-suspeita",
+                                                        type="number",
+                                                        placeholder="Digite a porcentagem",
+                                                        min=10,
+                                                        max=100,
+                                                        step=1,
+                                                        value=10,
+                                                    ),
+                                                    dbc.InputGroupText("%")
+                                                ]),
+                                                id="container-baixa-performace-suspeita",
+                                                style={"display": "none", "marginTop": "10px"}
+                                            )
+                                        ])
+                                    ], body=True),
+                                    md=3
                                 ),
+
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
+                                    dbc.Card([
+                                        html.Div([
+                                            dmc.Switch(id="switch-baixa-performace-indicativo", label="Viagens indicativo baixa performance", checked=False),
+                                            dmc.Space(h=10),
                                             html.Div(
-                                                [
-                                                    dmc.Switch(id="switch-baixa-performace-indicativo", label="Viagens indicativo baixa perfomance ", checked=False),
-                                                    dmc.Space(h=10),
-                                                    html.Div(
-                                                            dmc.NumberInput(
-                                                                id="select-baixa-performace-indicativo",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                                suffix="%"
-                                                            ),
-                                                        id="container-baixa-performace-indicativo",
-                                                        style={"display": "none"}  # inicialmente escondido
-                                                    )
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                                dbc.InputGroup([
+                                                    dbc.Input(
+                                                        id="select-baixa-performace-indicativo",
+                                                        type="number",
+                                                        placeholder="Digite a porcentagem",
+                                                        min=10,
+                                                        max=100,
+                                                        step=1,
+                                                        value=10,
+                                                    ),
+                                                    dbc.InputGroupText("%")
+                                                ]),
+                                                id="container-baixa-performace-indicativo",
+                                                style={"display": "none", "marginTop": "10px"}
+                                            )
+                                        ])
+                                    ], body=True),
+                                    md=3
                                 ),
+
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
+                                    dbc.Card([
+                                        html.Div([
+                                            dmc.Switch(id="switch-erro-telemetria", label="Viagens suspeita erro de telemetria", checked=False),
+                                            dmc.Space(h=10),
                                             html.Div(
-                                                [
-                                                    dmc.Switch(id="switch-erro-telemetria", label="Viagens suspeita erro de telemetria ", checked=False),
-                                                    dmc.Space(h=10),
-                                                    html.Div(
-                                                            dmc.NumberInput(
-                                                                id="select-erro-telemetria",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                                suffix="%"
-                                                            ),
-                                                        id="container-erro-telemetria",
-                                                        style={"display": "none"}  # inicialmente escondido
-                                                    )
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
+                                                dbc.InputGroup([
+                                                    dbc.Input(
+                                                        id="select-erro-telemetria",
+                                                        type="number",
+                                                        placeholder="Digite a porcentagem",
+                                                        min=10,
+                                                        max=100,
+                                                        step=1,
+                                                        value=10,
+                                                    ),
+                                                    dbc.InputGroupText("%")
+                                                ]),
+                                                id="container-erro-telemetria",
+                                                style={"display": "none", "marginTop": "10px"}
+                                            )
+                                        ])
+                                    ], body=True),
+                                    md=3
                                 ),
                             ]
                         ),
