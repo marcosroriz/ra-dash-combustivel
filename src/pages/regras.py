@@ -64,6 +64,7 @@ comb_por_linha_service = CombustivelPorLinhaService(pgEngine)
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
 lista_todas_linhas = df_todas_linhas.to_dict(orient="records")
+lista_todas_linhas .insert(0, {"LABEL": "TODAS"})
 
 # Modelos de veículos
 df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
@@ -108,7 +109,13 @@ def atualiza_tabela_regra_viagens_monitoramento(
     print("indicativo: ", excluir_km_l_maior_que)
     print("erro telemetria: ", excluir_km_l_maior_que)
 
-    df = regra_service.get_estatistica_veiculos(dia, linha, dias_marcados)
+    df = regra_service.get_estatistica_veiculos(
+        dia, modelos, linha,
+        quantidade_de_viagens, dias_marcados, 
+        excluir_km_l_menor_que, excluir_km_l_maior_que,
+        mediana_viagem, suspeita_performace,
+        indicativo_performace, erro_telemetria
+    )
 
     return df.to_dict(orient="records")
 
@@ -201,7 +208,28 @@ layout = dbc.Container(
                             ]
                         ),
                         dbc.Row(
-                            [
+                            [   
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Label("Nome da Regra de Monitoramneto"),
+                                                    dbc.Input(
+                                                        id="input-nome-regra-monitoramento",
+                                                        type="text",  # Alterado de "number" para "text"
+                                                        placeholder="Digite algo...",
+                                                        value="",
+                                                    ),
+                                                ],
+                                                className="dash-bootstrap",
+                                            ),
+                                        ],
+                                        body=True,
+                                    ),
+                                    md=12,
+                                ), 
+                                dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
                                         [
@@ -272,7 +300,8 @@ layout = dbc.Container(
                                                             }
                                                             for linha in lista_todas_linhas
                                                         ],
-                                                        value="TODAS",
+                                                        multi=True,
+                                                        value=["TODAS"],
                                                         placeholder="Selecione a linha",
                                                     ),
                                                 ],
@@ -366,7 +395,7 @@ layout = dbc.Container(
                                                 dbc.Input(
                                                     id="input-excluir-km-l-menor-que-monitoramento-regra",
                                                     type="number",
-                                                    min=0,
+                                                    min=1,
                                                     step=0.1,
                                                     value=1,
                                                 ),
@@ -393,9 +422,9 @@ layout = dbc.Container(
                                                 dbc.Input(
                                                     id="input-excluir-km-l-maior-que-monitoramento-regra",
                                                     type="number",
-                                                    min=0,
+                                                    min=1,
                                                     step=0.1,
-                                                    value=1,
+                                                    value=10,
                                                 ),
                                                 dbc.InputGroupText("km/L")
                                             ]),
@@ -421,7 +450,6 @@ layout = dbc.Container(
                                                         min=10,
                                                         max=100,
                                                         step=1,
-                                                        value=10,
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
@@ -447,7 +475,6 @@ layout = dbc.Container(
                                                         min=10,
                                                         max=100,
                                                         step=1,
-                                                        value=10,
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
@@ -473,7 +500,6 @@ layout = dbc.Container(
                                                         min=10,
                                                         max=100,
                                                         step=1,
-                                                        value=10,
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
@@ -499,7 +525,6 @@ layout = dbc.Container(
                                                         min=10,
                                                         max=100,
                                                         step=1,
-                                                        value=10,
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
@@ -514,6 +539,41 @@ layout = dbc.Container(
                         ),
                     ],
                     md=12,
+                ),
+            ]
+        ),
+        dmc.Space(h=10),
+        dbc.Row(
+                [
+                html.H4(
+                    "Preview da Regra",
+                    className="align-self-center",
+                ),
+                dmc.Space(h=5),
+                # dbc.Col(gera_labels_inputs_veiculos("input-geral-combustivel-1"), width=True),
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Button(
+                                "Cria regra",
+                                id="btn-exportar-comb",
+                                n_clicks=0,
+                                style={
+                                    "background-color": "#007bff",  # Azul
+                                    "color": "white",
+                                    "border": "none",
+                                    "padding": "10px 20px",
+                                    "border-radius": "8px",
+                                    "cursor": "pointer",
+                                    "font-size": "16px",
+                                    "font-weight": "bold",
+                                },
+                            ),
+                            dcc.Download(id="download-excel-tabela-combustivel-1"),
+                        ],
+                        style={"text-align": "right"},
+                    ),
+                    width="auto",
                 ),
             ]
         ),

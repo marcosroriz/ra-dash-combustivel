@@ -6,6 +6,7 @@ import numpy as np
 import holidays
 
 from datetime import datetime, timedelta
+from modules.sql_utils import *
 
 # Imports auxiliares
 
@@ -45,13 +46,21 @@ class RegrasService:
 
         return dias_subquery
 
-    def get_estatistica_veiculos(self, dia, linha, dias_marcados):
+    def get_estatistica_veiculos(
+        self, dia, modelos, linha,
+        quantidade_de_viagens, dias_marcados, 
+        excluir_km_l_menor_que=0, excluir_km_l_maior_que=10,
+        mediana_viagem=0, suspeita_performace=0,
+        indicativo_performace=0, erro_telemetria=0         
+    ):
         # Extraí as datas (já em string)
         data_atual_str = pd.to_datetime(datetime.now()).strftime("%Y-%m-%d")
-        data_passada_str = pd.to_datetime(datetime.now()-timedelta(days=5)).strftime("%Y-%m-%d")
+        data_passada_str = pd.to_datetime(datetime.now()-timedelta(days=dia)).strftime("%Y-%m-%d")
 
         # Subquery para os dias selecionados
         subquery_dias_marcados = self.get_subquery_dias(dias_marcados)
+        subquery_modelo = subquery_modelos_combustivel(modelos)
+        subquery_linhas = subquery_linha_combustivel(linha)
 
         query = f"""
         WITH base AS (
@@ -80,6 +89,9 @@ class RegrasService:
             encontrou_linha = TRUE
             AND km_por_litro > 0
             AND km_por_litro <= 10
+            {subquery_modelo}
+            {subquery_linhas}
+
         ),
         amostras_validas AS (
         SELECT 
@@ -165,14 +177,16 @@ class RegrasService:
         ON 
             r.vec_num_id = t.vec_num_id
         """
-
+        print(query)
         # Executa a query
         df = pd.read_sql(query, self.pgEngine)
+        if df.empty:
+                return pd.DataFrame(columns=df.columns)
 
         # Arredonda a media
         df["media_consumo_por_km"] = df["media_consumo_por_km"].round(2)
 
-        # Pivota a tabela
+        # Pivot table
         df_pivot = df.pivot_table(
             index=["vec_num_id", "vec_model", "media_consumo_por_km"],
             columns="status_consumo",
@@ -180,19 +194,44 @@ class RegrasService:
             fill_value=0,
         )
 
-        # Ajustar os nomes das colunas para algo mais limpo
         df_pivot.columns = [f'{col[0]}_{col[1].lower().replace(" ", "_")}' for col in df_pivot.columns]
-
-        # Resetar o índice para voltar com 'vec_num_id' como coluna normal
         df_pivot = df_pivot.reset_index()
 
-        # Soma os valores de total_status
         df_pivot["total_viagens"] = df_pivot.filter(like="total_status").sum(axis=1)
 
-        # Dividir pelo número de dias
-        df_pivot["media_viagens_dia"] = (
-            # df_pivot["total_viagens"] / (pd.to_datetime(data_fim_str) - pd.to_datetime(data_inicio_str)).days
-            df_pivot["total_viagens"]
-        )
+        df_pivot["media_viagens_dia"] = df_pivot["total_viagens"]
 
+        # Filtros com checagem de existência de colunas
+
+        
+        print(excluir_km_l_menor_que, excluir_km_l_maior_que)
+        # Filtro por média de consumo
+        df_pivot = df_pivot[
+            (df_pivot["media_consumo_por_km"] >= excluir_km_l_menor_que) &
+            (df_pivot["media_consumo_por_km"] <= excluir_km_l_maior_que)
+        ]
+        
+        erro_telemetria = float(erro_telemetria) if erro_telemetria is not None else 0
+        suspeita_performace = float(suspeita_performace) if suspeita_performace is not None else 0
+        indicativo_performace = float(indicativo_performace) if indicativo_performace is not None else 0
+        mediana_viagem = float(mediana_viagem) if mediana_viagem is not None else 0
+        quantidade_de_viagens = int(quantidade_de_viagens) if quantidade_de_viagens is not None else 0
+
+
+        if 'percentual_erro_telemetria' in df_pivot.columns:
+            df_pivot = df_pivot[df_pivot['percentual_erro_telemetria'] >= erro_telemetria ]
+
+        if 'percentual_suspeita_baixa_perfomance' in df_pivot.columns:
+            df_pivot = df_pivot[df_pivot['percentual_suspeita_baixa_perfomance'] >= suspeita_performace]
+
+        if 'percentual_baixa_performance' in df_pivot.columns:
+            df_pivot = df_pivot[df_pivot['percentual_baixa_performance'] >= indicativo_performace]
+
+        if 'percentual_regular' in df_pivot.columns:
+            df_pivot = df_pivot[df_pivot['percentual_regular'] >= mediana_viagem]
+
+        if quantidade_de_viagens > 0:
+            df_pivot = df_pivot[df_pivot['total_viagens'] == quantidade_de_viagens]
+
+        print(df_pivot)
         return df_pivot
