@@ -36,20 +36,19 @@ tbl_perc_viagens_monitoramento = [
     {"field": "percentual_erro_telemetria", "headerName": "% Viagens Erro", "minWidth": 150, "type": ["numericColumn"]},
 ]
 
-
 tbl_detalhamento_viagens_monitoramento = [
-    {"field": "dia", "headerName": "DIA", "minWidth": 200},
-    {"field": "vec_num_id", "headerName": "VEÍCULO", "minWidth": 200},
-    {"field": "vec_model", "headerName": "MODELO", "minWidth": 300, "type": ["text"]},
-    {"field": "STATUS_CONSUMO_POR_KM", "headerName": "STATUS", "minWidth": 200, "type": ["text"]},
-    {
-        "field": "media_consumo_por_km",
-        "headerName": "Média km/L",
-        "wrapHeaderText": True,
-        "autoHeaderHeight": True,
-        "filter": "agNumberColumnFilter",
-        "maxWidth": 230,
-        "type": ["numericColumn"],
-    },
-    {"field": "VIAGENS_HTML", "headerName": "ÚLTIMAS VIAGENS", "cellRenderer": "dagcomponentfuncs.MultiButtonRenderer"},
+    {"field": "dia_label", "headerName": "DIA", "minWidth": 150},
+    {"field": "slot_horario", "headerName": "SLOT", "minWidth": 100, "type": ["text"]},
+    {"field": "encontrou_numero_linha", "headerName": "LINHA", "minWidth": 100, "type": ["text"]},
+    {"field": "encontrou_numero_sublinha", "headerName": "SUBLINHA", "minWidth": 100, "type": ["text"]},
+    {"field": "encontrou_sentido_linha", "headerName": "SENTIDO", "minWidth": 100, "type": ["text"]},
+    {"field": "status_consumo", "headerName": "STATUS", "minWidth": 200, "type": ["text"]},
+    {"field": "km_redondo", "headerName": "km/L", "minWidth": 100, "type": ["numericColumn"]},
+    {"field": "tempo_minutos", "headerName": "Duração (min)", "minWidth": 100, "type": ["numericColumn"]},
+    {"field": "hora_inicio", "headerName": "INICIO", "minWidth": 100, "type": ["text"]},
+    {"field": "hora_fim", "headerName": "FIM", "minWidth": 100, "type": ["text"]},
+    {"field": "n_amostras", "headerName": "Nº Amostras", "minWidth": 100, "type": ["numericColumn"]},
+    {"field": "mediana", "headerName": "Mediana", "minWidth": 100, "type": ["numericColumn"]},
+    {"field": "quartil_desvpadrao", "headerName": "Desv Padrão", "minWidth": 100, "type": ["numericColumn"]},
+    {"field": "nome_motorista", "headerName": "Motorista", "minWidth": 200, "type": ["text"]},
 ]

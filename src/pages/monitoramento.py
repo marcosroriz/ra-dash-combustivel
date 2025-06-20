@@ -156,16 +156,19 @@ def atualiza_tabela_perc_viagens_monitoramento(
 
 # Callback para gráfico de combustível por veículo ao longo do dia
 @callback(
-    Output("graph-monitoramento-viagens-veiculo", "figure"),
+    [
+        Output("graph-monitoramento-viagens-veiculo", "figure"),
+        Output("tabela-monitoramento-viagens-veiculo", "rowData"),
+    ],
     [
         Input("input-select-veiculos-monitoramento", "value"),
-        Input("input-intervalo-datas-monitorameto", "value"),
         Input("input-select-detalhamento-monitoramento-grafico-viagens", "value"),
     ],
+    State("input-intervalo-datas-monitorameto", "value"),
 )
-def atualiza_grafico_monitoramento_viagens_veiculo(veiculo, dia, opcoes_detalhamento):
-    if veiculo is None or dia is None:
-        return go.Figure()
+def atualiza_grafico_monitoramento_viagens_veiculo(veiculo, opcoes_detalhamento, dia):
+    if veiculo is None or veiculo == "" or dia is None:
+        return go.Figure(), []
 
     # Pega as viagens do veículo
     df = monitoramento_service.get_viagens_do_veiculo(dia, veiculo)
@@ -173,7 +176,7 @@ def atualiza_grafico_monitoramento_viagens_veiculo(veiculo, dia, opcoes_detalham
     # Gera o gráfico
     fig = monitoramento_graficos.gerar_grafico_monitoramento_viagens_veiculo(df, opcoes_detalhamento)
 
-    return fig
+    return fig, df.to_dict(orient="records")
 
 
 # Callback para detectar clique
@@ -784,7 +787,18 @@ layout = dbc.Container(
             className="dash-bootstrap",
         ),
         dcc.Graph(id="graph-monitoramento-viagens-veiculo"),
-        grid,
+        dag.AgGrid(
+            id="tabela-monitoramento-viagens-veiculo",
+            columnDefs=monitoramento_tabela.tbl_detalhamento_viagens_monitoramento,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
         html.Div(id="custom-component-dmc-btn-value-changed"),
         # dag.AgGrid(
         #     id="tabela-combustivel",
