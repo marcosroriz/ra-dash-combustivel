@@ -197,7 +197,7 @@ def show_button_click(event):
 ##############################################################################
 # Registro da página #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Home (Monitoramento)", path="/")
+dash.register_page(__name__, name="Home (Monitoramento)", path="/monitoramento")
 
 
 @callback(

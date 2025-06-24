@@ -144,11 +144,11 @@ class MonitoramentoService:
         resumo_por_veiculo AS (
             SELECT 
                 vec_num_id,
-                vec_model,
+                vec_model_padronizado,
                 status_consumo,
                 COUNT(*) AS total_status
             FROM classificados_filtrados
-            GROUP BY vec_num_id, vec_model, status_consumo
+            GROUP BY vec_num_id, vec_model_padronizado, status_consumo
         ),
         total_por_veiculo AS (
             SELECT 
@@ -160,7 +160,7 @@ class MonitoramentoService:
         )
         SELECT 
             r.vec_num_id,
-            r.vec_model,
+            r.vec_model_padronizado,
             r.status_consumo,
             r.total_status,
             t.MEDIA_CONSUMO_POR_KM,
@@ -181,7 +181,7 @@ class MonitoramentoService:
 
         # Pivota a tabela
         df_pivot = df.pivot_table(
-            index=["vec_num_id", "vec_model", "media_consumo_por_km"],
+            index=["vec_num_id", "vec_model_padronizado", "media_consumo_por_km"],
             columns="status_consumo",
             values=["total_status", "percentual"],
             fill_value=0,
