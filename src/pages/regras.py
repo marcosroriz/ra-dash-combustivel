@@ -25,6 +25,7 @@ import dash_ag_grid as dag
 import dash_mantine_components as dmc
 import dash_iconify
 from dash_iconify import DashIconify
+from dash import callback_context
 
 # Importar nossas constantes e funções utilitárias
 import tema
@@ -76,6 +77,7 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 ##############################################################################
 @callback(
     Output("tabela-regras-viagens-monitoramento", "rowData"),
+    Output("indicador-quantidade-de-veiculos", "children"),
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
@@ -97,17 +99,9 @@ def atualiza_tabela_regra_viagens_monitoramento(
     mediana_viagem, suspeita_performace,
     indicativo_performace, erro_telemetria
 ):
-    print("Datas: ", dia)
-    print("Modelos: ", modelos)
-    print("Linha: ", linha)
-    print("Quantidade de viagens: ", quantidade_de_viagens)
-    print("Dias marcados: ", dias_marcados)
-    print("Excluir km/L menor que: ", excluir_km_l_menor_que)
-    print("Excluir km/L maior que: ", excluir_km_l_maior_que)
-    print("Mediana: ", excluir_km_l_maior_que)
-    print("suspeita: ", excluir_km_l_maior_que)
-    print("indicativo: ", excluir_km_l_maior_que)
-    print("erro telemetria: ", excluir_km_l_maior_que)
+    print(excluir_km_l_menor_que, excluir_km_l_maior_que,
+    mediana_viagem, suspeita_performace,
+    indicativo_performace, erro_telemetria)
 
     df = regra_service.get_estatistica_veiculos(
         dia, modelos, linha,
@@ -117,7 +111,58 @@ def atualiza_tabela_regra_viagens_monitoramento(
         indicativo_performace, erro_telemetria
     )
 
-    return df.to_dict(orient="records")
+    #indicador de quantidade de veiculo
+    quantidade_veiculo = df['vec_num_id'].count()
+
+    return df.to_dict(orient="records"), quantidade_veiculo
+
+@callback(
+        Output("mensagem-sucesso", "children"),
+    [
+        Input("btn-criar-regra-monitoramento", "n_clicks"),
+        Input("input-nome-regra-monitoramento", "value"),
+        Input("input-periodo-dias-monitoramento-regra", "value"),
+        Input("input-modelos-monitoramento-regra", "value"),
+        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-select-dia-linha-combustivel-regra", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
+        Input("select-mediana", "value"),
+        Input("select-baixa-performace-suspeita", "value"),
+        Input("select-baixa-performace-indicativo", "value"),
+        Input("select-erro-telemetria", "value"),
+    ],
+    prevent_initial_call=True
+)
+def salvar_regra_monitoramento(
+    n_clicks, nome_regra,
+    dia, modelos, linha,
+    quantidade_de_viagens, dias_marcados, 
+    excluir_km_l_menor_que, excluir_km_l_maior_que,
+    mediana_viagem, suspeita_performace,
+    indicativo_performace, erro_telemetria
+): 
+    ctx = callback_context  # Obtém o contexto do callback
+    if not ctx.triggered:  
+        return dash.no_update  # Evita execução desnecessária
+    
+    # Verifica se o callback foi acionado pelo botão de download
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if triggered_id != "btn-criar-regra-monitoramento":
+        return dash.no_update  # Ignora mudanças nos outros inputs
+
+    if not n_clicks or n_clicks <= 0: 
+        return dash.no_update
+
+    regra_service.salvar_regra_monitoramento(
+        nome_regra, dia, modelos, linha,
+        quantidade_de_viagens, dias_marcados, 
+        excluir_km_l_menor_que, excluir_km_l_maior_que,
+        mediana_viagem, suspeita_performace,
+        indicativo_performace, erro_telemetria
+    )
+    return "✅ Regra salva com sucesso!"
 
 ##############################################################################
 # Callbacks para switch ######################################################
@@ -397,7 +442,6 @@ layout = dbc.Container(
                                                     type="number",
                                                     min=1,
                                                     step=0.1,
-                                                    value=1,
                                                 ),
                                                 dbc.InputGroupText("km/L")
                                             ]),
@@ -424,7 +468,6 @@ layout = dbc.Container(
                                                     type="number",
                                                     min=1,
                                                     step=0.1,
-                                                    value=10,
                                                 ),
                                                 dbc.InputGroupText("km/L")
                                             ]),
@@ -497,7 +540,7 @@ layout = dbc.Container(
                                                         id="select-baixa-performace-indicativo",
                                                         type="number",
                                                         placeholder="Digite a porcentagem",
-                                                        min=10,
+                                                        min=0,
                                                         max=100,
                                                         step=1,
                                                     ),
@@ -544,19 +587,50 @@ layout = dbc.Container(
         ),
         dmc.Space(h=10),
         dbc.Row(
-                [
-                html.H4(
-                    "Preview da Regra",
-                    className="align-self-center",
+            [
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-quantidade-de-veiculos", order=2),
+                                        DashIconify(
+                                            icon="mdi:bomb",
+                                            width=48,
+                                            color="black",
+                                        ),
+                                    ],
+                                    justify="center",  # Centralize conteúdo no card
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Total de veiculos"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},  # Adicione espaçamento inferior
                 ),
-                dmc.Space(h=5),
+            ],
+            justify="center",
+        ),
+    ],
+    style={"margin-top": "20px", "margin-bottom": "20px"},
+    ),
+        dmc.Space(h=10),
+        dbc.Row(
+                [
                 # dbc.Col(gera_labels_inputs_veiculos("input-geral-combustivel-1"), width=True),
                 dbc.Col(
                     html.Div(
                         [
                             html.Button(
                                 "Cria regra",
-                                id="btn-exportar-comb",
+                                id="btn-criar-regra-monitoramento",
                                 n_clicks=0,
                                 style={
                                     "background-color": "#007bff",  # Azul
@@ -569,12 +643,13 @@ layout = dbc.Container(
                                     "font-weight": "bold",
                                 },
                             ),
-                            dcc.Download(id="download-excel-tabela-combustivel-1"),
+                            
                         ],
                         style={"text-align": "right"},
                     ),
                     width="auto",
                 ),
+                html.Div(id="mensagem-sucesso", style={"color": "green"})
             ]
         ),
         dmc.Space(h=20),
