@@ -48,15 +48,15 @@ class RegrasService:
         return dias_subquery
 
     def get_estatistica_veiculos(
-        self, dia, modelos, linha,
+        self, data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
         excluir_km_l_menor_que=0, excluir_km_l_maior_que=10,
         mediana_viagem=0, suspeita_performace=0,
         indicativo_performace=0, erro_telemetria=0         
     ):
-        # Extraí as datas (já em string)
-        data_atual_str = pd.to_datetime(datetime.now()).strftime("%Y-%m-%d")
-        data_passada_str = pd.to_datetime(datetime.now()-timedelta(days=dia)).strftime("%Y-%m-%d")
+        
+        # Extraí a data inicial e final
+        data_inicio_str, data_fim_str = pd.to_datetime(data[0]).strftime("%Y-%m-%d"), pd.to_datetime(data[1]).strftime("%Y-%m-%d")
 
         # Subquery para os dias selecionados
         subquery_dias_marcados = self.get_subquery_dias(dias_marcados)
@@ -96,16 +96,10 @@ class RegrasService:
             FROM base
             WHERE {subquery_dias_marcados}
         ),
-        ultimos_dias_validos AS (
-            SELECT DISTINCT data_local
-            FROM amostras_validas
-            ORDER BY data_local DESC
-            LIMIT {dia}
-        ),
         amostras_filtradas AS (
             SELECT *
             FROM amostras_validas
-            WHERE data_local IN (SELECT data_local FROM ultimos_dias_validos)
+            WHERE data_local BETWEEN '{data_inicio_str}' AND '{data_fim_str}'
         ),
         quartis AS (
             SELECT
@@ -210,7 +204,7 @@ class RegrasService:
 
     def salvar_regra_monitoramento(
         self, nome_regra,
-        dia, modelos, linha,
+        data, modelos, linha,
         quantidade_de_viagens, dias_marcados,
         excluir_km_l_menor_que=0, excluir_km_l_maior_que=0,
         mediana_viagem=0, suspeita_performace=0,
@@ -224,6 +218,7 @@ class RegrasService:
         usar_indicativo = indicativo_performace != None
         usar_erro = erro_telemetria != None
 
+        print(data, modelos)
 
         try:
             with self.pgEngine.connect() as conn:
@@ -251,7 +246,7 @@ class RegrasService:
 
                 conn.execute(insert_sql, {
                     "nome_regra": nome_regra,
-                    "periodo": dia,
+                    "periodo": data,
                     "modelos": modelos,
                     "linha": linha,
                     "dias_analise": dias_marcados,

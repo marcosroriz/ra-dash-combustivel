@@ -93,18 +93,15 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
     ],
 )
 def atualiza_tabela_regra_viagens_monitoramento(
-    dia, modelos, linha,
+    data, modelos, linha,
     quantidade_de_viagens, dias_marcados, 
     excluir_km_l_menor_que, excluir_km_l_maior_que,
     mediana_viagem, suspeita_performace,
     indicativo_performace, erro_telemetria
 ):
-    print(excluir_km_l_menor_que, excluir_km_l_maior_que,
-    mediana_viagem, suspeita_performace,
-    indicativo_performace, erro_telemetria)
 
     df = regra_service.get_estatistica_veiculos(
-        dia, modelos, linha,
+        data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
         excluir_km_l_menor_que, excluir_km_l_maior_que,
         mediana_viagem, suspeita_performace,
@@ -137,7 +134,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
 )
 def salvar_regra_monitoramento(
     n_clicks, nome_regra,
-    dia, modelos, linha,
+    data, modelos, linha,
     quantidade_de_viagens, dias_marcados, 
     excluir_km_l_menor_que, excluir_km_l_maior_que,
     mediana_viagem, suspeita_performace,
@@ -156,7 +153,7 @@ def salvar_regra_monitoramento(
         return dash.no_update
 
     regra_service.salvar_regra_monitoramento(
-        nome_regra, dia, modelos, linha,
+        nome_regra, data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
         excluir_km_l_menor_que, excluir_km_l_maior_que,
         mediana_viagem, suspeita_performace,
@@ -280,15 +277,17 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Periodo (Dias)"),
-                                                    dbc.Input(
+                                                    dbc.Label("Data"),
+                                                    dmc.DatePicker(
                                                         id="input-periodo-dias-monitoramento-regra",
-                                                        type="number",
-                                                        placeholder="km/L",
-                                                        value=5,
-                                                        step=1,
-                                                        min=1,
-                                                        max=10,
+                                                        allowSingleDateInRange=True,
+                                                        type="range",
+                                                        minDate=date(2025, 1, 1),
+                                                        maxDate=date.today(),
+                                                        value=[
+                                                            date(2025, 1, 1),
+                                                            date.today(),
+                                                        ],
                                                     ),
                                                 ],
                                                 className="dash-bootstrap",
@@ -362,7 +361,7 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Quantidade de viagens por dia"),
+                                                    dbc.Label("Quantidade minima de viagens"),
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
@@ -372,7 +371,6 @@ layout = dbc.Container(
                                                                 value=5,
                                                                 step=1,
                                                                 min=1,
-                                                                max=10,
                                                             ),
                                                         ]
                                                     ),
