@@ -58,6 +58,7 @@ class RegrasService:
         # Extraí a data inicial e final
         data_inicio_str, data_fim_str = pd.to_datetime(data[0]).strftime("%Y-%m-%d"), pd.to_datetime(data[1]).strftime("%Y-%m-%d")
 
+        mediana_viagem = int(mediana_viagem) if mediana_viagem else 0
         # Subquery para os dias selecionados
         subquery_dias_marcados = self.get_subquery_dias(dias_marcados)
         subquery_modelo = subquery_modelos_combustivel(modelos)
@@ -138,7 +139,12 @@ class RegrasService:
             GROUP BY vec_num_id, vec_model, status_consumo
         ),
         total_por_veiculo AS (
-            SELECT vec_num_id, AVG(km_por_litro) as MEDIA_CONSUMO_POR_KM, COUNT(*) AS total_geral
+            SELECT 
+                vec_num_id,
+                AVG(km_por_litro) AS MEDIA_CONSUMO_POR_KM,
+                COUNT(*) AS total_geral,
+                AVG(mediana) AS mediana,
+                (100.0 * COUNT(*) FILTER (WHERE km_por_litro < mediana) / COUNT(*)) AS percentual_abaixo
             FROM classificados
             GROUP BY vec_num_id
         )
@@ -148,11 +154,13 @@ class RegrasService:
             r.status_consumo,
             r.total_status,
             t.MEDIA_CONSUMO_POR_KM,
-            ROUND(100.0 * r.total_status / t.total_geral, 2) AS percentual
+            ROUND(100.0 * r.total_status / t.total_geral, 2) AS percentual,
+            t.percentual_abaixo
         FROM resumo_por_veiculo r
         JOIN total_por_veiculo t ON r.vec_num_id = t.vec_num_id
+        WHERE T.percentual_abaixo >= {mediana_viagem}
         """
-
+        print(query)
         df = pd.read_sql(query, self.pgEngine)
         if df.empty:
             return pd.DataFrame(columns=df.columns)
@@ -176,7 +184,7 @@ class RegrasService:
                 (df_pivot["media_consumo_por_km"] >= excluir_km_l_menor_que) &
                 (df_pivot["media_consumo_por_km"] <= excluir_km_l_maior_que)
             ]
-
+        print(df_pivot.columns)
         erro_telemetria = float(erro_telemetria or 0)
         suspeita_performace = float(suspeita_performace or 0)
         indicativo_performace = float(indicativo_performace or 0)
@@ -191,9 +199,6 @@ class RegrasService:
 
         if 'percentual_baixa_performance' in df_pivot.columns:
             df_pivot = df_pivot[df_pivot['percentual_baixa_performance'] >= indicativo_performace]
-
-        if 'percentual_regular' in df_pivot.columns:
-            df_pivot = df_pivot[df_pivot['percentual_regular'] >= mediana_viagem]
 
         if quantidade_de_viagens > 0:
             df_pivot = df_pivot[df_pivot['total_viagens'] >= quantidade_de_viagens]
