@@ -38,7 +38,7 @@ from db import PostgresSingleton
 
 # Imports específicos
 from modules.monitoramento.monitoramento_service import MonitoramentoService
-import modules.monitoramento.tabela as monitoramento_tabela
+import modules.regras.tabela as regras_tabela
 import modules.monitoramento.graficos as monitoramento_graficos
 
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
@@ -72,12 +72,37 @@ df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
+##################################################################################
+# LOADER #####################################################################
+###################################################################################
+@callback(
+    Output("overlay-tabela-monitoramento", "style", allow_duplicate=True),
+    [
+        Input("input-periodo-dias-monitoramento-regra", "value"),
+        Input("input-modelos-monitoramento-regra", "value"),
+        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-select-dia-linha-combustivel-regra", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
+        Input("select-mediana", "value"),
+        Input("select-baixa-performace-suspeita", "value"),
+        Input("select-baixa-performace-indicativo", "value"),
+        Input("select-erro-telemetria", "value"),
+    ],
+    prevent_initial_call=True
+)
+def mostrar_overlay(*_):
+    return {"display": "block"}
+
+
 ##############################################################################
 # Callbacks para dados ######################################################
 ##############################################################################
 @callback(
     Output("tabela-regras-viagens-monitoramento", "rowData"),
     Output("indicador-quantidade-de-veiculos", "children"),
+    Output("overlay-tabela-monitoramento", "style"),
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
@@ -99,6 +124,8 @@ def atualiza_tabela_regra_viagens_monitoramento(
     mediana_viagem, suspeita_performace,
     indicativo_performace, erro_telemetria
 ):
+    # Exibe overlay (inicial)
+    style_overlay = {"display": "block"}
 
     df = regra_service.get_estatistica_veiculos(
         data, modelos, linha,
@@ -111,7 +138,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     #indicador de quantidade de veiculo
     quantidade_veiculo = df['vec_num_id'].count()
 
-    return df.to_dict(orient="records"), quantidade_veiculo
+    return df.to_dict(orient="records"), quantidade_veiculo,  {"display": "none"}
 
 @callback(
         Output("mensagem-sucesso", "children"),
@@ -213,12 +240,114 @@ def input_kml_menor(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
+
+##############################################################################
+# Labels #####################################################################
+##############################################################################
+def gera_labels_inputs(campo):
+    @callback(
+        Output(f"{campo}-labels", "children"),
+        [
+            Input("input-periodo-dias-monitoramento-regra", "value"),  # datas
+            Input("input-modelos-monitoramento-regra", "value"),        # modelos
+            Input("input-select-linhas-monitoramento-regra", "value"), # linhas
+            Input("input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
+            Input("input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
+            Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
+            Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
+            Input("select-mediana", "value"),
+            Input("select-baixa-performace-suspeita", "value"),
+            Input("select-baixa-performace-indicativo", "value"),
+            Input("select-erro-telemetria", "value"),
+        ]
+    )
+    def atualiza_labels_inputs(
+        datas, modelos, linhas,
+        qtd_viagens, dias_marcados,
+        km_l_min, km_l_max,
+        mediana, suspeita, indicativo, erro
+    ):
+        badges = [
+            dmc.Badge(
+            "Filtro",
+            color="gray",
+            variant="outline",
+            size="lg",
+            style={"fontSize": 16, "padding": "6px 12px"}
+        )
+        ]
+
+        # Datas
+        if datas and datas[0] and datas[1]:
+            data_inicio = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
+            data_fim = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
+            badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
+
+        # Modelos
+        if modelos and "TODOS" not in modelos:
+            for m in modelos:
+                badges.append(dmc.Badge(f"Modelo: {m}", variant="dot"))
+        else:
+            badges.append(dmc.Badge("Todos os modelos", variant="outline"))
+
+        # Linhas
+        if linhas and "TODAS" not in linhas:
+            for l in linhas:
+                badges.append(dmc.Badge(f"Linha: {l}", variant="dot"))
+        else:
+            badges.append(dmc.Badge("Todas as linhas", variant="outline"))
+
+        # Outras métricas
+        if qtd_viagens:
+            badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
+
+        if dias_marcados:
+            badges.append(dmc.Badge(f"{dias_marcados} dias", variant="outline"))
+
+        if km_l_min is not None:
+            badges.append(dmc.Badge(f"Excluir km/L < {km_l_min}", color="red", variant="outline"))
+        if km_l_max is not None:
+            badges.append(dmc.Badge(f"Excluir km/L > {km_l_max}", color="red", variant="outline"))
+
+        if mediana:
+            badges.append(dmc.Badge(f"Mediana: {mediana}%", color="blue", variant="outline"))
+        if suspeita:
+            badges.append(dmc.Badge(f"Suspeita: {suspeita}%", color="orange", variant="outline"))
+        if indicativo:
+            badges.append(dmc.Badge(f"Indicativo: {indicativo}%", color="yellow", variant="outline"))
+        if erro:
+            badges.append(dmc.Badge(f"Erro: {erro}%", color="pink", variant="outline"))
+
+        return [dmc.Group(badges, gap="xs")]
+
+    # Componente de saída
+    return dmc.Group(id=f"{campo}-labels", children=[], gap="xs")
+
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
 layout = dbc.Container(
     [
-        dcc.Store(id="dash-monitoramento-por-linha-store"),
+        # Cabeçalho
+        dmc.Overlay(
+            dmc.Loader(size="xl", color="blue", type="ring"),
+            id="overlay-tabela-monitoramento",
+            blur=3,
+            opacity=0.5,
+            zIndex=9999,
+            fixed=True,
+            center=True,
+            style={
+                "display": "block",  # Mostrar overlay
+                "backgroundColor": "rgba(0, 0, 0, 0.3)",  # Fundo semi-transparente escuro para destacar o loader
+                "width": "100vw",    # Cobrir toda a largura da viewport
+                "height": "100vh",   # Cobrir toda a altura da viewport
+                "position": "fixed", # Fixar overlay na tela toda
+                "top": 0,
+                "left": 0,
+            },
+        ),
         dbc.Row(
             [
                 dbc.Col(
@@ -622,7 +751,7 @@ layout = dbc.Container(
         dmc.Space(h=10),
         dbc.Row(
                 [
-                # dbc.Col(gera_labels_inputs_veiculos("input-geral-combustivel-1"), width=True),
+                dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
                 dbc.Col(
                     html.Div(
                         [
@@ -647,18 +776,24 @@ layout = dbc.Container(
                     ),
                     width="auto",
                 ),
-                html.Div(id="mensagem-sucesso", style={"color": "green"})
+                dcc.Loading(
+                    id="loading-spinner",
+                    type="circle",  # outros: "default", "cube", "dot"
+                    children=html.Div(id="mensagem-sucesso"),
+                    fullscreen=False,  # se True, cobre a tela inteira
+                ),
             ]
         ),
         dmc.Space(h=20),
         dag.AgGrid(
             id="tabela-regras-viagens-monitoramento",
-            columnDefs=monitoramento_tabela.tbl_perc_viagens_monitoramento,
+            columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
             rowData=[],
             defaultColDef={"filter": True, "floatingFilter": True},
             columnSize="autoSize",
             dashGridOptions={
                 "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                "rowSelection": "multiple",  # permite seleção múltipla
             },
             # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
             style={"height": 400, "resize": "vertical", "overflow": "hidden"},
