@@ -302,21 +302,21 @@ def gera_labels_inputs(campo):
             badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
 
         if dias_marcados:
-            badges.append(dmc.Badge(f"{dias_marcados} dias", variant="outline"))
+            badges.append(dmc.Badge(f"{dias_marcados}", variant="outline"))
 
         if km_l_min is not None:
-            badges.append(dmc.Badge(f"Excluir km/L < {km_l_min}", color="red", variant="outline"))
+            badges.append(dmc.Badge(f"Excluir km/L menor que {km_l_min}", color="green", variant="outline"))
         if km_l_max is not None:
-            badges.append(dmc.Badge(f"Excluir km/L > {km_l_max}", color="red", variant="outline"))
+            badges.append(dmc.Badge(f"Excluir km/L maior que {km_l_max}", color="green", variant="outline"))
 
         if mediana:
-            badges.append(dmc.Badge(f"Mediana: {mediana}%", color="blue", variant="outline"))
+            badges.append(dmc.Badge(f"Abaixo da Mediana: {mediana}%", color="yellow", variant="outline"))
         if suspeita:
-            badges.append(dmc.Badge(f"Suspeita: {suspeita}%", color="orange", variant="outline"))
+            badges.append(dmc.Badge(f"Suspeita Baixa Performance: {suspeita}%", color="orange", variant="outline"))
         if indicativo:
-            badges.append(dmc.Badge(f"Indicativo: {indicativo}%", color="yellow", variant="outline"))
+            badges.append(dmc.Badge(f"Indicativo Baixa Performance: {indicativo}%", color="yellow", variant="outline"))
         if erro:
-            badges.append(dmc.Badge(f"Erro: {erro}%", color="pink", variant="outline"))
+            badges.append(dmc.Badge(f"Supeita de Erro Telemetria: {erro}%", color="pink", variant="outline"))
 
         return [dmc.Group(badges, gap="xs")]
 
@@ -406,7 +406,7 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Data"),
+                                                    dbc.Label("Período de Monitoramento"),
                                                     dmc.DatePicker(
                                                         id="input-periodo-dias-monitoramento-regra",
                                                         allowSingleDateInRange=True,

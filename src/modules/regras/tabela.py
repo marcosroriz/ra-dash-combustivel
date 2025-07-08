@@ -22,12 +22,12 @@ tbl_perc_viagens_monitoramento = [
     {"field": "total_status_regular", "headerName": "# Regular", "minWidth": 150, "type": ["numericColumn"]},
     {
         "field": "total_status_suspeita_baixa_perfomance",
-        "headerName": "# Suspeita",
+        "headerName": "# Suspeita Baixa Performance",
         "minWidth": 150,
         "type": ["numericColumn"],
     },
-    {"field": "total_status_baixa_performance", "headerName": "# Baixo", "minWidth": 150, "type": ["numericColumn"]},
-    {"field": "total_status_erro_telemetria", "headerName": "# Erro", "minWidth": 150, "type": ["numericColumn"]},
+    {"field": "total_status_baixa_performance", "headerName": "# Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
+    {"field": "total_status_erro_telemetria", "headerName": "# Supeita Erro", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "percentual_regular", "headerName": "% Viagens Regular", "minWidth": 150, "type": ["numericColumn"]},
     {
         "field": "percentual_suspeita_baixa_perfomance",
