@@ -7,7 +7,7 @@
 # IMPORTS ####################################################################
 ##############################################################################
 # Bibliotecas básicas
-from datetime import date
+from datetime import datetime, timedelta
 import pandas as pd
 import json
 
@@ -278,9 +278,9 @@ def gera_labels_inputs(campo):
         ]
 
         # Datas
-        if datas and datas[0] and datas[1]:
-            data_inicio = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
-            data_fim = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
+        if datas:
+            data_inicio = pd.to_datetime(datetime.now()- timedelta(days=datas)).strftime("%d/%m/%Y")
+            data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
             badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
 
         # Modelos
@@ -406,17 +406,19 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Período de Monitoramento"),
-                                                    dmc.DatePicker(
-                                                        id="input-periodo-dias-monitoramento-regra",
-                                                        allowSingleDateInRange=True,
-                                                        type="range",
-                                                        minDate=date(2025, 1, 1),
-                                                        maxDate=date.today(),
-                                                        value=[
-                                                            date(2025, 1, 1),
-                                                            date.today(),
-                                                        ],
+                                                    dbc.Label("Período de Monitoramento (últimos X dias)"),
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="input-periodo-dias-monitoramento-regra",
+                                                                type="number",
+                                                                placeholder="Dias",
+                                                                value=7,  # valor padrão
+                                                                step=1,
+                                                                min=1,
+                                                            ),
+                                                            dbc.InputGroupText("dias"),
+                                                        ]
                                                     ),
                                                 ],
                                                 className="dash-bootstrap",
@@ -496,7 +498,7 @@ layout = dbc.Container(
                                                             dbc.Input(
                                                                 id="input-quantidade-de-viagens-monitoramento-regra",
                                                                 type="number",
-                                                                placeholder="km/L",
+                                                                placeholder="Dias",
                                                                 value=5,
                                                                 step=1,
                                                                 min=1,

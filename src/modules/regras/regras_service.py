@@ -56,7 +56,7 @@ class RegrasService:
     ):
         
         # Extraí a data inicial e final
-        data_inicio_str, data_fim_str = pd.to_datetime(data[0]).strftime("%Y-%m-%d"), pd.to_datetime(data[1]).strftime("%Y-%m-%d")
+        data_inicio_str, data_fim_str = pd.to_datetime(datetime.now()-timedelta(days=data)), pd.to_datetime(datetime.now()).strftime("%Y-%m-%d")
 
         mediana_viagem = int(mediana_viagem) if mediana_viagem else 0
         # Subquery para os dias selecionados

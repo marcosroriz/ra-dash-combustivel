@@ -1,6 +1,6 @@
 tbl_perc_viagens_monitoramento = [
         {
-        "headerName": "SELEÇÃO",  # sem título
+        "headerName": "ABRIR OS",  # sem título
         "checkboxSelection": True,
         "headerCheckboxSelection": True,  # checkbox no header para selecionar tudo
         "width": 50,
