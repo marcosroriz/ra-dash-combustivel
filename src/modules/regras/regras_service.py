@@ -223,6 +223,7 @@ class RegrasService:
         for coluna in colunas_para_arredondar:
             if coluna in df_pivot.columns:
                 df_pivot[coluna] = df_pivot[coluna].round(2)
+                df_pivot[coluna] = df_pivot[coluna].apply(lambda x: f"{x:.2f}")
 
         return df_pivot
 
