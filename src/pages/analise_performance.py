@@ -7,7 +7,7 @@
 # IMPORTS ####################################################################
 ##############################################################################
 # Bibliotecas básicas
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 import json
 
@@ -76,19 +76,19 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # LOADER #####################################################################
 ###################################################################################
 @callback(
-    Output("overlay-tabela-monitoramento", "style", allow_duplicate=True),
+    Output("overlay-tabela-analise-performance", "style", allow_duplicate=True),
     [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-periodo-dias-analise-performance", "value"),
+        Input("input-modelos-analise-performance", "value"),
+        Input("input-select-linhas-analise-performance", "value"),
+        Input("input-quantidade-de-viagens-analise-performance", "value"),
         Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
+        Input("input-excluir-km-l-menor-que-analise-performance", "value"),
+        Input("input-excluir-km-l-maior-que-analise-performance", "value"),
+        Input("select-mediana-analise-performance", "value"),
+        Input("select-baixa-performace-suspeita-analise-performance", "value"),
+        Input("select-baixa-performace-indicativo-analise-performance", "value"),
+        Input("select-erro-telemetria-analise-performance", "value"),
     ],
     prevent_initial_call=True
 )
@@ -100,21 +100,21 @@ def mostrar_overlay(*_):
 # Callbacks para dados ######################################################
 ##############################################################################
 @callback(
-    Output("tabela-regras-viagens-monitoramento", "rowData"),
-    Output("indicador-quantidade-de-veiculos", "children"),
-    Output("overlay-tabela-monitoramento", "style"),
+    Output("tabela-regras-viagens-analise-performance", "rowData"),
+    Output("indicador-quantidade-de-veiculos-analise-performance", "children"),
+    Output("overlay-tabela-analise-performance", "style"),
     [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-periodo-dias-analise-performance", "value"),
+        Input("input-modelos-analise-performance", "value"),
+        Input("input-select-linhas-analise-performance", "value"),
+        Input("input-quantidade-de-viagens-analise-performance", "value"),
         Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
+        Input("input-excluir-km-l-menor-que-analise-performance", "value"),
+        Input("input-excluir-km-l-maior-que-analise-performance", "value"),
+        Input("select-mediana-analise-performance", "value"),
+        Input("select-baixa-performace-suspeita-analise-performance", "value"),
+        Input("select-baixa-performace-indicativo-analise-performance", "value"),
+        Input("select-erro-telemetria-analise-performance", "value"),
     ],
 )
 def atualiza_tabela_regra_viagens_monitoramento(
@@ -127,7 +127,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     # Exibe overlay (inicial)
     style_overlay = {"display": "block"}
 
-    df = regra_service.get_estatistica_veiculos(
+    df = regra_service.get_estatistica_veiculos_analise_performance(
         data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
         excluir_km_l_menor_que, excluir_km_l_maior_que,
@@ -140,131 +140,54 @@ def atualiza_tabela_regra_viagens_monitoramento(
 
     return df.to_dict(orient="records"), quantidade_veiculo,  {"display": "none"}
 
-@callback(
-    Output("tabela-de-regras-existentes", "rowData"),
-    [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
-    ],
-)
-def atualiza_tabela_regra_existentes(
-    data, modelos, linha,
-    quantidade_de_viagens, dias_marcados, 
-    excluir_km_l_menor_que, excluir_km_l_maior_que,
-    mediana_viagem, suspeita_performace,
-    indicativo_performace, erro_telemetria
-):
-    # Exibe overlay (inicial)
-
-    df = regra_service.get_regras()
-
-
-    return df.to_dict(orient="records")
-
-@callback(
-        Output("mensagem-sucesso", "children"),
-    [
-        Input("btn-criar-regra-monitoramento", "n_clicks"),
-        Input("input-nome-regra-monitoramento", "value"),
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
-    ],
-    prevent_initial_call=True
-)
-def salvar_regra_monitoramento(
-    n_clicks, nome_regra,
-    data, modelos, linha,
-    quantidade_de_viagens, dias_marcados, 
-    excluir_km_l_menor_que, excluir_km_l_maior_que,
-    mediana_viagem, suspeita_performace,
-    indicativo_performace, erro_telemetria
-): 
-    ctx = callback_context  # Obtém o contexto do callback
-    if not ctx.triggered:  
-        return dash.no_update  # Evita execução desnecessária
-    
-    # Verifica se o callback foi acionado pelo botão de download
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if triggered_id != "btn-criar-regra-monitoramento":
-        return dash.no_update  # Ignora mudanças nos outros inputs
-
-    if not n_clicks or n_clicks <= 0: 
-        return dash.no_update
-
-    regra_service.salvar_regra_monitoramento(
-        nome_regra, data, modelos, linha,
-        quantidade_de_viagens, dias_marcados, 
-        excluir_km_l_menor_que, excluir_km_l_maior_que,
-        mediana_viagem, suspeita_performace,
-        indicativo_performace, erro_telemetria
-    )
-    return "✅ Regra salva com sucesso!"
 
 ##############################################################################
 # Callbacks para switch ######################################################
 ##############################################################################
 
 @callback(
-    Output("container-mediana", "style"),
-    Input("switch-mediana", "checked"),
+    Output("container-mediana-analise-peformance", "style"),
+    Input("switch-mediana-analise-performance", "checked"),
 )
 def input_mediana(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
 @callback(
-    Output("container-baixa-performace-suspeita", "style"),
-    Input("switch-baixa-performace-suspeita", "checked"),
+    Output("container-baixa-performace-suspeita-analise-performance", "style"),
+    Input("switch-baixa-performace-suspeita-analise-performance", "checked"),
 )
 def input_baixa_performace_suspeita(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
 @callback(
-    Output("container-baixa-performace-indicativo", "style"),
-    Input("switch-baixa-performace-indicativo", "checked"),
+    Output("container-baixa-performace-indicativo-analise-performance", "style"),
+    Input("switch-baixa-performace-indicativo-analise-performance", "checked"),
 )
 def input_baixa_performace_indicativo(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
 @callback(
-    Output("container-erro-telemetria", "style"),
-    Input("switch-erro-telemetria", "checked"),
+    Output("container-erro-telemetria-analise-performance", "style"),
+    Input("switch-erro-telemetria-analise-performance", "checked"),
 )
 def input_erro_telemetria(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
 @callback(
-    Output("container-kml-maior", "style"),
-    Input("switch-kml-maior", "checked"),
+    Output("container-kml-maior-analise-performance", "style"),
+    Input("switch-kml-maior-analise-performancer", "checked"),
 )
 def input_kml_maior(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
 @callback(
-    Output("container-kml-menor", "style"),
-    Input("switch-kml-menor", "checked"),
+    Output("container-kml-menor-analise-performance", "style"),
+    Input("switch-kml-menor-analise-performance", "checked"),
 )
 def input_kml_menor(ativado):
     # Se ativado (True): display block; se desativado: none
@@ -278,17 +201,17 @@ def gera_labels_inputs(campo):
     @callback(
         Output(f"{campo}-labels", "children"),
         [
-            Input("input-periodo-dias-monitoramento-regra", "value"),  # datas
-            Input("input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("input-select-linhas-monitoramento-regra", "value"), # linhas
-            Input("input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
+            Input("input-periodo-dias-analise-performance", "value"),  # datas
+            Input("input-modelos-analise-performance", "value"),        # modelos
+            Input("input-select-linhas-analise-performance", "value"), # linhas
+            Input("input-quantidade-de-viagens-analise-performance", "value"),  # qtd viagens
             Input("input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
-            Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-            Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-            Input("select-mediana", "value"),
-            Input("select-baixa-performace-suspeita", "value"),
-            Input("select-baixa-performace-indicativo", "value"),
-            Input("select-erro-telemetria", "value"),
+            Input("input-excluir-km-l-menor-que-analise-performance", "value"),
+            Input("input-excluir-km-l-maior-que-analise-performance", "value"),
+            Input("select-mediana-analise-performance", "value"),
+            Input("select-baixa-performace-suspeita-analise-performance", "value"),
+            Input("select-baixa-performace-indicativo-analise-performance", "value"),
+            Input("select-erro-telemetria-analise-performance", "value"),
         ]
     )
     def atualiza_labels_inputs(
@@ -308,11 +231,10 @@ def gera_labels_inputs(campo):
         ]
 
         # Datas
-        if datas:
-            data_inicio = pd.to_datetime(datetime.now()- timedelta(days=datas)).strftime("%d/%m/%Y")
-            data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
+        if datas and datas[0] and datas[1]:
+            data_inicio = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
+            data_fim = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
             badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
-
         # Modelos
         if modelos and "TODOS" not in modelos:
             for m in modelos:
@@ -362,7 +284,7 @@ layout = dbc.Container(
         # Cabeçalho
         dmc.Overlay(
             dmc.Loader(size="xl", color="blue", type="ring"),
-            id="overlay-tabela-monitoramento",
+            id="overlay-tabela-analise-performance",
             blur=3,
             opacity=0.5,
             zIndex=9999,
@@ -410,45 +332,21 @@ layout = dbc.Container(
                         ),
                         dbc.Row(
                             [   
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Nome da Regra de Monitoramneto"),
-                                                    dbc.Input(
-                                                        id="input-nome-regra-monitoramento",
-                                                        type="text",  # Alterado de "number" para "text"
-                                                        placeholder="Digite algo...",
-                                                        value="",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=12,
-                                ), 
                                 dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Período de Monitoramento (últimos X dias)"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-periodo-dias-monitoramento-regra",
-                                                                type="number",
-                                                                placeholder="Dias",
-                                                                value=30,  # valor padrão
-                                                                step=1,
-                                                                min=1,
-                                                            ),
-                                                            dbc.InputGroupText("dias"),
-                                                        ]
+                                                    dbc.Label("Período de Monitoramento"),
+                                                    dmc.DatePicker(
+                                                        id="input-periodo-dias-analise-performance",
+                                                        type="range",  # permite selecionar intervalo
+                                                        allowSingleDateInRange=True,  # permite data única também
+                                                        minDate=date(2025, 1, 1),  # data mínima permitida
+                                                        maxDate=date.today(),        # data máxima: hoje
+                                                        value=[date(2025, 1, 1), date.today()],  # valor padrão
+                                                        dropdownType="modal",  # melhor para dispositivos móveis (opcional)
                                                     ),
                                                 ],
                                                 className="dash-bootstrap",
@@ -465,7 +363,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Modelos"),
                                                     dcc.Dropdown(
-                                                        id="input-modelos-monitoramento-regra",
+                                                        id="input-modelos-analise-performance",
                                                         multi=True,
                                                         options=[
                                                             {
@@ -497,7 +395,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Linha"),
                                                     dcc.Dropdown(
-                                                        id="input-select-linhas-monitoramento-regra",
+                                                        id="input-select-linhas-analise-performance",
                                                         options=[
                                                             {
                                                                 "label": linha["LABEL"],
@@ -526,7 +424,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="input-quantidade-de-viagens-monitoramento-regra",
+                                                                id="input-quantidade-de-viagens-analise-performance",
                                                                 type="number",
                                                                 placeholder="Viagens",
                                                                 value=5,
@@ -590,7 +488,7 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         dmc.Switch(
-                                            id="switch-kml-menor",
+                                            id="switch-kml-menor-analise-performance",
                                             label="Excluir km/L menor que",
                                             checked=False
                                         ),
@@ -598,14 +496,14 @@ layout = dbc.Container(
                                         html.Div(
                                             dbc.InputGroup([
                                                 dbc.Input(
-                                                    id="input-excluir-km-l-menor-que-monitoramento-regra",
+                                                    id="input-excluir-km-l-menor-que-analise-performance",
                                                     type="number",
                                                     min=1,
                                                     step=0.1,
                                                 ),
                                                 dbc.InputGroupText("km/L")
                                             ]),
-                                            id="container-kml-menor",
+                                            id="container-kml-menor-analise-performance",
                                             style={"display": "none", "marginTop": "10px"}
                                         )
                                     ], body=True),
@@ -616,7 +514,7 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         dmc.Switch(
-                                            id="switch-kml-maior",
+                                            id="switch-kml-maior-analise-performancer",
                                             label="Excluir km/L maior que",
                                             checked=False
                                         ),
@@ -624,14 +522,14 @@ layout = dbc.Container(
                                         html.Div(
                                             dbc.InputGroup([
                                                 dbc.Input(
-                                                    id="input-excluir-km-l-maior-que-monitoramento-regra",
+                                                    id="input-excluir-km-l-maior-que-analise-performance",
                                                     type="number",
                                                     min=1,
                                                     step=0.1,
                                                 ),
                                                 dbc.InputGroupText("km/L")
                                             ]),
-                                            id="container-kml-maior",
+                                            id="container-kml-maior-analise-performance",
                                             style={"display": "none", "marginTop": "10px"}
                                         )
                                     ], body=True),
@@ -642,12 +540,12 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         html.Div([
-                                            dmc.Switch(id="switch-mediana", label="Viagens abaixo da mediana ", checked=False),
+                                            dmc.Switch(id="switch-mediana-analise-performance", label="Viagens abaixo da mediana ", checked=False),
                                             dmc.Space(h=10),
                                             html.Div(
                                                 dbc.InputGroup([
                                                     dbc.Input(
-                                                        id="select-mediana",
+                                                        id="select-mediana-analise-performance",
                                                         type="number",
                                                         placeholder="Digite a porcentagem",
                                                         min=10,
@@ -656,7 +554,7 @@ layout = dbc.Container(
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
-                                                id="container-mediana",
+                                                id="container-mediana-analise-peformance",
                                                 style={"display": "none", "marginTop": "10px"}
                                             )
                                         ])
@@ -667,12 +565,12 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         html.Div([
-                                            dmc.Switch(id="switch-baixa-performace-suspeita", label="Viagens suspeita baixa performance", checked=False),
+                                            dmc.Switch(id="switch-baixa-performace-suspeita-analise-performance", label="Viagens suspeita baixa performance", checked=False),
                                             dmc.Space(h=10),
                                             html.Div(
                                                 dbc.InputGroup([
                                                     dbc.Input(
-                                                        id="select-baixa-performace-suspeita",
+                                                        id="select-baixa-performace-suspeita-analise-performance",
                                                         type="number",
                                                         placeholder="Digite a porcentagem",
                                                         min=10,
@@ -681,7 +579,7 @@ layout = dbc.Container(
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
-                                                id="container-baixa-performace-suspeita",
+                                                id="container-baixa-performace-suspeita-analise-performance",
                                                 style={"display": "none", "marginTop": "10px"}
                                             )
                                         ])
@@ -692,12 +590,12 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         html.Div([
-                                            dmc.Switch(id="switch-baixa-performace-indicativo", label="Viagens indicativo baixa performance", checked=False),
+                                            dmc.Switch(id="switch-baixa-performace-indicativo-analise-performance", label="Viagens indicativo baixa performance", checked=False),
                                             dmc.Space(h=10),
                                             html.Div(
                                                 dbc.InputGroup([
                                                     dbc.Input(
-                                                        id="select-baixa-performace-indicativo",
+                                                        id="select-baixa-performace-indicativo-analise-performance",
                                                         type="number",
                                                         placeholder="Digite a porcentagem",
                                                         min=0,
@@ -706,7 +604,7 @@ layout = dbc.Container(
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
-                                                id="container-baixa-performace-indicativo",
+                                                id="container-baixa-performace-indicativo-analise-performance",
                                                 style={"display": "none", "marginTop": "10px"}
                                             )
                                         ])
@@ -717,12 +615,12 @@ layout = dbc.Container(
                                 dbc.Col(
                                     dbc.Card([
                                         html.Div([
-                                            dmc.Switch(id="switch-erro-telemetria", label="Viagens suspeita erro de telemetria", checked=False),
+                                            dmc.Switch(id="switch-erro-telemetria-analise-performance", label="Viagens suspeita erro de telemetria", checked=False),
                                             dmc.Space(h=10),
                                             html.Div(
                                                 dbc.InputGroup([
                                                     dbc.Input(
-                                                        id="select-erro-telemetria",
+                                                        id="select-erro-telemetria-analise-performance",
                                                         type="number",
                                                         placeholder="Digite a porcentagem",
                                                         min=10,
@@ -731,18 +629,9 @@ layout = dbc.Container(
                                                     ),
                                                     dbc.InputGroupText("%")
                                                 ]),
-                                                id="container-erro-telemetria",
+                                                id="container-erro-telemetria-analise-performance",
                                                 style={"display": "none", "marginTop": "10px"}
                                             )
-                                        ])
-                                    ], body=True),
-                                    md=3
-                                ),
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-os-automatica", label="Criar OS automática", checked=False),
                                         ])
                                     ], body=True),
                                     md=3
@@ -753,51 +642,6 @@ layout = dbc.Container(
                     md=12,
                 ),
             ]
-        ),
-        dmc.Space(h=10),
-        dbc.Col(
-                html.Div(
-                    [
-                        html.Button(
-                            "Cria regra",
-                            id="btn-criar-regra-monitoramento",
-                            n_clicks=0,
-                            style={
-                                "background-color": "#007bff",  # Azul
-                                "color": "white",
-                                "border": "none",
-                                "padding": "10px 20px",
-                                "border-radius": "8px",
-                                "cursor": "pointer",
-                                "font-size": "16px",
-                                "font-weight": "bold",
-                            },
-                        ),
-                        
-                    ],
-                    style={"text-align": "center"},
-                ),
-                width="auto",
-            ),
-        dmc.Title("Regras Existentes", order=3), 
-        dmc.Space(h=20),
-            dag.AgGrid(
-                id="tabela-de-regras-existentes",
-                columnDefs=regras_tabela.tbl_regras_monitoramento,
-                rowData=[],
-                defaultColDef={"filter": True, "floatingFilter": True},
-                columnSize="autoSize",
-                dashGridOptions={
-                    "localeText": locale_utils.AG_GRID_LOCALE_BR,
-                },
-                # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-                style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        dcc.Loading(
-            id="loading-spinner",
-            type="circle",  # outros: "default", "cube", "dot"
-            children=html.Div(id="mensagem-sucesso"),
-            fullscreen=False,  # se True, cobre a tela inteira
         ),
         dmc.Space(h=20),
         dbc.Row(
@@ -810,7 +654,7 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="indicador-quantidade-de-veiculos", order=2),
+                                        dmc.Title(id="indicador-quantidade-de-veiculos-analise-performance", order=2),
                                         DashIconify(
                                             icon="mdi:bomb",
                                             width=48,
@@ -835,28 +679,28 @@ layout = dbc.Container(
     ],
     style={"margin-top": "20px", "margin-bottom": "20px"},
     ),
-        dmc.Space(h=10),
-        dbc.Row(
-                [
-                dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
-            ]
-        ),
-        dmc.Space(h=20),
-        dag.AgGrid(
-            id="tabela-regras-viagens-monitoramento",
-            columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-                "rowSelection": "multiple",  # permite seleção múltipla
-            },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
+    dmc.Space(h=10),
+    dbc.Row(
+            [
+            dbc.Col(gera_labels_inputs("labels-analise-performance"), width=True),
+        ]
+    ),
+    dmc.Space(h=20),
+    dag.AgGrid(
+        id="tabela-regras-viagens-analise-performance",
+        columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
+        rowData=[],
+        defaultColDef={"filter": True, "floatingFilter": True},
+        columnSize="autoSize",
+        dashGridOptions={
+            "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            "rowSelection": "multiple",  # permite seleção múltipla
+        },
+        # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+        style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+    ),
 
-    ]
+]
 )
 
-dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento")
+dash.register_page(__name__, name="Analise Performance/Consumo", path="/analise-performance-consumo")
