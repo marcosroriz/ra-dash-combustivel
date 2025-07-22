@@ -168,7 +168,6 @@ class RegrasService:
 
         df = pd.read_sql(query, self.pgEngine)
 
-        print(query)
         if df.empty:
             return pd.DataFrame(columns=df.columns)
 
@@ -342,7 +341,6 @@ class RegrasService:
 
         df = pd.read_sql(query, self.pgEngine)
 
-        print(query)
         if df.empty:
             return pd.DataFrame(columns=df.columns)
 
@@ -390,7 +388,8 @@ class RegrasService:
         colunas_para_arredondar = [
             'percentual_erro_telemetria',
             'percentual_suspeita_baixa_performance',
-            'percentual_baixa_performance'
+            'percentual_baixa_performance',
+            'media_consumo_por_km'
         ]
 
         # Arredonda apenas as colunas existentes no DataFrame

@@ -102,7 +102,7 @@ def mostrar_overlay(*_):
 @callback(
     Output("tabela-regras-viagens-analise-performance", "rowData"),
     Output("indicador-quantidade-de-veiculos-analise-performance", "children"),
-    Output("overlay-tabela-analise-performance", "style"),
+    # Output("overlay-tabela-analise-performance", "style"),
     [
         Input("input-periodo-dias-analise-performance", "value"),
         Input("input-modelos-analise-performance", "value"),
@@ -124,8 +124,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     mediana_viagem, suspeita_performace,
     indicativo_performace, erro_telemetria
 ):
-    # Exibe overlay (inicial)
-    style_overlay = {"display": "block"}
+
 
     df = regra_service.get_estatistica_veiculos_analise_performance(
         data, modelos, linha,
@@ -138,7 +137,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     #indicador de quantidade de veiculo
     quantidade_veiculo = df['vec_num_id'].count()
 
-    return df.to_dict(orient="records"), quantidade_veiculo,  {"display": "none"}
+    return df.to_dict(orient="records"), quantidade_veiculo
 
 
 ##############################################################################
@@ -282,24 +281,24 @@ def gera_labels_inputs(campo):
 layout = dbc.Container(
     [
         # Cabeçalho
-        dmc.Overlay(
-            dmc.Loader(size="xl", color="blue", type="ring"),
-            id="overlay-tabela-analise-performance",
-            blur=3,
-            opacity=0.5,
-            zIndex=9999,
-            fixed=True,
-            center=True,
-            style={
-                "display": "block",  # Mostrar overlay
-                "backgroundColor": "rgba(0, 0, 0, 0.3)",  # Fundo semi-transparente escuro para destacar o loader
-                "width": "100vw",    # Cobrir toda a largura da viewport
-                "height": "100vh",   # Cobrir toda a altura da viewport
-                "position": "fixed", # Fixar overlay na tela toda
-                "top": 0,
-                "left": 0,
-            },
-        ),
+        # dmc.Overlay(
+        #     dmc.Loader(size="xl", color="blue", type="ring"),
+        #     id="overlay-tabela-analise-performance",
+        #     blur=3,
+        #     opacity=0.5,
+        #     zIndex=9999,
+        #     fixed=True,
+        #     center=True,
+        #     style={
+        #         "display": "block",  # Mostrar overlay
+        #         "backgroundColor": "rgba(0, 0, 0, 0.3)",  # Fundo semi-transparente escuro para destacar o loader
+        #         "width": "100vw",    # Cobrir toda a largura da viewport
+        #         "height": "100vh",   # Cobrir toda a altura da viewport
+        #         "position": "fixed", # Fixar overlay na tela toda
+        #         "top": 0,
+        #         "left": 0,
+        #     },
+        # ),
         dbc.Row(
             [
                 dbc.Col(

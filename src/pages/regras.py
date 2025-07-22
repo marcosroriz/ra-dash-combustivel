@@ -178,6 +178,8 @@ def salvar_regra_monitoramento(
 
     if not n_clicks or n_clicks <= 0: 
         return dash.no_update
+    
+    print('Entrando aqui')
 
     regra_service.salvar_regra_monitoramento(
         nome_regra, data, modelos, linha,
@@ -714,8 +716,13 @@ layout = dbc.Container(
                                         html.Div([
                                             dmc.Switch(id="switch-os-automatica", label="Criar OS automática", checked=False),
                                         ])
-                                    ], body=True),
-                                    md=3
+                                    ], body=True, style={
+                                            'backgroundColor': "#F6B64F",  # Vermelho Pastel
+                                            'color': 'black',
+                                            'borderRadius': '8px',
+                                            'boxShadow': '2px 2px 8px rgba(0,0,0,0.2)'
+                                        }),
+                                    md=12
                                 ),
                             ]
                         ),
@@ -742,7 +749,7 @@ layout = dbc.Container(
                                 "font-size": "16px",
                                 "font-weight": "bold",
                             },
-                        ),
+                        ), html.Div(id="mensagem-sucesso", style={"marginTop": "10px", "fontWeight": "bold"})
                         
                     ],
                     style={"text-align": "center"},

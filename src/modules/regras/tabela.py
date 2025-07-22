@@ -16,6 +16,9 @@ tbl_perc_viagens_monitoramento = [
         "filter": "agNumberColumnFilter",
         "maxWidth": 150,
         "type": ["numericColumn"],
+        "valueFormatter": {
+            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2))"
+        }
     },
     {"field": "total_viagens", "headerName": "Quantidade de Viagens", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_regular", "headerName": "Regular", "minWidth": 150, "type": ["numericColumn"]},
