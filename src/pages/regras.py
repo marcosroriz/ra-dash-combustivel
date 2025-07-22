@@ -738,6 +738,15 @@ layout = dbc.Container(
                                     ], body=True),
                                     md=3
                                 ),
+                                dmc.Space(h=10),
+                                dbc.Col(
+                                    dbc.Card([
+                                        html.Div([
+                                            dmc.Switch(id="switch-os-automatica", label="Criar OS automática", checked=False),
+                                        ])
+                                    ], body=True),
+                                    md=3
+                                ),
                             ]
                         ),
                     ],
@@ -770,7 +779,7 @@ layout = dbc.Container(
                 ),
                 width="auto",
             ),
-        dmc.Title("📋 Regras Existentes", order=3),  # Aqui está o título
+        dmc.Title("Regras Existentes", order=3), 
         dmc.Space(h=20),
             dag.AgGrid(
                 id="tabela-de-regras-existentes",

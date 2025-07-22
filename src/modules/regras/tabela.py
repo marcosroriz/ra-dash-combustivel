@@ -1,6 +1,6 @@
 tbl_perc_viagens_monitoramento = [
     # {
-    #     "headerName": "ABRIR OS",
+    #     "headerName": "ABRIR OS AUTOMATICA",
     #     "checkboxSelection": True,
     #     "headerCheckboxSelection": True,
     #     "width": 50,
@@ -42,28 +42,36 @@ tbl_perc_viagens_monitoramento = [
         "headerName": "% Viagens Regular",
         "minWidth": 150,
         "type": ["numericColumn"],
-        "valueFormatter": {"function": "params => Number(params.value).toFixed(2) + '%'"}
+        "valueFormatter": {
+            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+        }
     },
     {
         "field": "percentual_suspeita_baixa_performance",
         "headerName": "% Viagens Suspeita de Baixa Performance",
         "minWidth": 150,
         "type": ["numericColumn"],
-        "valueFormatter": {"function": "params => Number(params.value).toFixed(2) + '%'"}
+        "valueFormatter": {
+            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+        }
     },
     {
         "field": "percentual_baixa_performance",
         "headerName": "% Viagens Baixa Performnce ",
         "minWidth": 150,
         "type": ["numericColumn"],
-        "valueFormatter": {"function": "params => Number(params.value).toFixed(2) + '%'"}
+        "valueFormatter": {
+            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+        }
     },
     {
         "field": "percentual_erro_telemetria",
         "headerName": "% Viagens Supeita Erro",
         "minWidth": 150,
         "type": ["numericColumn"],
-        "valueFormatter": {"function": "params => Number(params.value).toFixed(2) + '%'"}
+        "valueFormatter": {
+            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+        }
     },
 ]
 

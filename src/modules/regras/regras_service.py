@@ -212,6 +212,18 @@ class RegrasService:
         if quantidade_de_viagens > 0:
             df_pivot = df_pivot[df_pivot['total_viagens'] >= quantidade_de_viagens]
 
+        # Lista de colunas que devem ser arredondadas
+        colunas_para_arredondar = [
+            'percentual_erro_telemetria',
+            'percentual_suspeita_baixa_performance',
+            'percentual_baixa_performance'
+        ]
+
+        # Arredonda apenas as colunas existentes no DataFrame
+        for coluna in colunas_para_arredondar:
+            if coluna in df_pivot.columns:
+                df_pivot[coluna] = df_pivot[coluna].round(2)
+
         return df_pivot
 
     
