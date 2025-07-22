@@ -141,6 +141,36 @@ def atualiza_tabela_regra_viagens_monitoramento(
     return df.to_dict(orient="records"), quantidade_veiculo,  {"display": "none"}
 
 @callback(
+    Output("tabela-de-regras-existentes", "rowData"),
+    [
+        Input("input-periodo-dias-monitoramento-regra", "value"),
+        Input("input-modelos-monitoramento-regra", "value"),
+        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("input-select-dia-linha-combustivel-regra", "value"),
+        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
+        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
+        Input("select-mediana", "value"),
+        Input("select-baixa-performace-suspeita", "value"),
+        Input("select-baixa-performace-indicativo", "value"),
+        Input("select-erro-telemetria", "value"),
+    ],
+)
+def atualiza_tabela_regra_existentes(
+    data, modelos, linha,
+    quantidade_de_viagens, dias_marcados, 
+    excluir_km_l_menor_que, excluir_km_l_maior_que,
+    mediana_viagem, suspeita_performace,
+    indicativo_performace, erro_telemetria
+):
+    # Exibe overlay (inicial)
+
+    df = regra_service.get_regras()
+
+
+    return df.to_dict(orient="records")
+
+@callback(
         Output("mensagem-sucesso", "children"),
     [
         Input("btn-criar-regra-monitoramento", "n_clicks"),
@@ -413,7 +443,7 @@ layout = dbc.Container(
                                                                 id="input-periodo-dias-monitoramento-regra",
                                                                 type="number",
                                                                 placeholder="Dias",
-                                                                value=7,  # valor padrão
+                                                                value=30,  # valor padrão
                                                                 step=1,
                                                                 min=1,
                                                             ),
@@ -492,17 +522,18 @@ layout = dbc.Container(
                                         [
                                             html.Div(
                                                 [
-                                                    dbc.Label("Quantidade minima de viagens"),
+                                                    dbc.Label("Quantidade mínima de viagens no período"),
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
                                                                 id="input-quantidade-de-viagens-monitoramento-regra",
                                                                 type="number",
-                                                                placeholder="Dias",
+                                                                placeholder="Viagens",
                                                                 value=5,
                                                                 step=1,
                                                                 min=1,
                                                             ),
+                                                            dbc.InputGroupText("viagens"),
                                                         ]
                                                     ),
                                                 ],
@@ -715,6 +746,51 @@ layout = dbc.Container(
             ]
         ),
         dmc.Space(h=10),
+        dbc.Col(
+                html.Div(
+                    [
+                        html.Button(
+                            "Cria regra",
+                            id="btn-criar-regra-monitoramento",
+                            n_clicks=0,
+                            style={
+                                "background-color": "#007bff",  # Azul
+                                "color": "white",
+                                "border": "none",
+                                "padding": "10px 20px",
+                                "border-radius": "8px",
+                                "cursor": "pointer",
+                                "font-size": "16px",
+                                "font-weight": "bold",
+                            },
+                        ),
+                        
+                    ],
+                    style={"text-align": "center"},
+                ),
+                width="auto",
+            ),
+        dmc.Title("📋 Regras Existentes", order=3),  # Aqui está o título
+        dmc.Space(h=20),
+            dag.AgGrid(
+                id="tabela-de-regras-existentes",
+                columnDefs=regras_tabela.tbl_regras_monitoramento,
+                rowData=[],
+                defaultColDef={"filter": True, "floatingFilter": True},
+                columnSize="autoSize",
+                dashGridOptions={
+                    "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                },
+                # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+                style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
+        dcc.Loading(
+            id="loading-spinner",
+            type="circle",  # outros: "default", "cube", "dot"
+            children=html.Div(id="mensagem-sucesso"),
+            fullscreen=False,  # se True, cobre a tela inteira
+        ),
+        dmc.Space(h=20),
         dbc.Row(
             [
         dbc.Row(
@@ -754,36 +830,6 @@ layout = dbc.Container(
         dbc.Row(
                 [
                 dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.Button(
-                                "Cria regra",
-                                id="btn-criar-regra-monitoramento",
-                                n_clicks=0,
-                                style={
-                                    "background-color": "#007bff",  # Azul
-                                    "color": "white",
-                                    "border": "none",
-                                    "padding": "10px 20px",
-                                    "border-radius": "8px",
-                                    "cursor": "pointer",
-                                    "font-size": "16px",
-                                    "font-weight": "bold",
-                                },
-                            ),
-                            
-                        ],
-                        style={"text-align": "right"},
-                    ),
-                    width="auto",
-                ),
-                dcc.Loading(
-                    id="loading-spinner",
-                    type="circle",  # outros: "default", "cube", "dot"
-                    children=html.Div(id="mensagem-sucesso"),
-                    fullscreen=False,  # se True, cobre a tela inteira
-                ),
             ]
         ),
         dmc.Space(h=20),
@@ -800,7 +846,7 @@ layout = dbc.Container(
             # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
             style={"height": 400, "resize": "vertical", "overflow": "hidden"},
         ),
-        dmc.Space(h=20),
+
     ]
 )
 

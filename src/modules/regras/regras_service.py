@@ -18,6 +18,13 @@ class RegrasService:
 
         self.pgEngine = pgEngine
 
+    def get_regras(self):
+
+        query = '''
+        SELECT * FROM public.regras_monitoramento;
+        '''
+        return pd.read_sql(query, self.pgEngine)
+
     def get_subquery_dias(self, dias_marcados):
         dias_subquery = ""
 
@@ -54,11 +61,12 @@ class RegrasService:
         mediana_viagem=0, suspeita_performace=0,
         indicativo_performace=0, erro_telemetria=0         
     ):
-        
-        # Extraí a data inicial e final
+
+        # Extrai a data inicial e final
         data_inicio_str, data_fim_str = pd.to_datetime(datetime.now()-timedelta(days=data)), pd.to_datetime(datetime.now()).strftime("%Y-%m-%d")
 
         mediana_viagem = int(mediana_viagem) if mediana_viagem else 0
+
         # Subquery para os dias selecionados
         subquery_dias_marcados = self.get_subquery_dias(dias_marcados)
         subquery_modelo = subquery_modelos_combustivel(modelos)
@@ -102,36 +110,33 @@ class RegrasService:
             FROM amostras_validas
             WHERE data_local BETWEEN '{data_inicio_str}' AND '{data_fim_str}'
         ),
-        quartis AS (
+        estatisticas AS (
             SELECT
                 vec_model_padronizado,
                 encontrou_numero_linha,
                 encontrou_numero_sublinha,
                 encontrou_sentido_linha,
                 slot_horario,
-                PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY km_por_litro) AS q1,
-                PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY km_por_litro) AS mediana,
-                PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY km_por_litro) AS q3
+                AVG(km_por_litro) AS media,
+                STDDEV(km_por_litro) AS desvio_padrao
             FROM amostras_filtradas
             GROUP BY vec_model_padronizado, encontrou_numero_linha, encontrou_numero_sublinha, encontrou_sentido_linha, slot_horario
         ),
         classificados AS (
-            SELECT a.*, q.q1, q.q3, q.mediana,
-                (q.q3 - q.q1) AS iqr,
-                (a.km_por_litro - q.mediana) AS diferenca_mediana,
+            SELECT a.*, e.media, e.desvio_padrao,
                 CASE
-                    WHEN a.km_por_litro < q.q1 - 1.5 * (q.q3 - q.q1) THEN 'BAIXA PERFORMANCE'
-                    WHEN a.km_por_litro < q.q1 - 1.0 * (q.q3 - q.q1) THEN 'SUSPEITA BAIXA PERFOMANCE'
-                    WHEN a.km_por_litro > q.q3 + 1.5 * (q.q3 - q.q1) THEN 'ERRO TELEMETRIA'
+                    WHEN a.km_por_litro > e.media + 1 * e.desvio_padrao THEN 'ERRO TELEMETRIA'
+                    WHEN a.km_por_litro < e.media - 2 * e.desvio_padrao THEN 'BAIXA PERFORMANCE'
+                    WHEN a.km_por_litro < e.media - 1 * e.desvio_padrao THEN 'SUSPEITA BAIXA PERFORMANCE'
                     ELSE 'REGULAR'
                 END AS status_consumo
             FROM amostras_filtradas a
-            JOIN quartis q
-            ON a.vec_model_padronizado = q.vec_model_padronizado
-                AND a.encontrou_numero_linha = q.encontrou_numero_linha
-                AND a.encontrou_numero_sublinha = q.encontrou_numero_sublinha
-                AND a.encontrou_sentido_linha = q.encontrou_sentido_linha
-                AND a.slot_horario = q.slot_horario
+            JOIN estatisticas e
+            ON a.vec_model_padronizado = e.vec_model_padronizado
+            AND a.encontrou_numero_linha = e.encontrou_numero_linha
+            AND a.encontrou_numero_sublinha = e.encontrou_numero_sublinha
+            AND a.encontrou_sentido_linha = e.encontrou_sentido_linha
+            AND a.slot_horario = e.slot_horario
         ),
         resumo_por_veiculo AS (
             SELECT vec_num_id, vec_model, status_consumo, COUNT(*) AS total_status
@@ -143,8 +148,8 @@ class RegrasService:
                 vec_num_id,
                 AVG(km_por_litro) AS MEDIA_CONSUMO_POR_KM,
                 COUNT(*) AS total_geral,
-                AVG(mediana) AS mediana,
-                (100.0 * COUNT(*) FILTER (WHERE km_por_litro < mediana) / COUNT(*)) AS percentual_abaixo
+                AVG(media) AS media_geral,
+                (100.0 * COUNT(*) FILTER (WHERE km_por_litro < media) / COUNT(*)) AS percentual_abaixo
             FROM classificados
             GROUP BY vec_num_id
         )
@@ -160,8 +165,10 @@ class RegrasService:
         JOIN total_por_veiculo t ON r.vec_num_id = t.vec_num_id
         WHERE T.percentual_abaixo >= {mediana_viagem}
         """
-        print(query)
+
         df = pd.read_sql(query, self.pgEngine)
+
+        print(query)
         if df.empty:
             return pd.DataFrame(columns=df.columns)
 
@@ -177,6 +184,7 @@ class RegrasService:
         df_pivot.columns = [f'{col[0]}_{col[1].lower().replace(" ", "_")}' for col in df_pivot.columns]
         df_pivot = df_pivot.reset_index()
         df_pivot["total_viagens"] = df_pivot.filter(like="total_status").sum(axis=1)
+        df_pivot = df_pivot.sort_values(by='total_viagens', ascending=False)
         df_pivot["media_viagens_dia"] = df_pivot["total_viagens"]
 
         if excluir_km_l_menor_que is not None and excluir_km_l_maior_que is not None:
@@ -184,7 +192,8 @@ class RegrasService:
                 (df_pivot["media_consumo_por_km"] >= excluir_km_l_menor_que) &
                 (df_pivot["media_consumo_por_km"] <= excluir_km_l_maior_que)
             ]
-        print(df_pivot.columns)
+
+        
         erro_telemetria = float(erro_telemetria or 0)
         suspeita_performace = float(suspeita_performace or 0)
         indicativo_performace = float(indicativo_performace or 0)
@@ -194,8 +203,8 @@ class RegrasService:
         if 'percentual_erro_telemetria' in df_pivot.columns:
             df_pivot = df_pivot[df_pivot['percentual_erro_telemetria'] >= erro_telemetria]
 
-        if 'percentual_suspeita_baixa_perfomance' in df_pivot.columns:
-            df_pivot = df_pivot[df_pivot['percentual_suspeita_baixa_perfomance'] >= suspeita_performace]
+        if 'percentual_suspeita_baixa_performance' in df_pivot.columns:
+            df_pivot = df_pivot[df_pivot['percentual_suspeita_baixa_performance'] >= suspeita_performace]
 
         if 'percentual_baixa_performance' in df_pivot.columns:
             df_pivot = df_pivot[df_pivot['percentual_baixa_performance'] >= indicativo_performace]
@@ -204,6 +213,7 @@ class RegrasService:
             df_pivot = df_pivot[df_pivot['total_viagens'] >= quantidade_de_viagens]
 
         return df_pivot
+
     
     
 
@@ -271,6 +281,5 @@ class RegrasService:
                     "criado_em": datetime.now()
                 })
                 conn.commit()
-                print("Regra salva com sucesso.")
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
