@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 
 # Lib para lidar com feriados
-import holidays
-
 from datetime import datetime, timedelta
 from modules.sql_utils import *
 from sqlalchemy import text
@@ -18,11 +16,15 @@ class RegrasService:
 
         self.pgEngine = pgEngine
 
-    def get_regras(self):
+    def get_regras(self, lista_regras):
 
-        query = '''
-        SELECT * FROM public.regras_monitoramento;
+        subquery_regras = subquery_regras_monitoramento(lista_regras)
+
+        query = f'''
+        SELECT * FROM public.regras_monitoramento
         '''
+        if not 'TODAS' in lista_regras:
+            query += f''' WHERE {subquery_regras}'''
         return pd.read_sql(query, self.pgEngine)
 
     def get_subquery_dias(self, dias_marcados):

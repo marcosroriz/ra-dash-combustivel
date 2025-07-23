@@ -91,3 +91,9 @@ def subquery_linha_combustivel(lista_linhas, prefix=""):
         return ""  # Não adiciona a cláusula IN se a lista estiver vazia ou for "TODOS":
     query = f"""AND {prefix} encontrou_numero_linha IN ({', '.join([f"'{x}'" for x in lista_linhas])})"""
     return query
+
+def subquery_regras_monitoramento(lista_regras, prefix=""):
+    if not lista_regras or "TODAS" in lista_regras:
+        return ""
+    return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
+

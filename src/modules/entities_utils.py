@@ -109,7 +109,7 @@ def get_lista_os(dbEngine):
 
 
 def get_modelos(dbEngine):
-    # Lista de OS
+    # Lista de Modelos
     return pd.read_sql(
         """
         SELECT DISTINCT
@@ -127,3 +127,17 @@ def gerar_excel(df):
         df.to_excel(writer, index=False, sheet_name="Dados")
     output.seek(0)
     return output.getvalue()
+
+
+def get_regras(dbEngine):
+    # Lista de regras
+    return pd.read_sql(
+        """
+        SELECT DISTINCT
+            nome_regra AS "LABEL"
+        FROM 
+            regras_monitoramento
+        """,
+        dbEngine,
+    )
+

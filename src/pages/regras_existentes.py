@@ -8,7 +8,7 @@
 ##############################################################################
 # Bibliotecas básicas
 # Importar bibliotecas do dash básicas e plotly
-from dash import html, callback, Input, Output
+from dash import html, callback, Input, Output, dcc
 import dash
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -34,7 +34,7 @@ import modules.regras.tabela as regras_tabela
 
 
 # Imports gerais
-from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel
+from modules.entities_utils import get_regras
 
 
 ##############################################################################
@@ -47,6 +47,10 @@ pgEngine = pgDB.get_engine()
 
 regra_service = RegrasService(pgEngine)
 
+# Preparando inputs
+df_regras = get_regras(pgEngine)
+lista_todas_regras = df_regras.to_dict(orient="records")
+lista_todas_regras.insert(0, {"LABEL": "TODAS"})
 ##############################################################################
 # Callbacks para dados ######################################################
 ##############################################################################
@@ -59,12 +63,28 @@ regra_service = RegrasService(pgEngine)
     ],
 )
 def atualiza_tabela_regra_existentes(
-    nome
+    lista_regras
 ):
 
-    df = regra_service.get_regras()
+    df = regra_service.get_regras(lista_regras)
 
     return df.to_dict(orient="records")
+
+# Callbacks para input
+@callback(
+    Output("input-nome-regra-existentes", "value"),
+    Input("input-nome-regra-existentes", "value"),
+    prevent_initial_call=True
+)
+def filtra_todas_opcao(valor_selecionado):
+    if not valor_selecionado:
+        return []
+
+    # Se "TODAS" estiver selecionado junto com outras opções, remove "TODAS"
+    if "TODAS" in valor_selecionado and len(valor_selecionado) > 1:
+        return [v for v in valor_selecionado if v != "TODAS"]
+
+    return valor_selecionado
 
 
 ##############################################################################
@@ -112,11 +132,18 @@ layout = dbc.Container(
                                             html.Div(
                                                 [
                                                     dbc.Label("Nome da Regra de Monitoramento"),
-                                                    dbc.Input(
+                                                    dcc.Dropdown(
                                                         id="input-nome-regra-existentes",
-                                                        type="text",
-                                                        placeholder="Digite algo...",
-                                                        value="",
+                                                        options=[
+                                                            {
+                                                                "label": regra['LABEL'],
+                                                                "value": regra['LABEL'],
+                                                            }
+                                                            for regra in lista_todas_regras
+                                                        ],
+                                                        placeholder="Digite o nome da regra...",
+                                                        value=['TODAS'],
+                                                        multi=True,
                                                     ),
                                                 ],
                                                 className="dash-bootstrap",
