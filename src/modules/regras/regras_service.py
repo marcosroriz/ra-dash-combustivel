@@ -428,22 +428,27 @@ class RegrasService:
 
 
     def salvar_regra_monitoramento(
-        self, nome_regra,
-        data, modelos, linha,
-        quantidade_de_viagens, dias_marcados,
-        excluir_km_l_menor_que=0, excluir_km_l_maior_que=0,
-        mediana_viagem=0, suspeita_performace=0,
-        indicativo_performace=0, erro_telemetria=0
+        self,
+        nome_regra,
+        data,
+        modelos,
+        linha,
+        quantidade_de_viagens,
+        dias_marcados,
+        excluir_km_l_menor_que=0,
+        excluir_km_l_maior_que=0,
+        mediana_viagem=0,
+        suspeita_performace=0,
+        indicativo_performace=0,
+        erro_telemetria=0
     ):
-        # Define se os campos devem ser usados (True se valor for diferente de 0)
-        usar_km_l_min = excluir_km_l_menor_que != None
-        usar_km_l_max = excluir_km_l_maior_que != None
-        usar_mediana = mediana_viagem != None
-        usar_suspeita = suspeita_performace != None
-        usar_indicativo = indicativo_performace != None
-        usar_erro = erro_telemetria != None
 
-        print(data, modelos)
+        usar_km_l_min = excluir_km_l_menor_que is not None
+        usar_km_l_max = excluir_km_l_maior_que is not None
+        usar_mediana = mediana_viagem is not None
+        usar_suspeita = suspeita_performace is not None
+        usar_indicativo = indicativo_performace is not None
+        usar_erro = erro_telemetria is not None
 
         try:
             with self.pgEngine.connect() as conn:
@@ -490,6 +495,8 @@ class RegrasService:
                     "usar_erro_telemetria": usar_erro,
                     "criado_em": datetime.now()
                 })
+
                 conn.commit()
+
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
