@@ -12,10 +12,9 @@ import pandas as pd
 import json
 
 # Importar bibliotecas do dash básicas e plotly
+from dash import html, dcc, callback, Input, Output
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State
-import plotly.express as px
-import plotly.graph_objects as go
+
 
 # Importar bibliotecas do bootstrap e ag-grid
 import dash_bootstrap_components as dbc
@@ -23,12 +22,11 @@ import dash_ag_grid as dag
 
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
-import dash_iconify
 from dash_iconify import DashIconify
 from dash import callback_context
+import dash_iconify
 
 # Importar nossas constantes e funções utilitárias
-import tema
 import locale_utils
 
 # Banco de Dados
@@ -37,14 +35,9 @@ from db import PostgresSingleton
 # Imports gerais
 
 # Imports específicos
-from modules.monitoramento.monitoramento_service import MonitoramentoService
-import modules.regras.tabela as regras_tabela
-import modules.monitoramento.graficos as monitoramento_graficos
-
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
 from modules.regras.regras_service import RegrasService
-import modules.combustivel_por_linha.graficos as combustivel_graficos
-import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
+import modules.regras.tabela as regras_tabela
 
 # Imports gerais
 from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel
@@ -58,9 +51,8 @@ pgDB = PostgresSingleton.get_instance()
 pgEngine = pgDB.get_engine()
 
 
-regra_service = RegrasService(pgEngine)
 # Cria o serviço
-comb_por_linha_service = CombustivelPorLinhaService(pgEngine)
+regra_service = RegrasService(pgEngine)
 
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
@@ -75,26 +67,6 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 ##################################################################################
 # LOADER #####################################################################
 ###################################################################################
-@callback(
-    Output("overlay-tabela-monitoramento", "style", allow_duplicate=True),
-    [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
-    ],
-    prevent_initial_call=True
-)
-def mostrar_overlay(*_):
-    return {"display": "block"}
-
 
 ##############################################################################
 # Callbacks para dados ######################################################
@@ -102,7 +74,7 @@ def mostrar_overlay(*_):
 @callback(
     Output("tabela-regras-viagens-monitoramento", "rowData"),
     Output("indicador-quantidade-de-veiculos", "children"),
-    Output("overlay-tabela-monitoramento", "style"),
+    # Output("overlay-tabela-monitoramento", "style"),
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
@@ -125,7 +97,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     indicativo_performace, erro_telemetria
 ):
     # Exibe overlay (inicial)
-    style_overlay = {"display": "block"}
+    # style_overlay = {"display": "block"}
 
     df = regra_service.get_estatistica_veiculos(
         data, modelos, linha,
@@ -138,7 +110,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     #indicador de quantidade de veiculo
     quantidade_veiculo = df['vec_num_id'].count()
 
-    return df.to_dict(orient="records"), quantidade_veiculo,  {"display": "none"}
+    return df.to_dict(orient="records"), quantidade_veiculo
 
 @callback(
         Output("mensagem-sucesso", "children"),
@@ -179,8 +151,6 @@ def salvar_regra_monitoramento(
     if not n_clicks or n_clicks <= 0: 
         return dash.no_update
     
-    print('Entrando aqui')
-
     regra_service.salvar_regra_monitoramento(
         nome_regra, data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
@@ -332,29 +302,13 @@ def gera_labels_inputs(campo):
 layout = dbc.Container(
     [
         # Cabeçalho
-        dmc.Overlay(
-            dmc.Loader(size="xl", color="blue", type="ring"),
-            id="overlay-tabela-monitoramento",
-            blur=3,
-            opacity=0.5,
-            zIndex=9999,
-            fixed=True,
-            center=True,
-            style={
-                "display": "block",  # Mostrar overlay
-                "backgroundColor": "rgba(0, 0, 0, 0.3)",  # Fundo semi-transparente escuro para destacar o loader
-                "width": "100vw",    # Cobrir toda a largura da viewport
-                "height": "100vh",   # Cobrir toda a altura da viewport
-                "position": "fixed", # Fixar overlay na tela toda
-                "top": 0,
-                "left": 0,
-            },
-        ),
+        # dmc.Overlay(...)  # Overlay comentado
+
         dbc.Row(
             [
                 dbc.Col(
                     [
-                        # Cabeçalho e Inputs
+                        # Cabeçalho e Título
                         dbc.Row(
                             [
                                 html.Hr(),
@@ -366,9 +320,7 @@ layout = dbc.Container(
                                         ),
                                         dbc.Col(
                                             html.H1(
-                                                [
-                                                    html.Strong("Regras de Monitoramento da Frota"),
-                                                ],
+                                                [html.Strong("Regras de Monitoramento da Frota")],
                                                 className="align-self-center",
                                             ),
                                             width=True,
@@ -380,349 +332,386 @@ layout = dbc.Container(
                                 html.Hr(),
                             ]
                         ),
+
+                        # Nome da Regra e Período
                         dbc.Row(
-                            [   
+                            [
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Nome da Regra de Monitoramneto"),
-                                                    dbc.Input(
-                                                        id="input-nome-regra-monitoramento",
-                                                        type="text",  # Alterado de "number" para "text"
-                                                        placeholder="Digite algo...",
-                                                        value="",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Nome da Regra de Monitoramneto"),
+                                                dbc.Input(
+                                                    id="input-nome-regra-monitoramento",
+                                                    type="text",
+                                                    placeholder="Digite algo...",
+                                                    value="",
+                                                ),
+                                            ],
+                                            className="dash-bootstrap",
+                                        ),
                                         body=True,
                                     ),
                                     md=12,
-                                ), 
+                                ),
                                 dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Período de Monitoramento (últimos X dias)"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-periodo-dias-monitoramento-regra",
-                                                                type="number",
-                                                                placeholder="Dias",
-                                                                value=30,  # valor padrão
-                                                                step=1,
-                                                                min=1,
-                                                            ),
-                                                            dbc.InputGroupText("dias"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Período de Monitoramento (últimos X dias)"),
+                                                dbc.InputGroup(
+                                                    [
+                                                        dbc.Input(
+                                                            id="input-periodo-dias-monitoramento-regra",
+                                                            type="number",
+                                                            placeholder="Dias",
+                                                            value=30,
+                                                            step=1,
+                                                            min=1,
+                                                        ),
+                                                        dbc.InputGroupText("dias"),
+                                                    ]
+                                                ),
+                                            ],
+                                            className="dash-bootstrap",
+                                        ),
                                         body=True,
                                     ),
                                     md=6,
                                 ),
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Modelos"),
-                                                    dcc.Dropdown(
-                                                        id="input-modelos-monitoramento-regra",
-                                                        multi=True,
-                                                        options=[
-                                                            {
-                                                                "label": modelo["LABEL"],
-                                                                "value": modelo["LABEL"],
-                                                            }
-                                                            for modelo in lista_todos_modelos_veiculos
-                                                        ],
-                                                        value=["TODOS"],
-                                                        placeholder="Selecione um ou mais modelos...",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Modelos"),
+                                                dcc.Dropdown(
+                                                    id="input-modelos-monitoramento-regra",
+                                                    multi=True,
+                                                    options=[
+                                                        {"label": modelo["LABEL"], "value": modelo["LABEL"]}
+                                                        for modelo in lista_todos_modelos_veiculos
+                                                    ],
+                                                    value=["TODOS"],
+                                                    placeholder="Selecione um ou mais modelos...",
+                                                ),
+                                            ],
+                                            className="dash-bootstrap",
+                                        ),
                                         body=True,
                                     ),
                                     md=6,
                                 ),
                             ]
                         ),
+
                         dmc.Space(h=10),
+
+                        # Linha e Viagens
                         dbc.Row(
                             [
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Linha"),
-                                                    dcc.Dropdown(
-                                                        id="input-select-linhas-monitoramento-regra",
-                                                        options=[
-                                                            {
-                                                                "label": linha["LABEL"],
-                                                                "value": linha["LABEL"],
-                                                            }
-                                                            for linha in lista_todas_linhas
-                                                        ],
-                                                        multi=True,
-                                                        value=["TODAS"],
-                                                        placeholder="Selecione a linha",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Linha"),
+                                                dcc.Dropdown(
+                                                    id="input-select-linhas-monitoramento-regra",
+                                                    options=[
+                                                        {"label": linha["LABEL"], "value": linha["LABEL"]}
+                                                        for linha in lista_todas_linhas
+                                                    ],
+                                                    multi=True,
+                                                    value=["TODOS"],
+                                                    placeholder="Selecione a linha",
+                                                ),
+                                            ],
+                                            className="dash-bootstrap",
+                                        ),
                                         body=True,
                                     ),
                                     md=6,
                                 ),
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Quantidade mínima de viagens no período"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-quantidade-de-viagens-monitoramento-regra",
-                                                                type="number",
-                                                                placeholder="Viagens",
-                                                                value=5,
-                                                                step=1,
-                                                                min=1,
-                                                            ),
-                                                            dbc.InputGroupText("viagens"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Quantidade mínima de viagens no período"),
+                                                dbc.InputGroup(
+                                                    [
+                                                        dbc.Input(
+                                                            id="input-quantidade-de-viagens-monitoramento-regra",
+                                                            type="number",
+                                                            placeholder="Viagens",
+                                                            value=5,
+                                                            step=1,
+                                                            min=1,
+                                                        ),
+                                                        dbc.InputGroupText("viagens"),
+                                                    ]
+                                                ),
+                                            ],
+                                            className="dash-bootstrap",
+                                        ),
                                         body=True,
                                     ),
                                     md=6,
                                 ),
                             ]
                         ),
+
                         dmc.Space(h=10),
+
+                        # Filtros e Switches
                         dbc.Row(
                             [
+                                # Dias
                                 dbc.Col(
                                     dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Dias"),
-                                                    dbc.RadioItems(
-                                                        id="input-select-dia-linha-combustivel-regra",
-                                                        options=[
-                                                            {
-                                                                "label": "Seg-Sexta",
-                                                                "value": "SEG_SEX",
-                                                            },
-                                                            {
-                                                                "label": "Sabado",
-                                                                "value": "SABADO",
-                                                            },
-                                                            {
-                                                                "label": "Domingo",
-                                                                "value": "DOMINGO",
-                                                            },
-                                                            {
-                                                                "label": "Feriado",
-                                                                "value": "FERIADO",
-                                                            },
-                                                        ],
-                                                        value="SEG_SEX",
-                                                        inline=True,
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
+                                        html.Div(
+                                            [
+                                                dbc.Label("Dias"),
+                                                dbc.RadioItems(
+                                                    id="input-select-dia-linha-combustivel-regra",
+                                                    options=[
+                                                        {"label": "Seg-Sexta", "value": "SEG_SEX"},
+                                                        {"label": "Sabado", "value": "SABADO"},
+                                                        {"label": "Domingo", "value": "DOMINGO"},
+                                                        {"label": "Feriado", "value": "FERIADO"},
+                                                    ],
+                                                    value="SEG_SEX",
+                                                    inline=True,
+                                                ),
+                                            ],
+                                            className="dash-bootstrap h-100",
+                                        ),
                                         className="h-100",
                                         body=True,
                                     ),
                                     md=6,
                                 ),
+
+                                # KML menor
                                 dbc.Col(
-                                    dbc.Card([
-                                        dmc.Switch(
-                                            id="switch-kml-menor",
-                                            label="Excluir km/L menor que",
-                                            checked=False
-                                        ),
-                                        dmc.Space(h=10),
-                                        html.Div(
-                                            dbc.InputGroup([
-                                                dbc.Input(
-                                                    id="input-excluir-km-l-menor-que-monitoramento-regra",
-                                                    type="number",
-                                                    min=1,
-                                                    step=0.1,
+                                    dbc.Card(
+                                        [
+                                            dmc.Switch(
+                                                id="switch-kml-menor",
+                                                label="Excluir km/L menor que",
+                                                checked=False,
+                                            ),
+                                            dmc.Space(h=10),
+                                            html.Div(
+                                                dbc.InputGroup(
+                                                    [
+                                                        dbc.Input(
+                                                            id="input-excluir-km-l-menor-que-monitoramento-regra",
+                                                            type="number",
+                                                            min=1,
+                                                            step=0.1,
+                                                        ),
+                                                        dbc.InputGroupText("km/L"),
+                                                    ]
                                                 ),
-                                                dbc.InputGroupText("km/L")
-                                            ]),
-                                            id="container-kml-menor",
-                                            style={"display": "none", "marginTop": "10px"}
-                                        )
-                                    ], body=True),
-                                    md=3
+                                                id="container-kml-menor",
+                                                style={"display": "none", "marginTop": "10px"},
+                                            ),
+                                        ],
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
 
-                                # Coluna MAIOR QUE
+                                # KML maior
                                 dbc.Col(
-                                    dbc.Card([
-                                        dmc.Switch(
-                                            id="switch-kml-maior",
-                                            label="Excluir km/L maior que",
-                                            checked=False
-                                        ),
-                                        dmc.Space(h=10),
-                                        html.Div(
-                                            dbc.InputGroup([
-                                                dbc.Input(
-                                                    id="input-excluir-km-l-maior-que-monitoramento-regra",
-                                                    type="number",
-                                                    min=1,
-                                                    step=0.1,
+                                    dbc.Card(
+                                        [
+                                            dmc.Switch(
+                                                id="switch-kml-maior",
+                                                label="Excluir km/L maior que",
+                                                checked=False,
+                                            ),
+                                            dmc.Space(h=10),
+                                            html.Div(
+                                                dbc.InputGroup(
+                                                    [
+                                                        dbc.Input(
+                                                            id="input-excluir-km-l-maior-que-monitoramento-regra",
+                                                            type="number",
+                                                            min=1,
+                                                            step=0.1,
+                                                        ),
+                                                        dbc.InputGroupText("km/L"),
+                                                    ]
                                                 ),
-                                                dbc.InputGroupText("km/L")
-                                            ]),
-                                            id="container-kml-maior",
-                                            style={"display": "none", "marginTop": "10px"}
-                                        )
-                                    ], body=True),
-                                    md=3
+                                                id="container-kml-maior",
+                                                style={"display": "none", "marginTop": "10px"},
+                                            ),
+                                        ],
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
                                 dmc.Space(h=10),
-
+                                # Mediana
                                 dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-mediana", label="Viagens abaixo da mediana ", checked=False),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup([
-                                                    dbc.Input(
-                                                        id="select-mediana",
-                                                        type="number",
-                                                        placeholder="Digite a porcentagem",
-                                                        min=10,
-                                                        max=100,
-                                                        step=1,
+                                    dbc.Card(
+                                        html.Div(
+                                            [
+                                                dmc.Switch(
+                                                    id="switch-mediana",
+                                                    label="Viagens abaixo da mediana ",
+                                                    checked=False,
+                                                ),
+                                                dmc.Space(h=10),
+                                                html.Div(
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="select-mediana",
+                                                                type="number",
+                                                                placeholder="Digite a porcentagem",
+                                                                min=10,
+                                                                max=100,
+                                                                step=1,
+                                                            ),
+                                                            dbc.InputGroupText("%"),
+                                                        ]
                                                     ),
-                                                    dbc.InputGroupText("%")
-                                                ]),
-                                                id="container-mediana",
-                                                style={"display": "none", "marginTop": "10px"}
-                                            )
-                                        ])
-                                    ], body=True),
-                                    md=3
+                                                    id="container-mediana",
+                                                    style={"display": "none", "marginTop": "10px"},
+                                                ),
+                                            ]
+                                        ),
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
 
+                                # Baixa performance suspeita
                                 dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-baixa-performace-suspeita", label="Viagens suspeita baixa performance", checked=False),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup([
-                                                    dbc.Input(
-                                                        id="select-baixa-performace-suspeita",
-                                                        type="number",
-                                                        placeholder="Digite a porcentagem",
-                                                        min=10,
-                                                        max=100,
-                                                        step=1,
+                                    dbc.Card(
+                                        html.Div(
+                                            [
+                                                dmc.Switch(
+                                                    id="switch-baixa-performace-suspeita",
+                                                    label="Viagens suspeita baixa performance",
+                                                    checked=False,
+                                                ),
+                                                dmc.Space(h=10),
+                                                html.Div(
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="select-baixa-performace-suspeita",
+                                                                type="number",
+                                                                placeholder="Digite a porcentagem",
+                                                                min=10,
+                                                                max=100,
+                                                                step=1,
+                                                            ),
+                                                            dbc.InputGroupText("%"),
+                                                        ]
                                                     ),
-                                                    dbc.InputGroupText("%")
-                                                ]),
-                                                id="container-baixa-performace-suspeita",
-                                                style={"display": "none", "marginTop": "10px"}
-                                            )
-                                        ])
-                                    ], body=True),
-                                    md=3
+                                                    id="container-baixa-performace-suspeita",
+                                                    style={"display": "none", "marginTop": "10px"},
+                                                ),
+                                            ]
+                                        ),
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
 
+                                # Baixa performance indicativo
                                 dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-baixa-performace-indicativo", label="Viagens indicativo baixa performance", checked=False),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup([
-                                                    dbc.Input(
-                                                        id="select-baixa-performace-indicativo",
-                                                        type="number",
-                                                        placeholder="Digite a porcentagem",
-                                                        min=0,
-                                                        max=100,
-                                                        step=1,
+                                    dbc.Card(
+                                        html.Div(
+                                            [
+                                                dmc.Switch(
+                                                    id="switch-baixa-performace-indicativo",
+                                                    label="Viagens indicativo baixa performance",
+                                                    checked=False,
+                                                ),
+                                                dmc.Space(h=10),
+                                                html.Div(
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="select-baixa-performace-indicativo",
+                                                                type="number",
+                                                                placeholder="Digite a porcentagem",
+                                                                min=0,
+                                                                max=100,
+                                                                step=1,
+                                                            ),
+                                                            dbc.InputGroupText("%"),
+                                                        ]
                                                     ),
-                                                    dbc.InputGroupText("%")
-                                                ]),
-                                                id="container-baixa-performace-indicativo",
-                                                style={"display": "none", "marginTop": "10px"}
-                                            )
-                                        ])
-                                    ], body=True),
-                                    md=3
+                                                    id="container-baixa-performace-indicativo",
+                                                    style={"display": "none", "marginTop": "10px"},
+                                                ),
+                                            ]
+                                        ),
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
 
+                                # Erro telemetria
                                 dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-erro-telemetria", label="Viagens suspeita erro de telemetria", checked=False),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup([
-                                                    dbc.Input(
-                                                        id="select-erro-telemetria",
-                                                        type="number",
-                                                        placeholder="Digite a porcentagem",
-                                                        min=10,
-                                                        max=100,
-                                                        step=1,
+                                    dbc.Card(
+                                        html.Div(
+                                            [
+                                                dmc.Switch(
+                                                    id="switch-erro-telemetria",
+                                                    label="Viagens suspeita erro de telemetria",
+                                                    checked=False,
+                                                ),
+                                                dmc.Space(h=10),
+                                                html.Div(
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="select-erro-telemetria",
+                                                                type="number",
+                                                                placeholder="Digite a porcentagem",
+                                                                min=10,
+                                                                max=100,
+                                                                step=1,
+                                                            ),
+                                                            dbc.InputGroupText("%"),
+                                                        ]
                                                     ),
-                                                    dbc.InputGroupText("%")
-                                                ]),
-                                                id="container-erro-telemetria",
-                                                style={"display": "none", "marginTop": "10px"}
-                                            )
-                                        ])
-                                    ], body=True),
-                                    md=3
+                                                    id="container-erro-telemetria",
+                                                    style={"display": "none", "marginTop": "10px"},
+                                                ),
+                                            ]
+                                        ),
+                                        body=True,
+                                    ),
+                                    md=3,
                                 ),
                                 dmc.Space(h=10),
+                                # OS automática
                                 dbc.Col(
-                                    dbc.Card([
-                                        html.Div([
-                                            dmc.Switch(id="switch-os-automatica", label="Criar OS automática", checked=False),
-                                        ])
-                                    ], body=True, style={
-                                            'backgroundColor': "#F6B64F",  # Vermelho Pastel
-                                            'color': 'black',
-                                            'borderRadius': '8px',
-                                            'boxShadow': '2px 2px 8px rgba(0,0,0,0.2)'
-                                        }),
-                                    md=12
+                                    dbc.Card(
+                                        html.Div(
+                                            dmc.Switch(
+                                                id="switch-os-automatica",
+                                                label="Criar OS automática",
+                                                checked=False,
+                                            ),
+                                        ),
+                                        body=True,
+                                        style={
+                                            "backgroundColor": "#F6B64F",
+                                            "color": "black",
+                                            "borderRadius": "8px",
+                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
+                                        },
+                                    ),
+                                    md=12,
                                 ),
                             ]
                         ),
@@ -731,34 +720,38 @@ layout = dbc.Container(
                 ),
             ]
         ),
+
         dmc.Space(h=10),
+
+        # Botão Criar Regra
         dbc.Col(
-                html.Div(
-                    [
-                        html.Button(
-                            "Cria regra",
-                            id="btn-criar-regra-monitoramento",
-                            n_clicks=0,
-                            style={
-                                "background-color": "#007bff",  # Azul
-                                "color": "white",
-                                "border": "none",
-                                "padding": "10px 20px",
-                                "border-radius": "8px",
-                                "cursor": "pointer",
-                                "font-size": "16px",
-                                "font-weight": "bold",
-                            },
-                        ), html.Div(id="mensagem-sucesso", style={"marginTop": "10px", "fontWeight": "bold"})
-                        
-                    ],
-                    style={"text-align": "center"},
-                ),
-                width="auto",
+            html.Div(
+                [
+                    html.Button(
+                        "Cria regra",
+                        id="btn-criar-regra-monitoramento",
+                        n_clicks=0,
+                        style={
+                            "background-color": "#007bff",
+                            "color": "white",
+                            "border": "none",
+                            "padding": "10px 20px",
+                            "border-radius": "8px",
+                            "cursor": "pointer",
+                            "font-size": "16px",
+                            "font-weight": "bold",
+                        },
+                    ),
+                    html.Div(id="mensagem-sucesso", style={"marginTop": "10px", "fontWeight": "bold"}),
+                ],
+                style={"text-align": "center"},
             ),
+            width="auto",
+        ),
+
         dmc.Space(h=20),
-        dbc.Row(
-            [
+
+        # Indicador de veículos
         dbc.Row(
             [
                 dbc.Col(
@@ -768,13 +761,9 @@ layout = dbc.Container(
                                 dmc.Group(
                                     [
                                         dmc.Title(id="indicador-quantidade-de-veiculos", order=2),
-                                        DashIconify(
-                                            icon="mdi:bomb",
-                                            width=48,
-                                            color="black",
-                                        ),
+                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
                                     ],
-                                    justify="center",  # Centralize conteúdo no card
+                                    justify="center",
                                     mt="md",
                                     mb="xs",
                                 ),
@@ -784,21 +773,24 @@ layout = dbc.Container(
                         class_name="card-box-shadow",
                     ),
                     md=4,
-                    style={"margin-bottom": "20px"},  # Adicione espaçamento inferior
+                    style={"margin-bottom": "20px"},
                 ),
             ],
             justify="center",
         ),
-    ],
-    style={"margin-top": "20px", "margin-bottom": "20px"},
-    ),
+
         dmc.Space(h=10),
+
+        # Labels adicionais
         dbc.Row(
-                [
+            [
                 dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
             ]
         ),
+
         dmc.Space(h=20),
+
+        # Tabela de regras
         dag.AgGrid(
             id="tabela-regras-viagens-monitoramento",
             columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
@@ -807,13 +799,12 @@ layout = dbc.Container(
             columnSize="autoSize",
             dashGridOptions={
                 "localeText": locale_utils.AG_GRID_LOCALE_BR,
-                "rowSelection": "multiple",  # permite seleção múltipla
+                "rowSelection": "multiple",
             },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
             style={"height": 400, "resize": "vertical", "overflow": "hidden"},
         ),
-
-    ]
+    ],
+    style={"margin-top": "20px", "margin-bottom": "20px"},
 )
 
 dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento")
