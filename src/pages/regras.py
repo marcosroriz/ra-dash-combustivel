@@ -9,7 +9,6 @@
 # Bibliotecas básicas
 from datetime import datetime, timedelta
 import pandas as pd
-import json
 
 # Importar bibliotecas do dash básicas e plotly
 from dash import html, dcc, callback, Input, Output
@@ -24,7 +23,6 @@ import dash_ag_grid as dag
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 from dash import callback_context
-import dash_iconify
 
 # Importar nossas constantes e funções utilitárias
 import locale_utils
