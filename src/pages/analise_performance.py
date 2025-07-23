@@ -480,7 +480,7 @@ layout = dbc.Container(
                                     ),
                                     md=3,
                                 ),
-
+                                dmc.Space(h=10),
                                 dbc.Col(
                                     dbc.Card(
                                         [
