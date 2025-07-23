@@ -99,7 +99,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     # Exibe overlay (inicial)
     # style_overlay = {"display": "block"}
 
-    df = regra_service.get_estatistica_veiculos(
+    df = regra_service.get_estatistica_regras(
         data, modelos, linha,
         quantidade_de_viagens, dias_marcados, 
         excluir_km_l_menor_que, excluir_km_l_maior_que,
