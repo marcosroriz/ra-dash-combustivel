@@ -76,6 +76,16 @@ def subquery_modelos_combustivel(lista_modelos, prefix="", termo_all="TODOS"):
 
     return query
 
+
+def subquery_modelos_regras(lista_modelos, prefix="", termo_all="TODOS", usa_where=True):
+
+    if termo_all not in lista_modelos:
+        clausula = "WHERE" if usa_where else "AND"
+        modelos_sql = ", ".join([f"'{x}'" for x in lista_modelos])
+        return f'{clausula} {prefix}"vec_model" IN ({modelos_sql})'
+    
+    return ""
+
 def subquery_sentido_combustivel(lista_sentido, prefix="", termo_all="TODOS"):
     query = ""
     # Não adiciona a cláusula IN se a lista tiver "TODOS"

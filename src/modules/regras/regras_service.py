@@ -100,7 +100,7 @@ class RegrasService:
             table = 'mat_view_viagens_classificadas_feriado'
 
 
-        subquery_modelo = subquery_modelos_combustivel(modelos)
+        subquery_modelo = subquery_modelos_regras(modelos)
 
         # Query principal
         query = f"""
@@ -295,8 +295,6 @@ class RegrasService:
 
         return df_pivot
 
-    
-
     def get_estatistica_veiculos_analise_performance(
         self,
         data,
@@ -482,27 +480,19 @@ class RegrasService:
 
         return df_pivot
 
-
     def salvar_regra_monitoramento(
         self,
         nome_regra,
         data,
         modelos,
-        linha,
+        numero_de_motoristas,
         quantidade_de_viagens,
         dias_marcados,
-        excluir_km_l_menor_que,
-        excluir_km_l_maior_que,
         mediana_viagem,
-        suspeita_performace,
         indicativo_performace,
         erro_telemetria
     ):
-
-        usar_km_l_min = excluir_km_l_menor_que is not None
-        usar_km_l_max = excluir_km_l_maior_que is not None
         usar_mediana = mediana_viagem is not None
-        usar_suspeita = suspeita_performace is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
 
@@ -510,22 +500,32 @@ class RegrasService:
             with self.pgEngine.connect() as conn:
                 insert_sql = text("""
                     INSERT INTO regras_monitoramento (
-                        nome_regra, periodo, modelos, linha, dias_analise, qtd_viagens,
-                        km_l_min, usar_km_l_min,
-                        km_l_max, usar_km_l_max,
-                        mediana_viagem, usar_mediana_viagem,
-                        suspeita_performace, usar_suspeita_performace,
-                        indicativo_performace, usar_indicativo_performace,
-                        erro_telemetria, usar_erro_telemetria,
+                        nome_regra,
+                        periodo,
+                        modelos,
+                        motoristas,
+                        dias_analise,
+                        qtd_viagens,
+                        mediana_viagem,
+                        usar_mediana_viagem,
+                        indicativo_performace,
+                        usar_indicativo_performace,
+                        erro_telemetria,
+                        usar_erro_telemetria,
                         criado_em
                     ) VALUES (
-                        :nome_regra, :periodo, :modelos, :linha, :dias_analise, :qtd_viagens,
-                        :km_l_min, :usar_km_l_min,
-                        :km_l_max, :usar_km_l_max,
-                        :mediana_viagem, :usar_mediana_viagem,
-                        :suspeita_performace, :usar_suspeita_performace,
-                        :indicativo_performace, :usar_indicativo_performace,
-                        :erro_telemetria, :usar_erro_telemetria,
+                        :nome_regra,
+                        :periodo,
+                        :modelos,
+                        :motoristas,
+                        :dias_analise,
+                        :qtd_viagens,
+                        :mediana_viagem,
+                        :usar_mediana_viagem,
+                        :indicativo_performace,
+                        :usar_indicativo_performace,
+                        :erro_telemetria,
+                        :usar_erro_telemetria,
                         :criado_em
                     )
                 """)
@@ -533,18 +533,12 @@ class RegrasService:
                 conn.execute(insert_sql, {
                     "nome_regra": nome_regra,
                     "periodo": data,
-                    "modelos": modelos,
-                    "linha": linha,
+                    "modelos": modelos,  # deve ser uma lista de strings
+                    "motoristas": numero_de_motoristas,
                     "dias_analise": dias_marcados,
                     "qtd_viagens": quantidade_de_viagens,
-                    "km_l_min": excluir_km_l_menor_que,
-                    "usar_km_l_min": usar_km_l_min,
-                    "km_l_max": excluir_km_l_maior_que,
-                    "usar_km_l_max": usar_km_l_max,
                     "mediana_viagem": mediana_viagem,
                     "usar_mediana_viagem": usar_mediana,
-                    "suspeita_performace": suspeita_performace,
-                    "usar_suspeita_performace": usar_suspeita,
                     "indicativo_performace": indicativo_performace,
                     "usar_indicativo_performace": usar_indicativo,
                     "erro_telemetria": erro_telemetria,
@@ -577,20 +571,14 @@ class RegrasService:
         nome_regra,
         data,
         modelos,
-        linha,
+        numero_de_motoristas,
         quantidade_de_viagens,
         dias_marcados,
-        excluir_km_l_menor_que,
-        excluir_km_l_maior_que,
         mediana_viagem,
-        suspeita_performace,
         indicativo_performace,
         erro_telemetria
     ):
-        usar_km_l_min = excluir_km_l_menor_que is not None
-        usar_km_l_max = excluir_km_l_maior_que is not None
         usar_mediana = mediana_viagem is not None
-        usar_suspeita = suspeita_performace is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
 
@@ -601,17 +589,11 @@ class RegrasService:
                     SET nome_regra = :nome_regra,
                         periodo = :periodo,
                         modelos = :modelos,
-                        linha = :linha,
+                        motoristas = :motoristas,
                         dias_analise = :dias_analise,
                         qtd_viagens = :qtd_viagens,
-                        km_l_min = :km_l_min,
-                        usar_km_l_min = :usar_km_l_min,
-                        km_l_max = :km_l_max,
-                        usar_km_l_max = :usar_km_l_max,
                         mediana_viagem = :mediana_viagem,
                         usar_mediana_viagem = :usar_mediana_viagem,
-                        suspeita_performace = :suspeita_performace,
-                        usar_suspeita_performace = :usar_suspeita_performace,
                         indicativo_performace = :indicativo_performace,
                         usar_indicativo_performace = :usar_indicativo_performace,
                         erro_telemetria = :erro_telemetria,
@@ -623,23 +605,19 @@ class RegrasService:
                     "id_regra": id_regra,
                     "nome_regra": nome_regra,
                     "periodo": data,
-                    "modelos": modelos,
-                    "linha": linha,
+                    "modelos": modelos,  # lista de strings
+                    "motoristas": numero_de_motoristas,
                     "dias_analise": dias_marcados,
                     "qtd_viagens": quantidade_de_viagens,
-                    "km_l_min": excluir_km_l_menor_que,
-                    "usar_km_l_min": usar_km_l_min,
-                    "km_l_max": excluir_km_l_maior_que,
-                    "usar_km_l_max": usar_km_l_max,
                     "mediana_viagem": mediana_viagem,
                     "usar_mediana_viagem": usar_mediana,
-                    "suspeita_performace": suspeita_performace,
-                    "usar_suspeita_performace": usar_suspeita,
                     "indicativo_performace": indicativo_performace,
                     "usar_indicativo_performace": usar_indicativo,
                     "erro_telemetria": erro_telemetria,
                     "usar_erro_telemetria": usar_erro
                 })
+
                 conn.commit()
         except Exception as e:
             print(f"Erro ao atualizar regra: {e}")
+

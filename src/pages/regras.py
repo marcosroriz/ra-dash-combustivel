@@ -33,12 +33,11 @@ from db import PostgresSingleton
 # Imports gerais
 
 # Imports específicos
-from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
 from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
 
 # Imports gerais
-from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel
+from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_regras
 
 
 ##############################################################################
@@ -52,13 +51,8 @@ pgEngine = pgDB.get_engine()
 # Cria o serviço
 regra_service = RegrasService(pgEngine)
 
-# Linhas que possuem informações de combustível
-df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
-lista_todas_linhas = df_todas_linhas.to_dict(orient="records")
-lista_todas_linhas .insert(0, {"LABEL": "TODAS"})
-
 # Modelos de veículos
-df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
+df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
@@ -244,6 +238,32 @@ def gera_labels_inputs(campo):
 
     # Componente de saída
     return dmc.Group(id=f"{campo}-labels", children=[], gap="xs")
+
+
+@callback(
+    Output("input-modelos-monitoramento-regra", "value"),
+    Input("input-modelos-monitoramento-regra", "value"),
+)
+def atualizar_modelos_selecao(valores_selecionados):
+    if not valores_selecionados:
+        # Nada selecionado -> assume "TODOS"
+        return ["TODOS"]
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return valores_selecionados
+
+    ultimo_valor = ctx.triggered[0]["value"]
+
+    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
+    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
+        if ultimo_valor == ["TODOS"]:
+            return ["TODOS"]
+        else:
+            return [v for v in valores_selecionados if v != "TODOS"]
+
+    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
+    return valores_selecionados
 
 
 ##############################################################################

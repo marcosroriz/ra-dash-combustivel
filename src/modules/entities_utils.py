@@ -39,6 +39,22 @@ def get_modelos_veiculos_com_combustivel(dbEngine):
         dbEngine,
     )
 
+def get_modelos_veiculos_regras(dbEngine):
+    # Modelos de veículos que possuem informações de consumo
+    return pd.read_sql(
+        """
+        SELECT 
+            DISTINCT "vec_model" AS "LABEL"
+        FROM 
+            mat_view_viagens_classificadas_dia_semana 
+        WHERE 
+            "vec_model" IS NOT NULL
+        ORDER BY
+            "vec_model"
+        """,
+        dbEngine,
+    )
+
 
 def get_linhas_possui_info_combustivel(dbEngine):
     # Linhas que possuem informações de consumo
