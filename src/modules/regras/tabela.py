@@ -60,9 +60,10 @@ tbl_perc_viagens_monitoramento = [
 ]
 
 tbl_regras_monitoramento = [
+
     {"field": "nome_regra", "headerName": "Nome da Regra", "minWidth": 200, "type": ["text"], "pinned": "left"},
     {"field": "periodo", "headerName": "Período", "minWidth": 150, "type": ["text"], "pinned": "left"},
-    {"field": "modelos", "headerName": "Modelos", "minWidth": 200, "type": ["text"], "pinned": "left"},
+    {"field": "modelos", "headerName": "Modelos", "minWidth": 200, "type": ["text"]},
     {"field": "linha", "headerName": "Linha", "minWidth": 150, "type": ["text"]},
     {"field": "dias_analise", "headerName": "Dias de Análise", "minWidth": 150, "type": ["text"]},
     {"field": "qtd_viagens", "headerName": "Qtd. Viagens", "minWidth": 130, "type": ["numericColumn"]},
@@ -139,4 +140,12 @@ tbl_regras_monitoramento = [
         "type": ["dateColumnFilter"],
         "valueFormatter": {"function": "params => new Date(params.value).toLocaleString()"},
     },
+    {
+        "headerName": "SELEÇÃO",
+        "checkboxSelection": True,
+        "headerCheckboxSelection": True,  # checkbox no header para selecionar tudo
+        "width": 50,
+        "pinned": "right",
+    },
+    
 ]

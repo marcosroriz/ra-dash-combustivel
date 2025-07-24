@@ -86,6 +86,31 @@ def filtra_todas_opcao(valor_selecionado):
 
     return valor_selecionado
 
+@callback(
+        Output("mensagem-sucesso-deletar", "children"),
+    [
+        Input('btn-deletar-regra', 'n_clicks'),
+        Input("tabela-de-regras-existentes", "selectedRows"),
+    ]
+)
+def deletar_regra(n_clicks, linhas):
+    if linhas:
+        return f"Linha selecionada: {linhas[0]}"
+    return "Nenhuma linha selecionada."
+
+
+@callback(
+        Output("mensagem-sucesso-editar", "children"),
+    [
+        Input('btn-editar-regra', 'n_clicks'),
+        Input("tabela-de-regras-existentes", "selectedRows"),
+    ]
+)
+def editar_regra(n_clicks, linhas):
+    if linhas:
+        return f"Linha selecionada: {linhas[0]}"
+    return "Nenhuma linha selecionada."
+
 
 ##############################################################################
 # Layout #####################################################################
@@ -175,8 +200,80 @@ layout = dbc.Container(
             columnSize="autoSize",
             dashGridOptions={
                 "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                "rowSelection": "single",
             },
             style={
+                "height": 400,
+                "resize": "vertical",
+                "overflow": "hidden",
+            },
+        ),
+        dbc.Row(
+            [
+                dmc.Space(h=10),
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Button(
+                                "Deletar Regra",
+                                id="btn-deletar-regra",
+                                n_clicks=0,
+                                style={
+                                    "background-color": "#d30000",
+                                    "color": "white",
+                                    "border": "none",
+                                    "padding": "10px 20px",
+                                    "border-radius": "8px",
+                                    "cursor": "pointer",
+                                    "font-size": "16px",
+                                    "font-weight": "bold",
+                                },
+                            ),
+                            html.Div(id="mensagem-sucesso-deletar", style={"marginTop": "10px", "fontWeight": "bold"}),
+                        ],
+                        style={
+                            "text-align": "left",
+                            "height": 400,
+                            "resize": "vertical",
+                            "overflow": "hidden",
+                        },
+                    ),
+                    width=4,
+                ),
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Button(
+                                "Editar Regra",
+                                id="btn-editar-regra",  # corrigi o id para não repetir
+                                n_clicks=0,
+                                style={
+                                    "background-color": "#085ff5",
+                                    "color": "white",
+                                    "border": "none",
+                                    "padding": "10px 20px",
+                                    "border-radius": "8px",
+                                    "cursor": "pointer",
+                                    "font-size": "16px",
+                                    "font-weight": "bold",
+                                },
+                            ),
+                            html.Div(id="mensagem-sucesso-editar", style={"marginTop": "10px", "fontWeight": "bold"}),
+                        ],
+                        style={
+                            "text-align": "right",
+                            "height": 400,
+                            "resize": "vertical",
+                            "overflow": "hidden",
+                        },
+                    ),
+                    width=8,
+                ),
+                dmc.Space(h=10),
+            ],
+            align="center",
+            style={
+                "text-align": "center",
                 "height": 400,
                 "resize": "vertical",
                 "overflow": "hidden",
