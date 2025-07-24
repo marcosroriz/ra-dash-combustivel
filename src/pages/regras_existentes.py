@@ -114,17 +114,38 @@ def deletar_regra(n_clicks, linhas):
 
 
 @callback(
-        Output("mensagem-sucesso-editar", "children"),
-    [
-        Input('btn-editar-regra', 'n_clicks'),
-        Input("tabela-de-regras-existentes", "selectedRows"),
-    ]
+    Output("mensagem-sucesso-editar", "children"),
+    Input("btn-editar-regra", "n_clicks"),
+    State("tabela-de-regras-existentes", "rowData"),
+    prevent_initial_call=True
 )
-def editar_regra(n_clicks, linhas):
-    if linhas:
-        return f"Linha selecionada: {linhas[0]}"
-    return "Nenhuma linha selecionada."
+def salvar_alteracoes(n_clicks, dados_editados):
+    if not dados_editados:
+        return "Nenhuma alteração detectada."
 
+    try:
+        for regra in dados_editados:
+            # Renomear as chaves para os parâmetros do método
+            kwargs = {
+                "id_regra": regra.get("id"),
+                "nome_regra": regra.get("nome_regra"),
+                "data": regra.get("periodo"),
+                "modelos": regra.get("modelos"),
+                "linha": regra.get("linha"),
+                "quantidade_de_viagens": regra.get("qtd_viagens"),
+                "dias_marcados": regra.get("dias_analise"),
+                "excluir_km_l_menor_que": regra.get("km_l_min"),
+                "excluir_km_l_maior_que": regra.get("km_l_max"),
+                "mediana_viagem": regra.get("mediana_viagem"),
+                "suspeita_performace": regra.get("suspeita_performace"),
+                "indicativo_performace": regra.get("indicativo_performace"),
+                "erro_telemetria": regra.get("erro_telemetria"),
+            }
+            regra_service.atualizar_regra_monitoramento(**kwargs)
+
+        return "Alterações salvas com sucesso!"
+    except Exception as e:
+        return f"Erro ao salvar alterações: {str(e)}"
 
 
 
@@ -211,7 +232,7 @@ layout = dbc.Container(
         # Tabela AG Grid
         dag.AgGrid(
             id="tabela-de-regras-existentes",
-            columnDefs=regras_tabela.tbl_regras_monitoramento,
+            columnDefs=regras_tabela.tbl_regras_monitoramento_editavel,
             rowData=[],
             defaultColDef={"filter": True, "floatingFilter": True, "editable": True,},
             columnSize="autoSize",
@@ -251,8 +272,6 @@ layout = dbc.Container(
                         style={
                             "text-align": "left",
                             "height": 400,
-                            "resize": "vertical",
-                            "overflow": "hidden",
                         },
                     ),
                     width=4,
@@ -280,8 +299,6 @@ layout = dbc.Container(
                         style={
                             "text-align": "right",
                             "height": 400,
-                            "resize": "vertical",
-                            "overflow": "hidden",
                         },
                     ),
                     width=8,
@@ -292,8 +309,6 @@ layout = dbc.Container(
             style={
                 "text-align": "center",
                 "height": 400,
-                "resize": "vertical",
-                "overflow": "hidden",
             },
         ),
     ]

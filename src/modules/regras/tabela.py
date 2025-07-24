@@ -149,3 +149,35 @@ tbl_regras_monitoramento = [
     },
     
 ]
+
+tbl_regras_monitoramento_editavel = []
+
+for col in tbl_regras_monitoramento:
+    field = col.get("field")  # pega o valor ou None se não existir
+
+    if not field:
+        # Coluna sem campo, tipo a coluna de seleção, deixa como está e pula edição
+        col.update({"editable": False})
+        tbl_regras_monitoramento_editavel.append(col)
+        continue
+
+    # Agora só para colunas que têm campo "field"
+    if col.get("headerName") in ["SELEÇÃO", "Criado Em"]:
+        editable = False
+    else:
+        editable = True
+
+    if field.startswith("usar_"):
+        col.update({
+            "editable": editable,
+            "cellEditor": "agCheckboxCellEditor",
+            "cellRenderer": "agCheckboxCellRenderer",
+            "minWidth": col.get("minWidth", 100)
+        })
+    else:
+        col.update({
+            "editable": editable,
+        })
+
+    tbl_regras_monitoramento_editavel.append(col)
+
