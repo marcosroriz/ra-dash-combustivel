@@ -8,7 +8,7 @@
 ##############################################################################
 # Bibliotecas básicas
 # Importar bibliotecas do dash básicas e plotly
-from dash import html, callback, Input, Output, dcc
+from dash import html, callback, Input, Output, dcc, ctx, State
 import dash
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -87,17 +87,30 @@ def filtra_todas_opcao(valor_selecionado):
     return valor_selecionado
 
 @callback(
-        Output("mensagem-sucesso-deletar", "children"),
-    [
-        Input('btn-deletar-regra', 'n_clicks'),
-        Input("tabela-de-regras-existentes", "selectedRows"),
-    ]
+    Output("mensagem-sucesso-deletar", "children"),
+    Input('btn-deletar-regra', 'n_clicks'),
+    State("tabela-de-regras-existentes", "selectedRows"),
+    prevent_initial_call=True
 )
 def deletar_regra(n_clicks, linhas):
-    if linhas:
-        print(linhas)
-        return f"Linha selecionada: {linhas[0]}"
-    return "Nenhuma linha selecionada."
+    if not n_clicks:
+        return ""
+
+    if not linhas:
+        return "Selecione uma regra para deletar."
+
+    try:
+        regra_id = linhas[0].get('id')
+        if regra_id is None:
+            return "ID da regra não encontrado."
+
+        regra_service.deletar_regra_monitoramento(id_regra=regra_id)
+        return f"Regra ID {regra_id} deletada com sucesso."
+
+    except Exception as e:
+        print(f"[ERRO] Falha ao deletar regra: {e}")
+        return "Erro ao deletar a regra. Verifique os logs."
+
 
 
 @callback(
