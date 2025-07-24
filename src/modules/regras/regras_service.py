@@ -437,12 +437,12 @@ class RegrasService:
         linha,
         quantidade_de_viagens,
         dias_marcados,
-        excluir_km_l_menor_que=0,
-        excluir_km_l_maior_que=0,
-        mediana_viagem=0,
-        suspeita_performace=0,
-        indicativo_performace=0,
-        erro_telemetria=0
+        excluir_km_l_menor_que,
+        excluir_km_l_maior_que,
+        mediana_viagem,
+        suspeita_performace,
+        indicativo_performace,
+        erro_telemetria
     ):
 
         usar_km_l_min = excluir_km_l_menor_que is not None
@@ -516,3 +516,77 @@ class RegrasService:
 
         except Exception as e:
             print(f"Erro ao deletar a regra: {e}")
+
+    def atualizar_regra_monitoramento(
+        self,
+        id_regra,
+        nome_regra,
+        data,
+        modelos,
+        linha,
+        quantidade_de_viagens,
+        dias_marcados,
+        excluir_km_l_menor_que,
+        excluir_km_l_maior_que,
+        mediana_viagem,
+        suspeita_performace,
+        indicativo_performace,
+        erro_telemetria
+    ):
+        usar_km_l_min = excluir_km_l_menor_que is not None
+        usar_km_l_max = excluir_km_l_maior_que is not None
+        usar_mediana = mediana_viagem is not None
+        usar_suspeita = suspeita_performace is not None
+        usar_indicativo = indicativo_performace is not None
+        usar_erro = erro_telemetria is not None
+
+        try:
+            with self.pgEngine.connect() as conn:
+                update_sql = text("""
+                    UPDATE regras_monitoramento
+                    SET nome_regra = :nome_regra,
+                        periodo = :periodo,
+                        modelos = :modelos,
+                        linha = :linha,
+                        dias_analise = :dias_analise,
+                        qtd_viagens = :qtd_viagens,
+                        km_l_min = :km_l_min,
+                        usar_km_l_min = :usar_km_l_min,
+                        km_l_max = :km_l_max,
+                        usar_km_l_max = :usar_km_l_max,
+                        mediana_viagem = :mediana_viagem,
+                        usar_mediana_viagem = :usar_mediana_viagem,
+                        suspeita_performace = :suspeita_performace,
+                        usar_suspeita_performace = :usar_suspeita_performace,
+                        indicativo_performace = :indicativo_performace,
+                        usar_indicativo_performace = :usar_indicativo_performace,
+                        erro_telemetria = :erro_telemetria,
+                        usar_erro_telemetria = :usar_erro_telemetria
+                    WHERE id = :id_regra
+                """)
+
+                conn.execute(update_sql, {
+                    "id_regra": id_regra,
+                    "nome_regra": nome_regra,
+                    "periodo": data,
+                    "modelos": modelos,
+                    "linha": linha,
+                    "dias_analise": dias_marcados,
+                    "qtd_viagens": quantidade_de_viagens,
+                    "km_l_min": excluir_km_l_menor_que,
+                    "usar_km_l_min": usar_km_l_min,
+                    "km_l_max": excluir_km_l_maior_que,
+                    "usar_km_l_max": usar_km_l_max,
+                    "mediana_viagem": mediana_viagem,
+                    "usar_mediana_viagem": usar_mediana,
+                    "suspeita_performace": suspeita_performace,
+                    "usar_suspeita_performace": usar_suspeita,
+                    "indicativo_performace": indicativo_performace,
+                    "usar_indicativo_performace": usar_indicativo,
+                    "erro_telemetria": erro_telemetria,
+                    "usar_erro_telemetria": usar_erro
+                })
+                conn.commit()
+        except Exception as e:
+            print(f"Erro ao atualizar regra: {e}")
+
