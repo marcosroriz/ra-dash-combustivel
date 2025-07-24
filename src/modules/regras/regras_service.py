@@ -70,127 +70,170 @@ class RegrasService:
         self,
         data,
         modelos,
-        linha,
+        numero_de_motoristas,
         quantidade_de_viagens,
         dias_marcados,
-        excluir_km_l_menor_que,
-        excluir_km_l_maior_que,
         mediana_viagem,
         suspeita_performace,
         indicativo_performace,
         erro_telemetria         
     ):
-        # Datas
-        data_inicio_str = pd.to_datetime(datetime.now() - timedelta(days=data)).strftime("%Y-%m-%d")
-        data_fim_str = pd.to_datetime(datetime.now()).strftime("%Y-%m-%d")
 
         # Converte para tipos esperados
-        mediana_viagem = int(mediana_viagem or 0)
-        erro_telemetria = float(erro_telemetria or 0)
-        suspeita_performace = float(suspeita_performace or 0)
-        indicativo_performace = float(indicativo_performace or 0)
+        mediana_viagem = int(mediana_viagem or 0) / 100
+        erro_telemetria = float(erro_telemetria or 0)  / 100
+        suspeita_performace = float(suspeita_performace or 0)  / 100
+        indicativo_performace = float(indicativo_performace or 0)  / 100
         quantidade_de_viagens = int(quantidade_de_viagens or 0)
-        excluir_km_l_menor_que = float(excluir_km_l_menor_que or 0)
-        excluir_km_l_maior_que = float(excluir_km_l_maior_que or 10)
+        numero_de_motoristas = int(numero_de_motoristas or 0)
+        
 
-        # Subqueries auxiliares
-        subquery_dias_marcados = self.get_subquery_dias(dias_marcados)
+        # Condições para filtros de dias 
+        if dias_marcados =='SEG_SEX':
+            table = 'mat_view_viagens_classificadas_dia_semana'
+
+        elif dias_marcados == 'SABADO':
+            table = 'mat_view_viagens_classificadas_sabado'
+
+        elif dias_marcados == 'DOMINGO':
+            table = 'mat_view_viagens_classificadas_domingo'
+
+        elif dias_marcados == 'FERIADO':
+            table = 'mat_view_viagens_classificadas_feriado'
+
+
         subquery_modelo = subquery_modelos_combustivel(modelos)
-        subquery_linhas = subquery_linha_combustivel(linha)
 
         # Query principal
         query = f"""
-            WITH base AS (
-                SELECT *,
-                    (
-                        DATE_TRUNC('hour', TO_TIMESTAMP(rmtc_timestamp_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') - INTERVAL '3 hours') +
-                        MAKE_INTERVAL(mins => (
-                            FLOOR(EXTRACT(minute FROM TO_TIMESTAMP(rmtc_timestamp_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') - INTERVAL '3 hours') / 30.0) * 30
-                        )::int)
-                    )::time AS slot_horario,
-                    CASE
-                        WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
-                        WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
-                        WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
-                        WHEN vec_model ILIKE 'O500%%' THEN 'O500'
-                        WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
-                        WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
-                        WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
-                        ELSE vec_model
-                    END AS vec_model_padronizado,
-                    (TO_TIMESTAMP(rmtc_timestamp_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') - INTERVAL '3 hours')::date AS data_local
-                FROM rmtc_viagens_analise
-                WHERE 
-                    encontrou_linha = TRUE
-                    AND km_por_litro > 0
-                    AND km_por_litro <= 10
-                    {subquery_modelo}
-                    {subquery_linhas}
-            ),
-            amostras_validas AS (
-                SELECT *
-                FROM base
-                WHERE {subquery_dias_marcados}
-            ),
-            amostras_filtradas AS (
-                SELECT *
-                FROM amostras_validas
-                WHERE data_local BETWEEN '{data_inicio_str}' AND '{data_fim_str}'
-            ),
-            estatisticas AS (
-                SELECT
-                    vec_model_padronizado,
-                    encontrou_numero_linha,
-                    encontrou_numero_sublinha,
-                    encontrou_sentido_linha,
-                    slot_horario,
-                    AVG(km_por_litro) AS media,
-                    STDDEV(km_por_litro) AS desvio_padrao
-                FROM amostras_filtradas
-                GROUP BY vec_model_padronizado, encontrou_numero_linha, encontrou_numero_sublinha, encontrou_sentido_linha, slot_horario
-            ),
-            classificados AS (
-                SELECT a.*, e.media, e.desvio_padrao,
-                    CASE
-                        WHEN a.km_por_litro > e.media + e.desvio_padrao THEN 'ERRO TELEMETRIA'
-                        WHEN a.km_por_litro < e.media - 2 * e.desvio_padrao THEN 'BAIXA PERFORMANCE'
-                        WHEN a.km_por_litro < e.media - 1 * e.desvio_padrao THEN 'SUSPEITA BAIXA PERFORMANCE'
-                        ELSE 'REGULAR'
-                    END AS status_consumo
-                FROM amostras_filtradas a
-                JOIN estatisticas e
-                    ON a.vec_model_padronizado = e.vec_model_padronizado
-                    AND a.encontrou_numero_linha = e.encontrou_numero_linha
-                    AND a.encontrou_numero_sublinha = e.encontrou_numero_sublinha
-                    AND a.encontrou_sentido_linha = e.encontrou_sentido_linha
-                    AND a.slot_horario = e.slot_horario
-            ),
-            resumo_por_veiculo AS (
-                SELECT vec_num_id, vec_model, status_consumo, COUNT(*) AS total_status
-                FROM classificados
-                GROUP BY vec_num_id, vec_model, status_consumo
-            ),
-            total_por_veiculo AS (
-                SELECT 
-                    vec_num_id,
-                    AVG(km_por_litro) AS media_consumo_por_km,
-                    COUNT(*) AS total_geral,
-                    AVG(media) AS media_geral,
-                    (100.0 * COUNT(*) FILTER (WHERE km_por_litro < media) / COUNT(*)) AS percentual_abaixo
-                FROM classificados
-                GROUP BY vec_num_id
-            )
+        WITH viagens AS (
+            SELECT *
+            FROM public.{table}
+        ),
+
+        viagens_classificadas_no_periodo AS (
+            SELECT *
+            FROM viagens vc
+            -- WHERE vc."dia" BETWEEN '2025-04-01' AND '2025-04-30'
+            WHERE vc."dia" >= CURRENT_DATE - interval '{data} days' ---- Aqui a gente faz o filtro de data
+        ),
+
+        viagens_classificadas_do_modelo AS (
+            SELECT *
+            FROM viagens_classificadas_no_periodo
+            {subquery_modelo}
+        ),
+
+        viagens_classificadas_nas_linhas AS (
+            SELECT *
+            FROM viagens_classificadas_do_modelo
+            -- WHERE de linhas
+        ),
+
+        viagens_filtro AS (
             SELECT 
+                vcl.vec_asset_id,
+                COUNT(*) FILTER (WHERE diferenca_mediana < 0) AS viagens_abaixo_mediana,
+                COUNT(*) FILTER (WHERE diferenca_mediana < 0)::decimal / COUNT(*) AS proporcao_abaixo_mediana,
+                COUNT(*) FILTER (
+                    WHERE status_consumo IN ('SUSPEITA BAIXA PERFOMANCE', 'BAIXA PERFORMANCE')
+                )::decimal / COUNT(*) AS proporcao_suspeita_ou_baixa_perfomance,
+                COUNT(*) FILTER (WHERE status_consumo IN ('ERRO TELEMETRIA'))::decimal / COUNT(*) AS proporcao_erro,
+                -- vbf.num_motoristas_baixa_perf
+                COUNT(DISTINCT "DriverId") FILTER (
+                    WHERE status_consumo IN ('SUSPEITA BAIXA PERFOMANCE', 'BAIXA PERFORMANCE')
+                ) AS num_motoristas_diferentes
+            FROM viagens_classificadas_do_modelo vcl
+            GROUP BY vcl.vec_asset_id
+            HAVING 
+                COUNT(*) >= {quantidade_de_viagens} --- quantidade de viagens por periodo
+                AND COUNT(*) FILTER (WHERE diferenca_mediana < 0)::decimal / COUNT(*) >= {mediana_viagem} ---- porcentagem abaixo da mediana
+                AND COUNT(*) FILTER (
+                    WHERE status_consumo IN ('SUSPEITA BAIXA PERFOMANCE', 'BAIXA PERFORMANCE')
+                )::decimal / COUNT(*) >= {indicativo_performace}--- filtro de suspeita ou baixa performance
+                AND COUNT(*) FILTER (WHERE status_consumo IN ('ERRO TELEMETRIA'))::decimal / COUNT(*) >= {erro_telemetria} --- porcentagem erro telemetria
+                AND COUNT(DISTINCT "DriverId") FILTER (
+                    WHERE status_consumo IN ('SUSPEITA BAIXA PERFOMANCE', 'BAIXA PERFORMANCE')
+                ) >= {numero_de_motoristas}--- filtro para motoristas diferentes
+        ),
+
+        viagens_filtro_final AS (
+            SELECT 
+                todas_viagens.*,
+                viagens_filtro.viagens_abaixo_mediana,
+                viagens_filtro.proporcao_abaixo_mediana,
+                viagens_filtro.proporcao_suspeita_ou_baixa_perfomance,
+                viagens_filtro.proporcao_erro,
+                viagens_filtro.num_motoristas_diferentes,
+                todas_viagens."tamanho_linha_km_sobreposicao" / todas_viagens."mediana" AS comb_esperado_mediana,
+                todas_viagens."total_comb_l" - (todas_viagens."tamanho_linha_km_sobreposicao" / todas_viagens."mediana") AS comb_excedente_L
+            FROM viagens_classificadas_nas_linhas todas_viagens
+            JOIN viagens_filtro viagens_filtro
+                ON todas_viagens.vec_asset_id = viagens_filtro.vec_asset_id
+        ),
+
+        resumo_por_veiculo AS (
+            SELECT 
+                vec_asset_id,
+                vec_num_id,
+                vec_model,
+                status_consumo,
+                COUNT(*) AS total_status,
+                SUM(comb_excedente_L) AS comb_excedente_L_por_categoria
+            FROM viagens_filtro_final
+            GROUP BY vec_asset_id, vec_num_id, vec_model, status_consumo
+        ),
+
+        total_por_veiculo AS (
+            SELECT 
+                vec_asset_id,
+                vec_num_id,
+                AVG(km_por_litro) AS MEDIA_CONSUMO_POR_KM,
+                SUM(comb_excedente_L) AS comb_excedente_L,
+                COUNT(*) AS total_geral
+            FROM viagens_filtro_final
+            GROUP BY vec_asset_id, vec_num_id
+        ),
+
+        proporcao_por_veiculo AS (
+            SELECT 
+                vec_asset_id,
+                viagens_abaixo_mediana,
+                proporcao_abaixo_mediana,
+                proporcao_suspeita_ou_baixa_perfomance,
+                proporcao_erro,
+                num_motoristas_diferentes
+            FROM viagens_filtro_final
+            GROUP BY 
+                vec_asset_id,
+                viagens_abaixo_mediana,
+                proporcao_abaixo_mediana,
+                proporcao_suspeita_ou_baixa_perfomance,
+                proporcao_erro,
+                num_motoristas_diferentes
+        ),
+
+        estatistica_veiculos AS (
+            SELECT 
+                r.vec_asset_id,
                 r.vec_num_id,
                 r.vec_model,
                 r.status_consumo,
                 r.total_status,
-                t.media_consumo_por_km,
-                ROUND(100.0 * r.total_status / t.total_geral, 2) AS percentual,
-                t.percentual_abaixo
+                ROUND(100.0 * r.total_status / t.total_geral, 2) AS percentual_categoria_status,
+                r.comb_excedente_L_por_categoria,
+                t.MEDIA_CONSUMO_POR_KM,
+                t.comb_excedente_L
             FROM resumo_por_veiculo r
-            JOIN total_por_veiculo t ON r.vec_num_id = t.vec_num_id
-            WHERE t.percentual_abaixo >= {mediana_viagem}
+            JOIN total_por_veiculo t
+                ON r.vec_num_id = t.vec_num_id
+        )
+
+        SELECT *
+        FROM estatistica_veiculos e
+        LEFT JOIN proporcao_por_veiculo p
+            ON e.vec_asset_id = p.vec_asset_id;
+
         """
 
         df = pd.read_sql(query, self.pgEngine)
@@ -199,44 +242,46 @@ class RegrasService:
         if df.empty:
             return pd.DataFrame(columns=["vec_num_id", "vec_model", "media_consumo_por_km", "total_viagens"])
 
-        # Pivot da tabela
+        # Arredonda o consumo médio
         df["media_consumo_por_km"] = df["media_consumo_por_km"].round(2)
+
+        # AGRUPA para obter comb_excedente_L total e proporcao_abaixo_mediana média por veículo
+        df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg({
+            "comb_excedente_l": "sum",
+            "proporcao_abaixo_mediana": "mean"
+        })
+
+        # Pivot da tabela: cria colunas para cada status de consumo
         df_pivot = df.pivot_table(
             index=["vec_num_id", "vec_model", "media_consumo_por_km"],
             columns="status_consumo",
-            values=["total_status", "percentual"],
+            values=["total_status", "percentual_categoria_status"],
             fill_value=0
         )
 
-        # Ajusta nomes de colunas
-        df_pivot.columns = [f"{col[0]}_{col[1].lower().replace(' ', '_')}" for col in df_pivot.columns]
-        df_pivot = df_pivot.reset_index()
-
-        # Calcula totais
-        df_pivot["total_viagens"] = df_pivot.filter(like="total_status").sum(axis=1)
-        df_pivot = df_pivot.sort_values(by="total_viagens", ascending=False)
-        df_pivot["media_viagens_dia"] = df_pivot["total_viagens"]
-
-        # Filtros por km/L
-        df_pivot = df_pivot[
-            (df_pivot["media_consumo_por_km"] >= excluir_km_l_menor_que) &
-            (df_pivot["media_consumo_por_km"] <= excluir_km_l_maior_que)
+        # Ajusta nomes de colunas (ex: total_status_regular, percentual_baixa_performance)
+        df_pivot.columns = [
+            f"{col[0]}_{col[1].lower().replace(' ', '_')}" 
+            for col in df_pivot.columns
         ]
 
-        # Aplicação dos filtros por percentual
-        filtros_percentuais = {
-            'percentual_erro_telemetria': erro_telemetria,
-            'percentual_suspeita_baixa_performance': suspeita_performace,
-            'percentual_baixa_performance': indicativo_performace
-        }
+        # Converte de volta o índice em colunas
+        df_pivot = df_pivot.reset_index()
 
-        for coluna, limite in filtros_percentuais.items():
-            if coluna in df_pivot.columns:
-                df_pivot = df_pivot[df_pivot[coluna] >= limite]
+        # Junta com os dados de comb_excedente_L e proporcao_abaixo_mediana
+        df_pivot = df_pivot.merge(df_extra, on=["vec_num_id", "vec_model", "media_consumo_por_km"], how="left")
 
-        # Filtro por número mínimo de viagens
-        if quantidade_de_viagens > 0:
-            df_pivot = df_pivot[df_pivot['total_viagens'] >= quantidade_de_viagens]
+        # Calcula total de viagens
+        df_pivot["total_viagens"] = df_pivot.filter(like="total_status_").sum(axis=1)
+
+        # Ordena por número de viagens
+        df_pivot = df_pivot.sort_values(by="total_viagens", ascending=False)
+
+        # Arredonda comb_excedente_l
+        df_pivot["comb_excedente_l"] = df_pivot["comb_excedente_l"].round(2)
+
+        # Multiplica proporcao_abaixo_mediana por 100 e arredonda
+        df_pivot["proporcao_abaixo_mediana"] = (df_pivot["proporcao_abaixo_mediana"] * 100).round(2)
 
         # Arredonda colunas de percentual
         colunas_para_arredondar = [

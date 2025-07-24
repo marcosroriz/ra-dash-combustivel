@@ -17,12 +17,12 @@ tbl_perc_viagens_monitoramento = [
 
     {"field": "total_viagens", "headerName": "Quantidade de Viagens", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_regular", "headerName": "Regular", "minWidth": 150, "type": ["numericColumn"]},
-    {"field": "total_status_suspeita_baixa_performance", "headerName": "Suspeita Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
+    {"field": "total_status_suspeita_baixa_perfomance", "headerName": "Suspeita Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_baixa_performance", "headerName": "Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_erro_telemetria", "headerName": "Supeita Erro Telemetria", "minWidth": 150, "type": ["numericColumn"]},
 
     {
-        "field": "percentual_regular",
+        "field": "percentual_categoria_status_regular",
         "headerName": "% Viagens Regular",
         "minWidth": 150,
         "type": ["numericColumn"],
@@ -31,7 +31,7 @@ tbl_perc_viagens_monitoramento = [
         },
     },
     {
-        "field": "percentual_suspeita_baixa_performance",
+        "field": "percentual_categoria_status_suspeita_baixa_perfomance",
         "headerName": "% Viagens Suspeita de Baixa Performance",
         "minWidth": 150,
         "type": ["numericColumn"],
@@ -40,7 +40,7 @@ tbl_perc_viagens_monitoramento = [
         },
     },
     {
-        "field": "percentual_baixa_performance",
+        "field": "percentual_categoria_status_baixa_performance",
         "headerName": "% Viagens Baixa Performnce",
         "minWidth": 150,
         "type": ["numericColumn"],
@@ -49,7 +49,7 @@ tbl_perc_viagens_monitoramento = [
         },
     },
     {
-        "field": "percentual_erro_telemetria",
+        "field": "percentual_categoria_status_erro_telemetria",
         "headerName": "% Viagens Supeita Erro",
         "minWidth": 150,
         "type": ["numericColumn"],
