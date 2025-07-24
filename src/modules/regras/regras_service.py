@@ -21,11 +21,14 @@ class RegrasService:
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
         query = f'''
-        SELECT * FROM public.regras_monitoramento ORDER BY nome_regra;
+        SELECT * FROM public.regras_monitoramento
         '''
-        if not 'TODAS' in lista_regras or lista_regras is not None:
+        if not 'TODAS' in lista_regras or not None in lista_regras:
             query += f''' WHERE {subquery_regras}'''
-        return pd.read_sql(query, self.pgEngine)
+        df =  pd.read_sql(query, self.pgEngine)
+        df = df.sort_values('nome_regra')
+        return df
+
 
     def get_subquery_dias(self, dias_marcados):
         dias_subquery = ""
@@ -184,6 +187,7 @@ class RegrasService:
         """
 
         df = pd.read_sql(query, self.pgEngine)
+        
 
         if df.empty:
             return pd.DataFrame(columns=["vec_num_id", "vec_model", "media_consumo_por_km", "total_viagens"])

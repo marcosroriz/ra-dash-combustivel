@@ -74,7 +74,6 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # Preparando inputs
 df_regras = get_regras_padronizadas(pgEngine)
 lista_todas_regras = df_regras.to_dict(orient="records")
-lista_todas_regras.insert(0, {"LABEL": "TODAS"})
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
@@ -173,7 +172,7 @@ def atualiza_tabela_perc_viagens_monitoramento(
 
 # Callback para grafico de total de Veiculos por modelo
 @callback(
-    # Output("input-nome-regra-padronizada", "value"),
+    Output("grafico-veiculos-modelo-regra", "figure"),
     Input("input-nome-regra-padronizada", "value"),
     prevent_initial_call=True
 )
@@ -182,6 +181,31 @@ def grafico_veiculos_por_modelo_regra(valor_selecionado):
     regra = regras_service.get_regras(
         [valor_selecionado]
     )
+
+    if regra.empty:
+        return go.Figure()
+    
+    regra_dict = regra.to_dict(orient='records')
+    
+    for regra in regra_dict:
+        kwargs = {
+            "data":int(regra.get("periodo")),
+            "modelos": regra.get("modelos"),
+            "linha": regra.get("linha"),
+            "quantidade_de_viagens": regra.get("qtd_viagens"),
+            "dias_marcados": regra.get("dias_analise"),
+            "excluir_km_l_menor_que": regra.get("km_l_min"),
+            "excluir_km_l_maior_que": regra.get("km_l_max"),
+            "mediana_viagem": regra.get("mediana_viagem"),
+            "suspeita_performace": regra.get("suspeita_performace"),
+            "indicativo_performace": regra.get("indicativo_performace"),
+            "erro_telemetria": regra.get("erro_telemetria"),
+        }
+        result = regras_service.get_estatistica_regras(**kwargs)
+
+    fig = monitoramento_graficos.plot_veiculos_por_modelo(result)
+
+    return fig
 
 
 # Callback para gráfico de combustível por veículo ao longo do dia
@@ -895,6 +919,13 @@ layout = dbc.Container(
                     ),
                     md=12,
                 ),
+                dmc.Space(h=20),
+                html.Div(
+                    [
+                        html.H2("Quantidade de Veiculos por Modelo"),
+                        dcc.Graph(id='grafico-veiculos-modelo-regra')
+                    ]   
+                )
             ]
         ),
     ]
