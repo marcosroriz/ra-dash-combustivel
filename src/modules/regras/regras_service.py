@@ -20,12 +20,19 @@ class RegrasService:
 
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
+        print(lista_regras)
+
         query = f'''
         SELECT * FROM public.regras_monitoramento
         '''
-        if not 'TODAS' in lista_regras or not None in lista_regras:
-            query += f''' WHERE {subquery_regras}'''
-        df =  pd.read_sql(query, self.pgEngine)
+
+        if not lista_regras:
+            lista_regras = []
+
+        if lista_regras and 'TODAS' not in lista_regras:
+            query += f' WHERE {subquery_regras}'
+
+        df = pd.read_sql(query, self.pgEngine)
         df = df.sort_values('nome_regra')
         return df
 
