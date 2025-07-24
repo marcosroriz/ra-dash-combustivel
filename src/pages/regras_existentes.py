@@ -100,12 +100,12 @@ def deletar_regra(n_clicks, linhas):
         return "Selecione uma regra para deletar."
 
     try:
-        regra_id = linhas[0].get('id')
-        if regra_id is None:
+        regra_nome = linhas[0].get('nome_regra')
+        if linhas[0].get('id') is None:
             return "ID da regra não encontrado."
 
-        regra_service.deletar_regra_monitoramento(id_regra=regra_id)
-        return f"Regra ID {regra_id} deletada com sucesso."
+        regra_service.deletar_regra_monitoramento(id_regra=linhas[0].get('id'))
+        return f"Regra {regra_nome} deletada com sucesso."
 
     except Exception as e:
         print(f"[ERRO] Falha ao deletar regra: {e}")
@@ -131,13 +131,10 @@ def salvar_alteracoes(n_clicks, dados_editados):
                 "nome_regra": regra.get("nome_regra"),
                 "data": regra.get("periodo"),
                 "modelos": regra.get("modelos"),
-                "linha": regra.get("linha"),
+                "numero_de_motoristas": regra.get("motoristas"),
                 "quantidade_de_viagens": regra.get("qtd_viagens"),
                 "dias_marcados": regra.get("dias_analise"),
-                "excluir_km_l_menor_que": regra.get("km_l_min"),
-                "excluir_km_l_maior_que": regra.get("km_l_max"),
                 "mediana_viagem": regra.get("mediana_viagem"),
-                "suspeita_performace": regra.get("suspeita_performace"),
                 "indicativo_performace": regra.get("indicativo_performace"),
                 "erro_telemetria": regra.get("erro_telemetria"),
             }
