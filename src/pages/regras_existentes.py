@@ -95,6 +95,7 @@ def filtra_todas_opcao(valor_selecionado):
 )
 def deletar_regra(n_clicks, linhas):
     if linhas:
+        print(linhas)
         return f"Linha selecionada: {linhas[0]}"
     return "Nenhuma linha selecionada."
 

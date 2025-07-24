@@ -502,3 +502,17 @@ class RegrasService:
 
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
+
+    def deletar_regra_monitoramento(self, id_regra):
+        try:
+            with self.pgEngine.connect() as conn:
+                delete_sql = text("""
+                    DELETE FROM regras_monitoramento
+                    WHERE id = :id_regra
+                """)
+
+                conn.execute(delete_sql, {"id_regra": id_regra})
+                conn.commit()
+
+        except Exception as e:
+            print(f"Erro ao deletar a regra: {e}")
