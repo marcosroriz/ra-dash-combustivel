@@ -11,11 +11,32 @@ tbl_perc_viagens_monitoramento = [
         "maxWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
-            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2))"
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00' : val.toFixed(2); }"
+        },
+    },
+    {
+        "field": "comb_excedente_l",
+        "headerName": "Litros Excedentes",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 150,
+        "type": ["numericColumn"],
+        "valueFormatter": {
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00L' : val.toFixed(2) + 'L'; }"
         },
     },
 
     {"field": "total_viagens", "headerName": "Quantidade de Viagens", "minWidth": 150, "type": ["numericColumn"]},
+    {
+    "field": "proporcao_abaixo_mediana",
+    "headerName": "% Viagens Abaixo Da Mediana",
+    "minWidth": 150,
+    "type": ["numericColumn"],
+    "valueFormatter": {
+        "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00%' : val.toFixed(2) + '%'; }"
+    },
+    },
     {"field": "total_status_regular", "headerName": "Regular", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_suspeita_baixa_perfomance", "headerName": "Suspeita Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
     {"field": "total_status_baixa_performance", "headerName": "Baixa Performance", "minWidth": 150, "type": ["numericColumn"]},
@@ -27,7 +48,7 @@ tbl_perc_viagens_monitoramento = [
         "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
-            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00%' : val.toFixed(2) + '%'; }"
         },
     },
     {
@@ -36,7 +57,7 @@ tbl_perc_viagens_monitoramento = [
         "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
-            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00%' : val.toFixed(2) + '%'; }"
         },
     },
     {
@@ -45,7 +66,7 @@ tbl_perc_viagens_monitoramento = [
         "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
-            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00%' : val.toFixed(2) + '%'; }"
         },
     },
     {
@@ -54,10 +75,11 @@ tbl_perc_viagens_monitoramento = [
         "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
-            "function": "params => (isNaN(parseFloat(params.value)) ? '0.00%' : parseFloat(params.value).toFixed(2) + '%')"
+            "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00%' : val.toFixed(2) + '%'; }"
         },
     },
 ]
+
 
 tbl_regras_monitoramento = [
 

@@ -36,7 +36,6 @@ class RegrasService:
         df = df.sort_values('nome_regra')
         return df
 
-
     def get_subquery_dias(self, dias_marcados):
         dias_subquery = ""
 
@@ -283,10 +282,11 @@ class RegrasService:
 
         # Arredonda colunas de percentual
         colunas_para_arredondar = [
-            'percentual_erro_telemetria',
-            'percentual_suspeita_baixa_performance',
-            'percentual_baixa_performance',
-            'media_consumo_por_km'
+            'percentual_categoria_status_regular',
+            'percentual_categoria_status_suspeita_baixa_perfomance',
+            'percentual_categoria_status_baixa_performance',
+            'comb_excedente_l', 'media_consumo_por_km', 'percentual_categoria_status_erro_telemetria',
+            'proporcao_abaixo_mediana'
         ]
 
         for coluna in colunas_para_arredondar:
