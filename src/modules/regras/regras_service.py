@@ -74,7 +74,6 @@ class RegrasService:
         quantidade_de_viagens,
         dias_marcados,
         mediana_viagem,
-        suspeita_performace,
         indicativo_performace,
         erro_telemetria         
     ):
@@ -82,7 +81,6 @@ class RegrasService:
         # Converte para tipos esperados
         mediana_viagem = int(mediana_viagem or 0) / 100
         erro_telemetria = float(erro_telemetria or 0)  / 100
-        suspeita_performace = float(suspeita_performace or 0)  / 100
         indicativo_performace = float(indicativo_performace or 0)  / 100
         quantidade_de_viagens = int(quantidade_de_viagens or 0)
         numero_de_motoristas = int(numero_de_motoristas or 0)

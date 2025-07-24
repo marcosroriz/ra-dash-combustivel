@@ -72,36 +72,30 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 @callback(
     Output("tabela-regras-viagens-monitoramento", "rowData"),
     Output("indicador-quantidade-de-veiculos", "children"),
-    # Output("overlay-tabela-monitoramento", "style"),
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-motoristas", "value"),
         Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
         Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
         Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
         Input("select-baixa-performace-indicativo", "value"),
         Input("select-erro-telemetria", "value"),
     ],
 )
 def atualiza_tabela_regra_viagens_monitoramento(
-    data, modelos, linha,
+    data, modelos, motoristas,
     quantidade_de_viagens, dias_marcados, 
-    excluir_km_l_menor_que, excluir_km_l_maior_que,
-    mediana_viagem, suspeita_performace,
+    mediana_viagem,
     indicativo_performace, erro_telemetria
 ):
     # Exibe overlay (inicial)
     # style_overlay = {"display": "block"}
 
     df = regra_service.get_estatistica_regras(
-        data, modelos, linha,
+        data, modelos, motoristas,
         quantidade_de_viagens, dias_marcados, 
-        excluir_km_l_menor_que, excluir_km_l_maior_que,
-        mediana_viagem, suspeita_performace,
+        mediana_viagem,
         indicativo_performace, erro_telemetria
     )
 
@@ -117,13 +111,10 @@ def atualiza_tabela_regra_viagens_monitoramento(
         Input("input-nome-regra-monitoramento", "value"),
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-select-linhas-monitoramento-regra", "value"),
+        Input("input-quantidade-de-motoristas", "value"),
         Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
         Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-        Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
         Input("select-mediana", "value"),
-        Input("select-baixa-performace-suspeita", "value"),
         Input("select-baixa-performace-indicativo", "value"),
         Input("select-erro-telemetria", "value"),
     ],
@@ -131,10 +122,9 @@ def atualiza_tabela_regra_viagens_monitoramento(
 )
 def salvar_regra_monitoramento(
     n_clicks, nome_regra,
-    data, modelos, linha,
+    data, modelos, motoristas,
     quantidade_de_viagens, dias_marcados, 
-    excluir_km_l_menor_que, excluir_km_l_maior_que,
-    mediana_viagem, suspeita_performace,
+    mediana_viagem, 
     indicativo_performace, erro_telemetria
 ): 
     ctx = callback_context  # Obtém o contexto do callback
@@ -150,10 +140,9 @@ def salvar_regra_monitoramento(
         return dash.no_update
     
     regra_service.salvar_regra_monitoramento(
-        nome_regra, data, modelos, linha,
+        nome_regra, data, modelos, motoristas,
         quantidade_de_viagens, dias_marcados, 
-        excluir_km_l_menor_que, excluir_km_l_maior_que,
-        mediana_viagem, suspeita_performace,
+        mediana_viagem,
         indicativo_performace, erro_telemetria
     )
     return "✅ Regra salva com sucesso!"
@@ -167,14 +156,6 @@ def salvar_regra_monitoramento(
     Input("switch-mediana", "checked"),
 )
 def input_mediana(ativado):
-    # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
-
-@callback(
-    Output("container-baixa-performace-suspeita", "style"),
-    Input("switch-baixa-performace-suspeita", "checked"),
-)
-def input_baixa_performace_suspeita(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
@@ -194,22 +175,6 @@ def input_erro_telemetria(ativado):
     # Se ativado (True): display block; se desativado: none
     return {"display": "block"} if ativado else {"display": "none"}
 
-@callback(
-    Output("container-kml-maior", "style"),
-    Input("switch-kml-maior", "checked"),
-)
-def input_kml_maior(ativado):
-    # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
-
-@callback(
-    Output("container-kml-menor", "style"),
-    Input("switch-kml-menor", "checked"),
-)
-def input_kml_menor(ativado):
-    # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
-
 
 ##############################################################################
 # Labels #####################################################################
@@ -220,22 +185,18 @@ def gera_labels_inputs(campo):
         [
             Input("input-periodo-dias-monitoramento-regra", "value"),  # datas
             Input("input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("input-select-linhas-monitoramento-regra", "value"), # linhas
+            Input("input-quantidade-de-motoristas", "value"), # Motoristas
             Input("input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
             Input("input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
-            Input("input-excluir-km-l-menor-que-monitoramento-regra", "value"),
-            Input("input-excluir-km-l-maior-que-monitoramento-regra", "value"),
             Input("select-mediana", "value"),
-            Input("select-baixa-performace-suspeita", "value"),
             Input("select-baixa-performace-indicativo", "value"),
             Input("select-erro-telemetria", "value"),
         ]
     )
     def atualiza_labels_inputs(
-        datas, modelos, linhas,
+        datas, modelos, motoristas,
         qtd_viagens, dias_marcados,
-        km_l_min, km_l_max,
-        mediana, suspeita, indicativo, erro
+        mediana, indicativo, erro
     ):
         badges = [
             dmc.Badge(
@@ -260,29 +221,20 @@ def gera_labels_inputs(campo):
         else:
             badges.append(dmc.Badge("Todos os modelos", variant="outline"))
 
-        # Linhas
-        if linhas and "TODAS" not in linhas:
-            for l in linhas:
-                badges.append(dmc.Badge(f"Linha: {l}", variant="dot"))
-        else:
-            badges.append(dmc.Badge("Todas as linhas", variant="outline"))
-
         # Outras métricas
+        if motoristas:
+            badges.append(dmc.Badge(f"Min. {motoristas} motoristas diferentes", variant="outline"))
+
+         # Outras métricas
         if qtd_viagens:
             badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
 
         if dias_marcados:
             badges.append(dmc.Badge(f"{dias_marcados}", variant="outline"))
 
-        if km_l_min is not None:
-            badges.append(dmc.Badge(f"Excluir km/L menor que {km_l_min}", color="green", variant="outline"))
-        if km_l_max is not None:
-            badges.append(dmc.Badge(f"Excluir km/L maior que {km_l_max}", color="green", variant="outline"))
-
         if mediana:
             badges.append(dmc.Badge(f"Abaixo da Mediana: {mediana}%", color="yellow", variant="outline"))
-        if suspeita:
-            badges.append(dmc.Badge(f"Suspeita Baixa Performance: {suspeita}%", color="orange", variant="outline"))
+
         if indicativo:
             badges.append(dmc.Badge(f"Indicativo Baixa Performance: {indicativo}%", color="yellow", variant="outline"))
         if erro:
@@ -412,16 +364,19 @@ layout = dbc.Container(
                                     dbc.Card(
                                         html.Div(
                                             [
-                                                dbc.Label("Linha"),
-                                                dcc.Dropdown(
-                                                    id="input-select-linhas-monitoramento-regra",
-                                                    options=[
-                                                        {"label": linha["LABEL"], "value": linha["LABEL"]}
-                                                        for linha in lista_todas_linhas
-                                                    ],
-                                                    multi=True,
-                                                    value=["TODOS"],
-                                                    placeholder="Selecione a linha",
+                                                dbc.Label("Quantidade mínima de motoristas diferentes"),
+                                                dbc.InputGroup(
+                                                    [
+                                                        dbc.Input(
+                                                            id="input-quantidade-de-motoristas",
+                                                            type="number",
+                                                            placeholder="Viagens",
+                                                            value=3,
+                                                            step=1,
+                                                            min=1,
+                                                        ),
+                                                        dbc.InputGroupText("Motoristas"),
+                                                    ]
                                                 ),
                                             ],
                                             className="dash-bootstrap",
@@ -488,69 +443,7 @@ layout = dbc.Container(
                                     ),
                                     md=6,
                                 ),
-
-                                # KML menor
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            dmc.Switch(
-                                                id="switch-kml-menor",
-                                                label="Excluir km/L menor que",
-                                                checked=False,
-                                            ),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup(
-                                                    [
-                                                        dbc.Input(
-                                                            id="input-excluir-km-l-menor-que-monitoramento-regra",
-                                                            type="number",
-                                                            min=1,
-                                                            step=0.1,
-                                                        ),
-                                                        dbc.InputGroupText("km/L"),
-                                                    ]
-                                                ),
-                                                id="container-kml-menor",
-                                                style={"display": "none", "marginTop": "10px"},
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=3,
-                                ),
-
-                                # KML maior
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            dmc.Switch(
-                                                id="switch-kml-maior",
-                                                label="Excluir km/L maior que",
-                                                checked=False,
-                                            ),
-                                            dmc.Space(h=10),
-                                            html.Div(
-                                                dbc.InputGroup(
-                                                    [
-                                                        dbc.Input(
-                                                            id="input-excluir-km-l-maior-que-monitoramento-regra",
-                                                            type="number",
-                                                            min=1,
-                                                            step=0.1,
-                                                        ),
-                                                        dbc.InputGroupText("km/L"),
-                                                    ]
-                                                ),
-                                                id="container-kml-maior",
-                                                style={"display": "none", "marginTop": "10px"},
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=3,
-                                ),
-                                dmc.Space(h=10),
+                                
                                 # Mediana
                                 dbc.Col(
                                     dbc.Card(
@@ -558,7 +451,7 @@ layout = dbc.Container(
                                             [
                                                 dmc.Switch(
                                                     id="switch-mediana",
-                                                    label="Viagens abaixo da mediana ",
+                                                    label="% Mínima de Viagens Abaixo da Mediana ",
                                                     checked=False,
                                                 ),
                                                 dmc.Space(h=10),
@@ -583,44 +476,9 @@ layout = dbc.Container(
                                         ),
                                         body=True,
                                     ),
-                                    md=3,
+                                    md=6,
                                 ),
-
-                                # Baixa performance suspeita
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dmc.Switch(
-                                                    id="switch-baixa-performace-suspeita",
-                                                    label="Viagens suspeita baixa performance",
-                                                    checked=False,
-                                                ),
-                                                dmc.Space(h=10),
-                                                html.Div(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="select-baixa-performace-suspeita",
-                                                                type="number",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                            ),
-                                                            dbc.InputGroupText("%"),
-                                                        ]
-                                                    ),
-                                                    id="container-baixa-performace-suspeita",
-                                                    style={"display": "none", "marginTop": "10px"},
-                                                ),
-                                            ]
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=3,
-                                ),
-
+                                dmc.Space(h=10),
                                 # Baixa performance indicativo
                                 dbc.Col(
                                     dbc.Card(
@@ -628,7 +486,7 @@ layout = dbc.Container(
                                             [
                                                 dmc.Switch(
                                                     id="switch-baixa-performace-indicativo",
-                                                    label="Viagens indicativo baixa performance",
+                                                    label="% Mínima de Viagens com Supeita ou Baixa Performance",
                                                     checked=False,
                                                 ),
                                                 dmc.Space(h=10),
@@ -653,7 +511,7 @@ layout = dbc.Container(
                                         ),
                                         body=True,
                                     ),
-                                    md=3,
+                                    md=6,
                                 ),
 
                                 # Erro telemetria
@@ -663,7 +521,7 @@ layout = dbc.Container(
                                             [
                                                 dmc.Switch(
                                                     id="switch-erro-telemetria",
-                                                    label="Viagens suspeita erro de telemetria",
+                                                    label="% Mínima de Viagens com Erro de Telemetria",
                                                     checked=False,
                                                 ),
                                                 dmc.Space(h=10),
@@ -688,7 +546,7 @@ layout = dbc.Container(
                                         ),
                                         body=True,
                                     ),
-                                    md=3,
+                                    md=6,
                                 ),
                                 dmc.Space(h=10),
                                 # OS automática
