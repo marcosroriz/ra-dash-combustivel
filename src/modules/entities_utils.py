@@ -141,3 +141,17 @@ def get_regras(dbEngine):
         dbEngine,
     )
 
+def get_regras_padronizadas(dbEngine):
+    
+    return pd.read_sql(
+        '''
+        SELECT 
+            nome_regra AS "LABEL"
+        FROM public.regras_monitoramento 
+        WHERE regra_padronizada = true
+        ORDER BY nome_regra;
+        ''',
+        dbEngine
+    ) 
+ 
+

@@ -589,4 +589,3 @@ class RegrasService:
                 conn.commit()
         except Exception as e:
             print(f"Erro ao atualizar regra: {e}")
-
