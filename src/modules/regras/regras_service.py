@@ -21,7 +21,7 @@ class RegrasService:
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
         query = f'''
-        SELECT * FROM public.regras_monitoramento
+        SELECT * FROM public.regras_monitoramento ORDER BY nome_regra;
         '''
         if not 'TODAS' in lista_regras:
             query += f''' WHERE {subquery_regras}'''
