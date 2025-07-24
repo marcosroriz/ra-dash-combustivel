@@ -126,9 +126,12 @@ def editar_regra(n_clicks, linhas):
     return "Nenhuma linha selecionada."
 
 
+
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
+
 layout = dbc.Container(
     [
         # Cabeçalho
@@ -210,7 +213,7 @@ layout = dbc.Container(
             id="tabela-de-regras-existentes",
             columnDefs=regras_tabela.tbl_regras_monitoramento,
             rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
+            defaultColDef={"filter": True, "floatingFilter": True, "editable": True,},
             columnSize="autoSize",
             dashGridOptions={
                 "localeText": locale_utils.AG_GRID_LOCALE_BR,
