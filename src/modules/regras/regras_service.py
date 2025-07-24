@@ -23,7 +23,7 @@ class RegrasService:
         query = f'''
         SELECT * FROM public.regras_monitoramento ORDER BY nome_regra;
         '''
-        if not 'TODAS' in lista_regras:
+        if not 'TODAS' in lista_regras or lista_regras is not None:
             query += f''' WHERE {subquery_regras}'''
         return pd.read_sql(query, self.pgEngine)
 
