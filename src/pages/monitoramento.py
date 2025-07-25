@@ -74,6 +74,8 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # Preparando inputs
 df_regras = get_regras_padronizadas(pgEngine)
 lista_todas_regras = df_regras.to_dict(orient="records")
+
+print(lista_todas_regras)
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
@@ -191,13 +193,10 @@ def grafico_veiculos_por_modelo_regra(valor_selecionado):
         kwargs = {
             "data":int(regra.get("periodo")),
             "modelos": regra.get("modelos"),
-            "linha": regra.get("linha"),
+            "numero_de_motoristas": regra.get("motoristas"),
             "quantidade_de_viagens": regra.get("qtd_viagens"),
             "dias_marcados": regra.get("dias_analise"),
-            "excluir_km_l_menor_que": regra.get("km_l_min"),
-            "excluir_km_l_maior_que": regra.get("km_l_max"),
             "mediana_viagem": regra.get("mediana_viagem"),
-            "suspeita_performace": regra.get("suspeita_performace"),
             "indicativo_performace": regra.get("indicativo_performace"),
             "erro_telemetria": regra.get("erro_telemetria"),
         }
@@ -891,7 +890,7 @@ layout = dbc.Container(
         dmc.Space(h=20),
         # Campo de busca
         dbc.Row(
-            [
+            [   html.H2("Regras Padronizadas"),
                 dbc.Col(
                     dbc.Card(
                         [

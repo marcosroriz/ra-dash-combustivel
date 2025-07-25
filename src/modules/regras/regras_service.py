@@ -111,7 +111,6 @@ class RegrasService:
         viagens_classificadas_no_periodo AS (
             SELECT *
             FROM viagens vc
-            -- WHERE vc."dia" BETWEEN '2025-04-01' AND '2025-04-30'
             WHERE vc."dia" >= CURRENT_DATE - interval '{data} days' ---- Aqui a gente faz o filtro de data
         ),
 
@@ -344,7 +343,7 @@ class RegrasService:
         viagens_classificadas_no_periodo AS (
             SELECT *
             FROM viagens vc
-            WHERE vc."dia" BETWEEN {data_inicio_str} AND {data_fim_str}
+            WHERE vc."dia" BETWEEN '{data_inicio_str}' AND '{data_fim_str}'
         ),
 
         viagens_classificadas_do_modelo AS (

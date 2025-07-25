@@ -37,7 +37,7 @@ from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
 
 # Imports gerais
-from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_regras
+from modules.entities_utils import  get_modelos_veiculos_regras
 
 
 ##############################################################################
@@ -390,7 +390,7 @@ layout = dbc.Container(
                                                         dbc.Input(
                                                             id="input-quantidade-de-motoristas",
                                                             type="number",
-                                                            placeholder="Viagens",
+                                                            placeholder="digite um valor...",
                                                             value=3,
                                                             step=1,
                                                             min=1,
@@ -415,7 +415,7 @@ layout = dbc.Container(
                                                         dbc.Input(
                                                             id="input-quantidade-de-viagens-monitoramento-regra",
                                                             type="number",
-                                                            placeholder="Viagens",
+                                                            placeholder="digite um valor...",
                                                             value=5,
                                                             step=1,
                                                             min=1,
@@ -471,7 +471,7 @@ layout = dbc.Container(
                                             [
                                                 dmc.Switch(
                                                     id="switch-mediana",
-                                                    label="% Mínima de Viagens Abaixo da Mediana ",
+                                                    label="% Mínima de Viagens Abaixo da Mediana",
                                                     checked=False,
                                                 ),
                                                 dmc.Space(h=10),
