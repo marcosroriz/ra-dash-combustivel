@@ -17,6 +17,8 @@ import dash
 # Importar bibliotecas do bootstrap e ag-grid
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
+from dash import callback_context
+
 
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
@@ -216,6 +218,32 @@ def gera_labels_inputs(campo):
 
     # Componente de saída
     return dmc.Group(id=f"{campo}-labels", children=[], gap="xs")
+
+
+@callback(
+    Output("input-modelos-analise-performance", "value"),
+    Input("input-modelos-analise-performance", "value"),
+)
+def atualizar_modelos_selecao(valores_selecionados):
+    if not valores_selecionados:
+        # Nada selecionado -> assume "TODOS"
+        return ["TODOS"]
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return valores_selecionados
+
+    ultimo_valor = ctx.triggered[0]["value"]
+
+    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
+    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
+        if ultimo_valor == ["TODOS"]:
+            return ["TODOS"]
+        else:
+            return [v for v in valores_selecionados if v != "TODOS"]
+
+    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
+    return valores_selecionados
 
 
 ##############################################################################

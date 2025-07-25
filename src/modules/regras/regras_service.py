@@ -243,7 +243,7 @@ class RegrasService:
 
         # AGRUPA para obter comb_excedente_L total e proporcao_abaixo_mediana média por veículo
         df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg({
-            "comb_excedente_l": "sum",
+            "comb_excedente_l": "first",
             "proporcao_abaixo_mediana": "mean"
         })
 
@@ -475,7 +475,7 @@ class RegrasService:
 
         # AGRUPA para obter comb_excedente_L total e proporcao_abaixo_mediana média por veículo
         df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg({
-            "comb_excedente_l": "sum",
+            "comb_excedente_l": "first",
             "proporcao_abaixo_mediana": "mean"
         })
 
