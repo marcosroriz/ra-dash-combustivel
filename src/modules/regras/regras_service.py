@@ -503,7 +503,7 @@ class RegrasService:
         df_pivot["total_viagens"] = df_pivot.filter(like="total_status_").sum(axis=1)
 
         # Ordena por número de viagens
-        df_pivot = df_pivot.sort_values(by="total_viagens", ascending=False)
+        # df_pivot = df_pivot.sort_values(by="total_viagens", ascending=False)
 
         # Arredonda comb_excedente_l
         df_pivot["comb_excedente_l"] = df_pivot["comb_excedente_l"].round(2)

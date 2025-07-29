@@ -66,6 +66,8 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 @callback(
     Output("tabela-regras-viagens-monitoramento", "rowData"),
     Output("indicador-quantidade-de-veiculos", "children"),
+    Output("indicador-quantidade-gasto-combustivel", "children"),
+    Output("indicador-media-gasto-combustivel", "children"),
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
@@ -83,9 +85,6 @@ def atualiza_tabela_regra_viagens_monitoramento(
     mediana_viagem,
     indicativo_performace, erro_telemetria
 ):
-    # Exibe overlay (inicial)
-    # style_overlay = {"display": "block"}
-
     df = regra_service.get_estatistica_regras(
         data, modelos, motoristas,
         quantidade_de_viagens, dias_marcados, 
@@ -93,10 +92,19 @@ def atualiza_tabela_regra_viagens_monitoramento(
         indicativo_performace, erro_telemetria
     )
 
-    #indicador de quantidade de veiculo
-    quantidade_veiculo = df['vec_num_id'].count()
+    if df.empty:
+        return [], 0, 0, 0
 
-    return df.to_dict(orient="records"), quantidade_veiculo
+    df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
+
+    quantidade_veiculo = df['vec_num_id'].nunique()
+
+    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
+
+    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
+
+    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
+
 
 @callback(
         Output("mensagem-sucesso", "children"),
@@ -587,7 +595,26 @@ layout = dbc.Container(
                                             "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
                                         },
                                     ),
-                                    md=12,
+                                    md=6,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        html.Div(
+                                            dmc.Switch(
+                                                id="switch-enviar-email",
+                                                label="Enviar email",
+                                                checked=False,
+                                            ),
+                                        ),
+                                        body=True,
+                                        style={
+                                            "backgroundColor": "#F6B64F",
+                                            "color": "black",
+                                            "borderRadius": "8px",
+                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
+                                        },
+                                    ),
+                                    md=6,
                                 ),
                             ]
                         ),
@@ -611,11 +638,13 @@ layout = dbc.Container(
                             "background-color": "#007bff",
                             "color": "white",
                             "border": "none",
-                            "padding": "10px 20px",
+                            "padding": "16px 32px",  # Aumenta a área clicável
                             "border-radius": "8px",
                             "cursor": "pointer",
-                            "font-size": "16px",
+                            "font-size": "20px",  # Aumenta o tamanho da fonte
                             "font-weight": "bold",
+                            "width": "250px",     # (opcional) Define uma largura fixa
+                            "height": "80px",     # (opcional) Define uma altura fixa
                         },
                     ),
                     html.Div(id="mensagem-sucesso", style={"marginTop": "10px", "fontWeight": "bold"}),
@@ -630,6 +659,27 @@ layout = dbc.Container(
         # Indicador de veículos
         dbc.Row(
             [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-quantidade-gasto-combustivel", order=2),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Total de combustível a mais utilizado"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
                 dbc.Col(
                     dbc.Card(
                         [
@@ -651,10 +701,31 @@ layout = dbc.Container(
                     md=4,
                     style={"margin-bottom": "20px"},
                 ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-media-gasto-combustivel", order=2),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Média de combustível a mais utilizado"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
             ],
             justify="center",
         ),
-
+        
         dmc.Space(h=10),
 
         # Labels adicionais
