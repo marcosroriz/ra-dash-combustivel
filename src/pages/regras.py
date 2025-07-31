@@ -119,6 +119,8 @@ def atualiza_tabela_regra_viagens_monitoramento(
         Input("select-mediana", "value"),
         Input("select-baixa-performace-indicativo", "value"),
         Input("select-erro-telemetria", "value"),
+        Input("switch-os-automatica", "checked"),
+        Input("switch-enviar-email", "checked"),
     ],
     prevent_initial_call=True
 )
@@ -127,7 +129,8 @@ def salvar_regra_monitoramento(
     data, modelos, motoristas,
     quantidade_de_viagens, dias_marcados, 
     mediana_viagem, 
-    indicativo_performace, erro_telemetria
+    indicativo_performace, erro_telemetria,
+    criar_os_automatica, enviar_email
 ): 
     ctx = callback_context  # Obtém o contexto do callback
     if not ctx.triggered:  
@@ -141,11 +144,14 @@ def salvar_regra_monitoramento(
     if not n_clicks or n_clicks <= 0: 
         return dash.no_update
     
+    print(criar_os_automatica, enviar_email)
+    
     regra_service.salvar_regra_monitoramento(
         nome_regra, data, modelos, motoristas,
         quantidade_de_viagens, dias_marcados, 
         mediana_viagem,
-        indicativo_performace, erro_telemetria
+        indicativo_performace, erro_telemetria,
+        criar_os_automatica, enviar_email
     )
     return "✅ Regra salva com sucesso!"
 

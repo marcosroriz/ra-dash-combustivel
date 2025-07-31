@@ -536,11 +536,15 @@ class RegrasService:
         dias_marcados,
         mediana_viagem,
         indicativo_performace,
-        erro_telemetria
+        erro_telemetria,
+        criar_os_automatica, 
+        enviar_email
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
+        enviar_email = False if enviar_email is None else enviar_email
+        criar_os_automatica = False if criar_os_automatica is None else criar_os_automatica
 
         try:
             with self.pgEngine.connect() as conn:
@@ -558,7 +562,9 @@ class RegrasService:
                         usar_indicativo_performace,
                         erro_telemetria,
                         usar_erro_telemetria,
-                        criado_em
+                        criado_em,
+                        criar_os_automatica,
+                        enviar_email      
                     ) VALUES (
                         :nome_regra,
                         :periodo,
@@ -572,7 +578,9 @@ class RegrasService:
                         :usar_indicativo_performace,
                         :erro_telemetria,
                         :usar_erro_telemetria,
-                        :criado_em
+                        :criado_em,
+                        :criar_os_automatica,
+                        :enviar_email
                     )
                 """)
 
@@ -589,11 +597,13 @@ class RegrasService:
                     "usar_indicativo_performace": usar_indicativo,
                     "erro_telemetria": erro_telemetria,
                     "usar_erro_telemetria": usar_erro,
-                    "criado_em": datetime.now()
+                    "criado_em": datetime.now(),
+                    "criar_os_automatica": criar_os_automatica,
+                    "enviar_email": enviar_email
                 })
 
                 conn.commit()
-
+            print(criar_os_automatica, enviar_email)
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
 
