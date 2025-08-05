@@ -65,8 +65,12 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # Callbacks para dados ######################################################
 ##############################################################################
 @callback(
-    Output("tabela-regras-viagens-analise-performance", "rowData"),
-    Output("indicador-quantidade-de-veiculos-analise-performance", "children"),
+    [    
+        Output("tabela-regras-viagens-analise-performance", "rowData"),
+        Output("indicador-quantidade-de-veiculos-analise-performance", "children"),
+        Output("indicador-quantidade-gasto-combustivel-analise-performance", "children"),
+        Output("indicador-media-gasto-combustivel-analise-performance", "children"),
+    ],
     [
         Input("input-periodo-dias-analise-performance", "value"),
         Input("input-modelos-analise-performance", "value"),
@@ -92,10 +96,19 @@ def atualiza_tabela_regra_viagens_monitoramento(
         mediana_viagem,indicativo_performace, erro_telemetria
     )
 
-    #indicador de quantidade de veiculo
-    quantidade_veiculo = df['vec_num_id'].count()
 
-    return df.to_dict(orient="records"), quantidade_veiculo
+    if df.empty:
+        return [], 0, 0, 0
+
+    df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
+
+    quantidade_veiculo = df['vec_num_id'].nunique()
+
+    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
+
+    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
+
+    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
 
 
 ##############################################################################
@@ -544,7 +557,28 @@ layout = dbc.Container(
 
         # Indicador de total
         dbc.Row(
-            [
+            [                   
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-quantidade-gasto-combustivel-analise-performance", order=2),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Total de combustível a mais utilizado"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
                 dbc.Col(
                     dbc.Card(
                         [
@@ -560,6 +594,27 @@ layout = dbc.Container(
                                 ),
                             ),
                             dbc.CardFooter("Total de veiculos"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-media-gasto-combustivel-analise-performance", order=2),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Média de combustível a mais utilizado"),
                         ],
                         class_name="card-box-shadow",
                     ),

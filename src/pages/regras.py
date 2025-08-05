@@ -64,10 +64,12 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # Callbacks para dados ######################################################
 ##############################################################################
 @callback(
-    Output("tabela-regras-viagens-monitoramento", "rowData"),
-    Output("indicador-quantidade-de-veiculos", "children"),
-    Output("indicador-quantidade-gasto-combustivel", "children"),
-    Output("indicador-media-gasto-combustivel", "children"),
+    [
+        Output("tabela-regras-viagens-monitoramento", "rowData"),
+        Output("indicador-quantidade-de-veiculos", "children"),
+        Output("indicador-quantidade-gasto-combustivel", "children"),
+        Output("indicador-media-gasto-combustivel", "children"),
+    ],
     [
         Input("input-periodo-dias-monitoramento-regra", "value"),
         Input("input-modelos-monitoramento-regra", "value"),
@@ -583,45 +585,110 @@ layout = dbc.Container(
                                     md=6,
                                 ),
                                 dmc.Space(h=10),
+                                dbc.Col(
+                                    dbc.Card(
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dmc.Switch(
+                                                        id="switch-enviar-email",
+                                                        label="Enviar email",
+                                                        checked=False,
+                                                        size="md",
+                                                    ),
+                                                    width="auto",
+                                                ),
+                                                dbc.Col(width=2),
+                                                dbc.Col(
+                                                    dbc.Input(
+                                                        id="input-email-regra-monitoramento",
+                                                        type="email",
+                                                        placeholder="fulano@odilonsantos.com",
+                                                        value="",
+                                                        # style={"display": "block"},
+                                                    ),
+                                                    width=6,
+                                                ),
+                                            ],
+                                            align="center",
+                                        ),
+                                        body=True,
+                                        style={
+                                            "backgroundColor": "#12AAE6",
+                                            "color": "black",
+                                            "borderRadius": "8px",
+                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
+                                        },
+                                    ),
+                                    md=6,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dmc.Switch(
+                                                        id="switch-enviar-whatsapp-regra-moniotramento",
+                                                        label="Enviar WhatsApp",
+                                                        checked=False,
+                                                        size="md",
+                                                    ),
+                                                    width="auto",
+                                                ),
+                                                dbc.Col(width=2),
+                                                dbc.Col(
+                                                    dmc.TextInput(
+                                                        w=200,
+                                                        placeholder="(62) 99999-9999",
+                                                        rightSection=DashIconify(icon="logos:whatsapp-icon"),
+                                                    ),
+                                                    width="auto",
+                                                ),
+                                            ],
+                                            align="center",
+                                        ),
+                                        body=True,
+                                        style={
+                                            "backgroundColor": "#1BB400",
+                                            "color": "black",
+                                            "borderRadius": "8px",
+                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
+                                        },
+                                    ),
+                                    md=6,
+                                ),
+                                dmc.Space(h=10),
                                 # OS automática
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            dmc.Switch(
-                                                id="switch-os-automatica",
-                                                label="Criar OS automática",
-                                                checked=False,
+                                dbc.Row(
+                                    dbc.Col(
+                                        dbc.Card(
+                                            dbc.Row(
+                                                dbc.Col(
+                                                    dmc.Switch(
+                                                        id="switch-os-automatica",
+                                                        label="Criar OS automática",
+                                                        checked=False,
+                                                        size="md",
+                                                    ),
+                                                    width="auto",
+                                                    style={"margin": "0 auto"},
+                                                ),
+                                                justify="center",
+                                                align="center",
                                             ),
+                                            body=True,
+                                            style={
+                                                "backgroundColor": "#F6B64F",
+                                                "color": "black",
+                                                "borderRadius": "8px",
+                                                "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
+                                            },
                                         ),
-                                        body=True,
-                                        style={
-                                            "backgroundColor": "#F6B64F",
-                                            "color": "black",
-                                            "borderRadius": "8px",
-                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
-                                        },
+                                        md=6,  # <-- Mantém o mesmo tamanho
                                     ),
-                                    md=6,
+                                    justify="center",  # <-- Centraliza o card horizontalmente na linha
                                 ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            dmc.Switch(
-                                                id="switch-enviar-email",
-                                                label="Enviar email",
-                                                checked=False,
-                                            ),
-                                        ),
-                                        body=True,
-                                        style={
-                                            "backgroundColor": "#F6B64F",
-                                            "color": "black",
-                                            "borderRadius": "8px",
-                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
-                                        },
-                                    ),
-                                    md=6,
-                                ),
+
                             ]
                         ),
                     ],
