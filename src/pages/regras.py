@@ -124,6 +124,9 @@ def atualiza_tabela_regra_viagens_monitoramento(
         Input("select-erro-telemetria", "value"),
         Input("switch-os-automatica", "checked"),
         Input("switch-enviar-email", "checked"),
+        Input("switch-enviar-whatsapp-regra-moniotramento", "checked"),
+        Input("input-wpp-regra-monitoramento", "value"),
+        Input("input-email-regra-monitoramento", "value"),
     ],
     prevent_initial_call=True
 )
@@ -133,7 +136,8 @@ def salvar_regra_monitoramento(
     quantidade_de_viagens, dias_marcados, 
     mediana_viagem, 
     indicativo_performace, erro_telemetria,
-    criar_os_automatica, enviar_email
+    criar_os_automatica, enviar_email, enviar_whatsapp,
+    wpp_regra_monitoramento, email_regra_monitoramento
 ): 
     ctx = callback_context  # Obtém o contexto do callback
     if not ctx.triggered:  
@@ -154,7 +158,9 @@ def salvar_regra_monitoramento(
         quantidade_de_viagens, dias_marcados, 
         mediana_viagem,
         indicativo_performace, erro_telemetria,
-        criar_os_automatica, enviar_email
+        criar_os_automatica, enviar_email, 
+        enviar_whatsapp, wpp_regra_monitoramento, email_regra_monitoramento
+
     )
     return "✅ Regra salva com sucesso!"
 
@@ -619,13 +625,20 @@ layout = dbc.Container(
                                                 ),
                                                 dbc.Col(width=2),
                                                 dbc.Col(
-                                                    dbc.Input(
-                                                        id="input-email-regra-monitoramento",
-                                                        type="email",
-                                                        placeholder="fulano@odilonsantos.com",
-                                                        value="",
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="input-email-regra-monitoramento",
+                                                                type="email",
+                                                                placeholder="fulano@odilonsantos.com.br",
+                                                                value=""
+                                                            ),
+                                                            dbc.InputGroupText(
+                                                                DashIconify(icon="mdi:gmail", width=20, height=20)
+                                                            ),
+                                                        ],
+                                                        style={"width": "auto"},
                                                     ),
-                                                    width=6,
                                                 ),
                                             ],
                                             align="center",
@@ -649,12 +662,20 @@ layout = dbc.Container(
                                                 ),
                                                 dbc.Col(width=2),
                                                 dbc.Col(
-                                                    dmc.TextInput(
-                                                        w=200,
-                                                        placeholder="(62) 99999-9999",
-                                                        rightSection=DashIconify(icon="logos:whatsapp-icon"),
+                                                    dbc.InputGroup(
+                                                        [
+                                                            dbc.Input(
+                                                                id="input-wpp-regra-monitoramento",
+                                                                type="WhatsApp",
+                                                                placeholder="(62) 99999-9999",
+                                                                value=""
+                                                            ),
+                                                            dbc.InputGroupText(
+                                                                DashIconify(icon="logos:whatsapp-icon", width=20, height=20)
+                                                            ),
+                                                        ],
+                                                        style={"width": "auto"},
                                                     ),
-                                                    width="auto",
                                                 ),
                                             ],
                                             align="center",

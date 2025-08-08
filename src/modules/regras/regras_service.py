@@ -538,13 +538,18 @@ class RegrasService:
         indicativo_performace,
         erro_telemetria,
         criar_os_automatica, 
-        enviar_email
+        enviar_email,
+        enviar_whatsapp,
+        wpp_regra_monitoramento,
+        email_regra_monitoramento
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
         enviar_email = False if enviar_email is None else enviar_email
         criar_os_automatica = False if criar_os_automatica is None else criar_os_automatica
+        enviar_whatsapp = False if enviar_whatsapp is None else enviar_whatsapp
+
 
         try:
             with self.pgEngine.connect() as conn:
@@ -564,7 +569,11 @@ class RegrasService:
                         usar_erro_telemetria,
                         criado_em,
                         criar_os_automatica,
-                        enviar_email      
+                        enviar_email
+                        email_usuario,
+                        enviar_whatsapp,
+                        whatsapp_usuario
+                                      
                     ) VALUES (
                         :nome_regra,
                         :periodo,
@@ -580,7 +589,10 @@ class RegrasService:
                         :usar_erro_telemetria,
                         :criado_em,
                         :criar_os_automatica,
-                        :enviar_email
+                        :enviar_email,
+                        :email_regra_monitoramento,
+                        :enviar_whatsapp,
+                        :wpp_regra_monitoramento,
                     )
                 """)
 
@@ -599,7 +611,10 @@ class RegrasService:
                     "usar_erro_telemetria": usar_erro,
                     "criado_em": datetime.now(),
                     "criar_os_automatica": criar_os_automatica,
-                    "enviar_email": enviar_email
+                    "enviar_email": enviar_email,
+                    "email_regra_monitoramento": email_regra_monitoramento,
+                    "enviar_whatsapp": enviar_whatsapp,
+                    "wpp_regra_monitoramento": wpp_regra_monitoramento
                 })
 
                 conn.commit()
