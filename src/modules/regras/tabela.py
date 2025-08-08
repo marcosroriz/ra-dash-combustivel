@@ -8,7 +8,7 @@ tbl_perc_viagens_monitoramento = [
         "wrapHeaderText": True,
         "autoHeaderHeight": True,
         "filter": "agNumberColumnFilter",
-        "maxWidth": 150,
+        "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
             "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00' : val.toFixed(2); }"
@@ -17,10 +17,8 @@ tbl_perc_viagens_monitoramento = [
     {
         "field": "comb_excedente_l",
         "headerName": "Litros Excedentes",
-        "wrapHeaderText": True,
-        "autoHeaderHeight": True,
         "filter": "agNumberColumnFilter",
-        "maxWidth": 150,
+        "minWidth": 150,
         "type": ["numericColumn"],
         "valueFormatter": {
             "function": "function(params) { const val = parseFloat(params.value); return isNaN(val) ? '0.00L' : val.toFixed(2) + 'L'; }"

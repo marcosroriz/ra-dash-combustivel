@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 # Importar bibliotecas do dash básicas e plotly
-from dash import html, dcc, callback, Input, Output
+from dash import html, dcc, callback, Input, Output, State
 import dash
 
 
@@ -108,6 +108,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
     return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
 
 
+
 @callback(
         Output("mensagem-sucesso", "children"),
     [
@@ -156,6 +157,24 @@ def salvar_regra_monitoramento(
         criar_os_automatica, enviar_email
     )
     return "✅ Regra salva com sucesso!"
+
+
+@callback(
+    Output("tabela-regras-viagens-monitoramento", "style"),
+    Output("row-labels-adicionais", "style"),
+    Input("btn-preview-regra-monitoramento", "n_clicks"),
+    prevent_initial_call=True
+)
+def toggle_tabela(n_clicks):
+    base_style = {
+        "height": 400,
+        "resize": "vertical",
+        "overflow": "hidden",
+    }
+    if n_clicks % 2 == 1:
+        return {**base_style, "display": "block"}, {"display": "block"}
+    return {**base_style, "display": "none"}, {"display": "none"}
+
 
 ##############################################################################
 # Callbacks para switch ######################################################
@@ -605,7 +624,6 @@ layout = dbc.Container(
                                                         type="email",
                                                         placeholder="fulano@odilonsantos.com",
                                                         value="",
-                                                        # style={"display": "block"},
                                                     ),
                                                     width=6,
                                                 ),
@@ -613,12 +631,6 @@ layout = dbc.Container(
                                             align="center",
                                         ),
                                         body=True,
-                                        style={
-                                            "backgroundColor": "#12AAE6",
-                                            "color": "black",
-                                            "borderRadius": "8px",
-                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
-                                        },
                                     ),
                                     md=6,
                                 ),
@@ -648,12 +660,6 @@ layout = dbc.Container(
                                             align="center",
                                         ),
                                         body=True,
-                                        style={
-                                            "backgroundColor": "#1BB400",
-                                            "color": "black",
-                                            "borderRadius": "8px",
-                                            "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
-                                        },
                                     ),
                                     md=6,
                                 ),
@@ -677,12 +683,6 @@ layout = dbc.Container(
                                                 align="center",
                                             ),
                                             body=True,
-                                            style={
-                                                "backgroundColor": "#F6B64F",
-                                                "color": "black",
-                                                "borderRadius": "8px",
-                                                "boxShadow": "2px 2px 8px rgba(0,0,0,0.2)",
-                                            },
                                         ),
                                         md=6,  # <-- Mantém o mesmo tamanho
                                     ),
@@ -699,32 +699,73 @@ layout = dbc.Container(
 
         dmc.Space(h=10),
 
-        # Botão Criar Regra
-        dbc.Col(
-            html.Div(
-                [
-                    html.Button(
-                        "Cria regra",
-                        id="btn-criar-regra-monitoramento",
-                        n_clicks=0,
-                        style={
-                            "background-color": "#007bff",
-                            "color": "white",
-                            "border": "none",
-                            "padding": "16px 32px",  # Aumenta a área clicável
-                            "border-radius": "8px",
-                            "cursor": "pointer",
-                            "font-size": "20px",  # Aumenta o tamanho da fonte
-                            "font-weight": "bold",
-                            "width": "250px",     # (opcional) Define uma largura fixa
-                            "height": "80px",     # (opcional) Define uma altura fixa
-                        },
+       # Botões de Preview e Criar Regra
+        dbc.Row(
+            [
+                # Botão Preview
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Button(
+                                "Preview da Regra",
+                                id="btn-preview-regra-monitoramento",
+                                n_clicks=0,
+                                style={
+                                    "background-color": "#f9a704",
+                                    "color": "white",
+                                    "border": "none",
+                                    "padding": "16px 32px",
+                                    "border-radius": "8px",
+                                    "cursor": "pointer",
+                                    "font-size": "20px",
+                                    "font-weight": "bold",
+                                    "width": "250px",
+                                    "height": "80px",
+                                },
+                            ),
+                            html.Div(
+                                id="mensagem-sucesso-preview",
+                                style={"marginTop": "10px", "fontWeight": "bold"}
+                            ),
+                        ],
+                        style={"textAlign": "center"},
                     ),
-                    html.Div(id="mensagem-sucesso", style={"marginTop": "10px", "fontWeight": "bold"}),
-                ],
-                style={"text-align": "center"},
-            ),
-            width="auto",
+                    width="auto",
+                ),
+
+                # Botão Criar
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Button(
+                                "Criar Regra",
+                                id="btn-criar-regra-monitoramento",
+                                n_clicks=0,
+                                style={
+                                    "background-color": "#007bff",
+                                    "color": "white",
+                                    "border": "none",
+                                    "padding": "16px 32px",
+                                    "border-radius": "8px",
+                                    "cursor": "pointer",
+                                    "font-size": "20px",
+                                    "font-weight": "bold",
+                                    "width": "250px",
+                                    "height": "80px",
+                                },
+                            ),
+                            html.Div(
+                                id="mensagem-sucesso-criar",
+                                style={"marginTop": "10px", "fontWeight": "bold"}
+                            ),
+                        ],
+                        style={"textAlign": "center"},
+                    ),
+                    width="auto",
+                ),
+            ],
+            justify="center",      # Centraliza horizontalmente
+            align="center",        # Alinha verticalmente
         ),
 
         dmc.Space(h=20),
@@ -805,24 +846,37 @@ layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
-            ]
+            ],
+                style={"display": "none"},  # começa escondido
+                id="row-labels-adicionais"
         ),
 
         dmc.Space(h=20),
 
         # Tabela de regras
-        dag.AgGrid(
-            id="tabela-regras-viagens-monitoramento",
-            columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-                "rowSelection": "multiple",
-            },
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        html.Div(
+            id="container-tabela-regras",
+            children=[
+                dag.AgGrid(
+                    id="tabela-regras-viagens-monitoramento",
+                    columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
+                    rowData=[],
+                    defaultColDef={"filter": True, "floatingFilter": True},
+                    columnSize="autoSize",
+                    dashGridOptions={
+                        "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                        "rowSelection": "multiple",
+                    },
+                    style={
+                        "height": 400,
+                        "resize": "vertical",
+                        "overflow": "hidden",
+                        "display": "none"  # começa escondida
+                    },
+                )
+            ]
         ),
+
     ],
     style={"margin-top": "20px", "margin-bottom": "20px"},
 )
