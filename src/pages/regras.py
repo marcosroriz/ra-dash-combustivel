@@ -151,8 +151,6 @@ def salvar_regra_monitoramento(
     if not n_clicks or n_clicks <= 0: 
         return dash.no_update
     
-    print(criar_os_automatica, enviar_email)
-    
     regra_service.salvar_regra_monitoramento(
         nome_regra, data, modelos, motoristas,
         quantidade_de_viagens, dias_marcados, 
@@ -187,28 +185,56 @@ def toggle_tabela(n_clicks):
 ##############################################################################
 
 @callback(
-    Output("container-mediana", "style"),
-    Input("switch-mediana", "checked"),
+    [
+        Output("container-mediana", "style"),
+        Output("select-mediana", "value"),
+    ],
+    [
+        Input("switch-mediana", "checked"),
+        Input("select-mediana", "value"),
+    ]
 )
-def input_mediana(ativado):
+def input_mediana(ativado, value):
     # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
+    activate = {"display": "block"} if ativado else {"display": "none"}
+    if not ativado:
+        value = None
+
+    return activate, value
 
 @callback(
-    Output("container-baixa-performace-indicativo", "style"),
-    Input("switch-baixa-performace-indicativo", "checked"),
+    [
+        Output("container-baixa-performace-indicativo", "style"),
+        Output("select-baixa-performace-indicativo", "value"),
+    ],
+    [
+        Input("switch-baixa-performace-indicativo", "checked"),
+        Input("select-baixa-performace-indicativo", "value"),
+    ]
 )
-def input_baixa_performace_indicativo(ativado):
+def input_baixa_performace_indicativo(ativado, value):
     # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
+    activate = {"display": "block"} if ativado else {"display": "none"}
+    if not ativado:
+        value = None
+    return activate, value
 
 @callback(
-    Output("container-erro-telemetria", "style"),
-    Input("switch-erro-telemetria", "checked"),
+    [
+        Output("container-erro-telemetria", "style"),
+        Output("select-erro-telemetria", "value"),
+    ],
+    [
+        Input("switch-erro-telemetria", "checked"),
+        Input("select-erro-telemetria", "value"),
+    ]
 )
-def input_erro_telemetria(ativado):
+def input_erro_telemetria(ativado, value):
     # Se ativado (True): display block; se desativado: none
-    return {"display": "block"} if ativado else {"display": "none"}
+    activate = {"display": "block"} if ativado else {"display": "none"}
+    if not ativado:
+        value = None
+    return activate, value
 
 
 ##############################################################################
@@ -741,7 +767,7 @@ layout = dbc.Container(
                                     "font-size": "20px",
                                     "font-weight": "bold",
                                     "width": "250px",
-                                    "height": "80px",
+                                    "height": "60px",
                                 },
                             ),
                             html.Div(
@@ -772,7 +798,7 @@ layout = dbc.Container(
                                     "font-size": "20px",
                                     "font-weight": "bold",
                                     "width": "250px",
-                                    "height": "80px",
+                                    "height": "60px",
                                 },
                             ),
                             html.Div(
@@ -887,6 +913,8 @@ layout = dbc.Container(
                     dashGridOptions={
                         "localeText": locale_utils.AG_GRID_LOCALE_BR,
                         "rowSelection": "multiple",
+                        "enableCellTextSelection": True,
+                        "ensureDomOrder": True,
                     },
                     style={
                         "height": 400,
