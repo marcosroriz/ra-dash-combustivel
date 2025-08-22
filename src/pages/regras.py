@@ -110,7 +110,7 @@ def atualiza_tabela_regra_viagens_monitoramento(
 
 
 @callback(
-        Output("mensagem-sucesso", "children"),
+        Output("mensagem-sucesso-criar", "children"),
     [
         Input("btn-criar-regra-monitoramento", "n_clicks"),
         Input("input-nome-regra-monitoramento", "value"),
@@ -139,6 +139,7 @@ def salvar_regra_monitoramento(
     criar_os_automatica, enviar_email, enviar_whatsapp,
     wpp_regra_monitoramento, email_regra_monitoramento
 ): 
+    
     ctx = callback_context  # Obtém o contexto do callback
     if not ctx.triggered:  
         return dash.no_update  # Evita execução desnecessária

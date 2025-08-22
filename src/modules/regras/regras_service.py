@@ -569,7 +569,7 @@ class RegrasService:
                         usar_erro_telemetria,
                         criado_em,
                         criar_os_automatica,
-                        enviar_email
+                        enviar_email,
                         email_usuario,
                         enviar_whatsapp,
                         whatsapp_usuario
@@ -592,7 +592,7 @@ class RegrasService:
                         :enviar_email,
                         :email_regra_monitoramento,
                         :enviar_whatsapp,
-                        :wpp_regra_monitoramento,
+                        :wpp_regra_monitoramento
                     )
                 """)
 
