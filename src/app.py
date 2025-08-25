@@ -206,11 +206,11 @@ if __name__ == "__main__":
     PROFILE = os.getenv("PROFILE", "False").lower() in ("true", "1", "yes")
     PROF_DIR = os.getenv("PROFILE_DIR", "profile")
 
-    print(f"Host: {APP_HOST}")
-    print(f"Port: {APP_PORT}")
-    print(f"Debug: {APP_DEBUG}")
-    print(f"Profile: {PROFILE}")
-    print(f"Profile Directory: {PROF_DIR}")
+    # print(f"Host: {APP_HOST}")
+    # print(f"Port: {APP_PORT}")
+    # print(f"Debug: {APP_DEBUG}")
+    # print(f"Profile: {PROFILE}")
+    # print(f"Profile Directory: {PROF_DIR}")
 
     if PROFILE:
         print("ENTROUA QUI")

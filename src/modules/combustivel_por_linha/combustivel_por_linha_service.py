@@ -106,7 +106,6 @@ class CombustivelPorLinhaService:
             {subquery_sentido}
         """
 
-        print(query)
         df_linha = pd.read_sql(query, self.pgEngine)
 
         # Normaliza os modelos

@@ -107,3 +107,10 @@ def subquery_regras_monitoramento(lista_regras, prefix=""):
         return ""
     return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
 
+def subquery_regras_ids(lista_regras, prefix="", termo_all="TODOS"):
+    query = ""
+    if termo_all not in lista_regras:
+        query = f"""{prefix}"id" IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
+
+    return query
+

@@ -464,6 +464,8 @@ class RegrasService:
 
         """
 
+        print(query)
+
         df = pd.read_sql(query, self.pgEngine)
         
 
