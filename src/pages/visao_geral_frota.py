@@ -33,8 +33,7 @@ from db import PostgresSingleton
 # Imports gerais
 
 # Imports específicos
-from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
-import modules.regras.tabela as regras_tabela
+import modules.visao_geral_frotas.tabelas as regras_tabela
 from modules.visao_geral_frotas.visao_geral_service import RegrasServiceVisaoGeral
 
 from modules.visao_geral_frotas.entities_utils import get_regras
@@ -64,15 +63,32 @@ lista_todos_regras = df_modelos_veiculos.to_dict(orient="records")
 ##############################################################################
 @callback(
     Output("tabela-regras-viagens-analise-performance-frota-regra", "rowData"),
+    Output("indicador-veiculos-com-problemas-visao-geral-frota", "children"),
+    Output("indicador-combustivel-excedente-total-visao-geral-frota", "children"),
+    Output("indicador-combustivel-excedente-por-veiculo-visao-geral-frota", "children"),
     [
         Input("input-select-regra-visao-geral", "value"),
     ],
 )
+
 def atualiza_tabela_regra_viagens_monitoramento(regra):
+
+    if not regra:
+        return [], 0, 0, 0
 
     df = regra_service.get_estatistica_veiculos_analise_performance(regra)
 
-    return df.to_dict(orient="records")
+    df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
+
+    quantidade_veiculo = df['vec_num_id'].nunique()
+
+    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
+
+    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
+
+
+    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
+
 
 
 ##############################################################################
@@ -188,7 +204,7 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="indicador-quantidade-de-veiculos-analise-performance-frota-regra", order=2),
+                                        dmc.Title(id="indicador-veiculos-com-problemas-visao-geral-frota", order=2),
                                         DashIconify(icon="mdi:bomb", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -196,7 +212,49 @@ layout = dbc.Container(
                                     mb="xs",
                                 ),
                             ),
-                            dbc.CardFooter("Total de veiculos"),
+                            dbc.CardFooter("Veículos com problemas"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-combustivel-excedente-total-visao-geral-frota", order=2),
+                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Combustível excedente (Total)"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=4,
+                    style={"margin-bottom": "20px"},
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="indicador-combustivel-excedente-por-veiculo-visao-geral-frota", order=2),
+                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Combustível excedente (por veículo)"),
                         ],
                         class_name="card-box-shadow",
                     ),
@@ -212,7 +270,7 @@ layout = dbc.Container(
         # Tabela
         dag.AgGrid(
             id="tabela-regras-viagens-analise-performance-frota-regra",
-            columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
+            columnDefs=regras_tabela.tbl_regras_viagens_visao_geral_frota,
             rowData=[],
             defaultColDef={"filter": True, "floatingFilter": True},
             columnSize="autoSize",

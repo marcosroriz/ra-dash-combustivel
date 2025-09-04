@@ -37,17 +37,31 @@ class RegrasServiceVisaoGeral:
             periodo = int(dfregras.iloc[0]["periodo"])
 
         else:
-            mediana_viagem = None
+            mediana_viagem = 0
             erro_telemetria = 0
-            indicativo_performace = None
-            quantidade_de_viagens = None
-            numero_de_motoristas = None
-            dias_marcados = None
-            modelos = None
-            periodo = None
+            indicativo_performace = 0
+            quantidade_de_viagens = 0
+            numero_de_motoristas = 0
+            dias_marcados = 0
+            modelos = 0
+            periodo = 0
 
+        if mediana_viagem == None:
+            mediana_viagem = 0
         if erro_telemetria == None:
             erro_telemetria = 0
+        if indicativo_performace == None:
+            indicativo_performace = 0
+        if quantidade_de_viagens == None:
+            quantidade_de_viagens = 0
+        if numero_de_motoristas == None:
+            numero_de_motoristas = 0
+        if dias_marcados == None:
+            dias_marcados = 0
+        if modelos == None:
+            modelos = 0
+        if periodo == None:
+            periodo = 0
 
         # data atual
         data_fim_str = pd.Timestamp.today().strftime("%Y-%m-%d")
@@ -201,8 +215,6 @@ class RegrasServiceVisaoGeral:
             ON e.vec_asset_id = p.vec_asset_id;
 
         """
-
-        print(query)
 
         df = pd.read_sql(query, self.pgEngine)
         
