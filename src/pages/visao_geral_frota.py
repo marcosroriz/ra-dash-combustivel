@@ -226,7 +226,7 @@ layout = dbc.Container(
                                 dmc.Group(
                                     [
                                         dmc.Title(id="indicador-combustivel-excedente-total-visao-geral-frota", order=2),
-                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
                                     ],
                                     justify="center",
                                     mt="md",
@@ -247,7 +247,7 @@ layout = dbc.Container(
                                 dmc.Group(
                                     [
                                         dmc.Title(id="indicador-combustivel-excedente-por-veiculo-visao-geral-frota", order=2),
-                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
                                     ],
                                     justify="center",
                                     mt="md",
