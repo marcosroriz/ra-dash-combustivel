@@ -428,3 +428,25 @@ def gerar_grafico_monitoramento_viagens_veiculo_desvio_padrao(df, opcoes_detalha
     )
 
     return fig
+
+# Veiculso por modelo
+def plot_veiculos_por_modelo(df):
+
+    contagem = df['vec_model'].value_counts()
+
+
+    # Transforma em DataFrame
+    contagem_df = contagem.reset_index()
+    contagem_df.columns = ['vec_model', 'quantidade']
+
+    # Cria gráfico
+    fig = px.bar(
+        contagem_df,
+        x='vec_model',
+        y='quantidade',
+        title='Quantidade de Veículos por Modelo',
+        text='quantidade',
+        labels={'vec_model': 'Modelo do Veículo', 'quantidade': 'Quantidade'}
+    )
+
+    return fig

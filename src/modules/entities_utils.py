@@ -39,6 +39,22 @@ def get_modelos_veiculos_com_combustivel(dbEngine):
         dbEngine,
     )
 
+def get_modelos_veiculos_regras(dbEngine):
+    # Modelos de veículos que possuem informações de consumo
+    return pd.read_sql(
+        """
+        SELECT 
+            DISTINCT "vec_model" AS "LABEL"
+        FROM 
+            mat_view_viagens_classificadas_dia_semana 
+        WHERE 
+            "vec_model" IS NOT NULL
+        ORDER BY
+            "vec_model"
+        """,
+        dbEngine,
+    )
+
 
 def get_linhas_possui_info_combustivel(dbEngine):
     # Linhas que possuem informações de consumo
@@ -109,7 +125,7 @@ def get_lista_os(dbEngine):
 
 
 def get_modelos(dbEngine):
-    # Lista de OS
+    # Lista de Modelos
     return pd.read_sql(
         """
         SELECT DISTINCT
@@ -127,3 +143,31 @@ def gerar_excel(df):
         df.to_excel(writer, index=False, sheet_name="Dados")
     output.seek(0)
     return output.getvalue()
+
+
+def get_regras(dbEngine):
+    # Lista de regras
+    return pd.read_sql(
+        """
+        SELECT DISTINCT
+            nome_regra AS "LABEL"
+        FROM 
+            regras_monitoramento
+        """,
+        dbEngine,
+    )
+
+def get_regras_padronizadas(dbEngine):
+    
+    return pd.read_sql(
+        '''
+        SELECT 
+            nome_regra AS "LABEL"
+        FROM public.regras_monitoramento 
+        WHERE regra_padronizada = true
+        ORDER BY nome_regra;
+        ''',
+        dbEngine
+    ) 
+ 
+

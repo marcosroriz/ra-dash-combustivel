@@ -107,33 +107,49 @@ def criarMenu(dirVertical=True):
         [dbc.NavLink(page["name"], href=page["relative_path"], active="exact") for page in dash.page_registry.values()],
         vertical=dirVertical,
         pills=True,
+        className="justify-content-end"
     )
 
 
-# Cabeçalho
+# Cabeçalho - Versão Final Corrigida
 header = dmc.Group(
     [
+        # Adicionamos um style para impedir que ele seja "espremido"
         dmc.Group(
             [
                 dmc.Burger(id="burger-button", opened=False, hiddenFrom="md"),
                 html.Img(src=app.get_asset_url("logo.png"), height=40),
                 dmc.Text(["Combustível (RA-UFG)"], size="2.3rem", fw=700),
-            ]
+            ],
+            gap="sm",
+            # Adicione esta linha para garantir que este grupo não encolha
+            style={"flexShrink": 0},
         ),
-        dmc.Group(
+
+        # Envolvemos o menu em um Div que vai crescer e alinhar o conteúdo
+        html.Div(
             [
+                # Sua função original, sem alterações
                 criarMenu(dirVertical=False),
             ],
-            ml="xl",
-            gap=0,
-            visibleFrom="sm",
+            # Este estilo faz o Div crescer e empurra o menu para a direita
+            style={
+                "flexGrow": 1,
+                "display": "flex",
+                "justifyContent": "flex-end",
+            }
         ),
     ],
+    # Estas propriedades garantem o alinhamento geral
     justify="space-between",
-    style={"flex": 1},
+    align="center",
     h="100%",
     px="md",
+    # Impede que o grupo principal quebre a linha
+    wrap="nowrap",
 )
+
+
 
 # Corpo do app
 app_shell = dmc.AppShell(
@@ -190,11 +206,11 @@ if __name__ == "__main__":
     PROFILE = os.getenv("PROFILE", "False").lower() in ("true", "1", "yes")
     PROF_DIR = os.getenv("PROFILE_DIR", "profile")
 
-    print(f"Host: {APP_HOST}")
-    print(f"Port: {APP_PORT}")
-    print(f"Debug: {APP_DEBUG}")
-    print(f"Profile: {PROFILE}")
-    print(f"Profile Directory: {PROF_DIR}")
+    # print(f"Host: {APP_HOST}")
+    # print(f"Port: {APP_PORT}")
+    # print(f"Debug: {APP_DEBUG}")
+    # print(f"Profile: {PROFILE}")
+    # print(f"Profile Directory: {PROF_DIR}")
 
     if PROFILE:
         print("ENTROUA QUI")

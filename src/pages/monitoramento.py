@@ -35,7 +35,7 @@ import locale_utils
 from db import PostgresSingleton
 
 # Imports gerais
-from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel
+from modules.entities_utils import *
 
 # Imports específicos
 from modules.monitoramento.monitoramento_service import MonitoramentoService
@@ -45,6 +45,8 @@ import modules.monitoramento.graficos as monitoramento_graficos
 from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
 import modules.combustivel_por_linha.graficos as combustivel_graficos
 import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
+
+from modules.regras.regras_service import RegrasService
 
 
 ##############################################################################
@@ -56,6 +58,7 @@ pgEngine = pgDB.get_engine()
 
 # Cria o serviço
 monitoramento_service = MonitoramentoService(pgEngine)
+regras_service = RegrasService(pgEngine)
 
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
@@ -67,9 +70,25 @@ df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
+# Lista de regras padronizadas
+# Preparando inputs
+df_regras = get_regras_padronizadas(pgEngine)
+lista_todas_regras = df_regras.to_dict(orient="records")
+
+print(lista_todas_regras)
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
+# Callbacks para input
+@callback(
+    Output("input-nome-regra-padronizada", "value"),
+    Input("input-nome-regra-padronizada", "value"),
+    prevent_initial_call=True
+)
+def filtra_todas_opcao(valor_selecionado):
+    if valor_selecionado is None:
+        return None
+    return valor_selecionado
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
@@ -152,6 +171,40 @@ def atualiza_tabela_perc_viagens_monitoramento(
 ##############################################################################
 # Callbacks para os gráficos #################################################
 ##############################################################################
+
+# Callback para grafico de total de Veiculos por modelo
+@callback(
+    Output("grafico-veiculos-modelo-regra", "figure"),
+    Input("input-nome-regra-padronizada", "value"),
+    prevent_initial_call=True
+)
+def grafico_veiculos_por_modelo_regra(valor_selecionado):
+    
+    regra = regras_service.get_regras(
+        [valor_selecionado]
+    )
+
+    if regra.empty:
+        return go.Figure()
+    
+    regra_dict = regra.to_dict(orient='records')
+    
+    for regra in regra_dict:
+        kwargs = {
+            "data":int(regra.get("periodo")),
+            "modelos": regra.get("modelos"),
+            "numero_de_motoristas": regra.get("motoristas"),
+            "quantidade_de_viagens": regra.get("qtd_viagens"),
+            "dias_marcados": regra.get("dias_analise"),
+            "mediana_viagem": regra.get("mediana_viagem"),
+            "indicativo_performace": regra.get("indicativo_performace"),
+            "erro_telemetria": regra.get("erro_telemetria"),
+        }
+        result = regras_service.get_estatistica_regras(**kwargs)
+
+    fig = monitoramento_graficos.plot_veiculos_por_modelo(result)
+
+    return fig
 
 
 # Callback para gráfico de combustível por veículo ao longo do dia
@@ -834,6 +887,45 @@ layout = dbc.Container(
         ),
         dmc.Space(h=20),
         html.Div(id="mapa-linha-onibus"),
-        dmc.Space(h=60),
+        dmc.Space(h=20),
+        # Campo de busca
+        dbc.Row(
+            [   html.H2("Regras Padronizadas"),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            html.Div(
+                                [
+                                    dbc.Label("Regra de Monitoramento"),
+                                    dcc.Dropdown(
+                                        id="input-nome-regra-padronizada",
+                                        options=[
+                                            {
+                                                "label": regra['LABEL'],
+                                                "value": regra['LABEL'],
+                                            }
+                                            for regra in lista_todas_regras
+                                        ],
+                                        placeholder="Selecione a regra...",
+                                        value=None,
+                                        multi=False,
+                                    ),
+                                ],
+                                className="dash-bootstrap",
+                            ),
+                        ],
+                        body=True,
+                    ),
+                    md=12,
+                ),
+                dmc.Space(h=20),
+                html.Div(
+                    [
+                        html.H2("Quantidade de Veiculos por Modelo"),
+                        dcc.Graph(id='grafico-veiculos-modelo-regra')
+                    ]   
+                )
+            ]
+        ),
     ]
 )

@@ -76,6 +76,16 @@ def subquery_modelos_combustivel(lista_modelos, prefix="", termo_all="TODOS"):
 
     return query
 
+
+def subquery_modelos_regras(lista_modelos, prefix="", termo_all="TODOS", usa_where=True):
+
+    if termo_all not in lista_modelos:
+        clausula = "WHERE" if usa_where else "AND"
+        modelos_sql = ", ".join([f"'{x}'" for x in lista_modelos])
+        return f'{clausula} {prefix}"vec_model" IN ({modelos_sql})'
+    
+    return ""
+
 def subquery_sentido_combustivel(lista_sentido, prefix="", termo_all="TODOS"):
     query = ""
     # Não adiciona a cláusula IN se a lista tiver "TODOS"
@@ -91,3 +101,16 @@ def subquery_linha_combustivel(lista_linhas, prefix=""):
         return ""  # Não adiciona a cláusula IN se a lista estiver vazia ou for "TODOS":
     query = f"""AND {prefix} encontrou_numero_linha IN ({', '.join([f"'{x}'" for x in lista_linhas])})"""
     return query
+
+def subquery_regras_monitoramento(lista_regras, prefix=""):
+    if not lista_regras or "TODAS" in lista_regras:
+        return ""
+    return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
+
+def subquery_regras_ids(lista_regras, prefix="", termo_all="TODOS"):
+    query = ""
+    if termo_all not in lista_regras:
+        query = f"""{prefix}"id" IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
+
+    return query
+

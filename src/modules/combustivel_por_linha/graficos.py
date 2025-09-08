@@ -4,14 +4,14 @@
 # Funções utilitárias para gerar os gráficos da visão de combustível por linha
 
 # Imports básicos
+from datetime import datetime, timedelta
 import matplotlib.colors as mcolors
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 
 # Imports gráficos
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 
 # Imports do tema
 import tema
