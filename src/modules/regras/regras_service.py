@@ -20,7 +20,6 @@ class RegrasService:
 
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
-        print(lista_regras)
 
         query = f'''
         SELECT * FROM public.regras_monitoramento
@@ -463,9 +462,7 @@ class RegrasService:
             ON e.vec_asset_id = p.vec_asset_id;
 
         """
-
         df = pd.read_sql(query, self.pgEngine)
-        
 
         if df.empty:
             return pd.DataFrame(columns=["vec_num_id", "vec_model", "media_consumo_por_km", "total_viagens"])

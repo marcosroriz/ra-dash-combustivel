@@ -713,28 +713,44 @@ layout = dbc.Container(
                                 ),
                                 dmc.Space(h=10),
                                 # OS automática
-                                dbc.Row(
-                                    dbc.Col(
-                                        dbc.Card(
-                                            dbc.Row(
-                                                dbc.Col(
-                                                    dmc.Switch(
-                                                        id="switch-os-automatica",
-                                                        label="Criar OS automática",
-                                                        checked=False,
-                                                        size="md",
-                                                    ),
-                                                    width="auto",
-                                                    style={"margin": "0 auto"},
+                                dbc.Col(
+                                    dbc.Card(
+                                        dbc.Row(
+                                            dbc.Col(
+                                                dmc.Switch(
+                                                    id="switch-os-automatica",
+                                                    label="Criar OS automática",
+                                                    checked=False,
+                                                    size="md",
                                                 ),
-                                                justify="center",
-                                                align="center",
+                                                width="auto",
+                                                style={"margin": "0 auto"},
                                             ),
-                                            body=True,
+                                            justify="center",
+                                            align="center",
                                         ),
-                                        md=6,  # <-- Mantém o mesmo tamanho
+                                        body=True,
                                     ),
-                                    justify="center",  # <-- Centraliza o card horizontalmente na linha
+                                    md=6,  # <-- Mantém o mesmo tamanho
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Label("Horário de envio:"),
+                                                    dmc.TimeInput(
+                                                        debounce=True,
+                                                        id="horario-envio-regra-criar",
+                                                        value="06:00",
+                                                    ),
+                                                ],
+                                                className="dash-bootstrap",
+                                            ),
+                                        ],
+                                        body=True,
+                                    ),
+                                    md=6,
                                 ),
 
                             ]
@@ -931,4 +947,4 @@ layout = dbc.Container(
     style={"margin-top": "20px", "margin-bottom": "20px"},
 )
 
-dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento")
+dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento",  icon="carbon:rule-draft", hide_page=True)

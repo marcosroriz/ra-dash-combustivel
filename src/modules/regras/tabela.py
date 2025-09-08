@@ -132,34 +132,37 @@ tbl_regras_monitoramento = [
     
 ]
 
-tbl_regras_monitoramento_editavel = []
 
-for col in tbl_regras_monitoramento:
-    field = col.get("field")  # pega o valor ou None se não existir
+# Tabela de regras existentes
+tbl_regras_existentes = [
+    {"field": "nome_regra", "headerName": "NOME DA REGRA", "minWidth": 250},
+    {
+        "field": "criado_em",
+        "headerName": "DATA DE CRIAÇÃO",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "minWidth": 120,
+        "filter": "agDateColumnFilter",
+        "valueFormatter": {
+            "function": "params.value ? params.value.slice(8,10) + '/' + params.value.slice(5,7) + '/' + params.value.slice(0,4) + ' ' + params.value.slice(11,16) : ''"
+        },
+    },
 
-    if not field:
-        # Coluna sem campo, tipo a coluna de seleção, deixa como está e pula edição
-        col.update({"editable": False})
-        tbl_regras_monitoramento_editavel.append(col)
-        continue
-
-    # Agora só para colunas que têm campo "field"
-    if col.get("headerName") in ["SELEÇÃO", "Criado Em"]:
-        editable = False
-    else:
-        editable = True
-
-    if field.startswith("usar_"):
-        col.update({
-            "editable": editable,
-            "cellEditor": "agCheckboxCellEditor",
-            "cellRenderer": "agCheckboxCellRenderer",
-            "minWidth": col.get("minWidth", 100)
-        })
-    else:
-        col.update({
-            "editable": editable,
-        })
-
-    tbl_regras_monitoramento_editavel.append(col)
+    {
+        "field": "acao_editar",
+        "headerName": "EDITAR",
+        "cellRenderer": "Button",
+        "floatingFilter": False,
+        "filter": False,
+        "cellRendererParams": {"className": "btn btn-outline-warning btn-sm"},
+    },
+    {
+        "field": "acao_apagar",
+        "headerName": "APAGAR",
+        "cellRenderer": "Button",
+        "floatingFilter": False,
+        "filter": False,
+        "cellRendererParams": {"className": "btn btn-outline-danger btn-sm"},
+    },
+]
 
