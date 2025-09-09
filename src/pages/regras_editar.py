@@ -62,7 +62,6 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 ##############################################################################
 # Callbacks para os inputs via URL ###########################################
 ##############################################################################
-
 @callback(
     [
         Output("store-editar-input-id-editar-regra", "data"),
@@ -92,6 +91,7 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
         Output("editar-input-wpp-3-regra-criar-combustivel", "value"),
         Output("editar-input-wpp-4-regra-criar-combustivel", "value"),
         Output("editar-input-wpp-5-regra-criar-combustivel", "value"),
+        Output("editar-input-id-regra-monitoramento", "value"),
     ],
     Input("url", "href"),
     running=[(Output("loading-overlay-guia-editar-regra", "visible"), True, False)],
@@ -103,44 +103,63 @@ def callback_receber_campos_via_url_editar_regra(href):
 
     parsed_url = urlparse(href)
     query_params = parse_qs(parsed_url.query)
-    
-    regra_id = query_params.get("id", [None])[0]
 
-    if regra_id:
-        regra = regra_service.get_regra_by_id(regra_id)
-        if regra:
-            return (
-                regra["id"],
-                False,
-                regra["nome_regra"],
-                regra["data_periodo_dias"],
-                regra["modelos"],
-                regra["quantidade_motoristas"],
-                regra["quantidade_viagens"],
-                regra["dias_marcados"],
-                regra["mediana_ativado"],
-                regra["mediana_valor"],
-                regra["baixa_performance_ativado"],
-                regra["baixa_performance_valor"],
-                regra["erro_telemetria_ativado"],
-                regra["erro_telemetria_valor"],
-                regra["criar_os_automatica"],
-                regra["enviar_email"],
-                regra["email_1"],
-                regra["email_2"],
-                regra["email_3"],
-                regra["email_4"],
-                regra["email_5"],
-                regra["enviar_wpp"],
-                regra["wpp_1"],
-                regra["wpp_2"],
-                regra["wpp_3"],
-                regra["wpp_4"],
-                regra["wpp_5"],
-            )
-    return (
-        None, False, "", 30, ["TODOS"], 3, 5, "SEG_SEX", False, None, False, None, False, None, False, False, "", "", "", "", "", False, "", "", "", "", ""
-    )
+    if not parsed_url.path.startswith("/regra-editar"):
+        raise dash.exceptions.PreventUpdate
+
+    # Store da regra padrão
+    store_id_regra = {"id_regra": -1, "valido": False}
+    # Resposta padrão
+    resposta_padrao = [store_id_regra, False] + [dash.no_update] * 26
+
+    id_regra = query_params.get("id_regra", [0])[0]
+
+    if not id_regra or int(id_regra) == 0:
+        return resposta_padrao
+
+    # Busca a regra no banco
+    regra = regra_service.get_regra_by_id(id_regra)
+    
+    if regra.empty:
+        return resposta_padrao
+
+    # Pega a primeira linha do DataFrame
+    linha = regra.iloc[0]
+
+    # Monta o retorno com os valores reais
+    store_id = {"id_regra": linha["id"], "valido": True}
+    print(store_id)
+
+    return [
+        store_id,
+        False,  # Loading overlay
+        linha["nome_regra"],
+        int(linha["periodo"]),
+        linha["modelos"] if linha["modelos"] else ["TODOS"],
+        linha["motoristas"],
+        linha["qtd_viagens"],
+        linha["dias_analise"] if linha["dias_analise"] else "SEG_SEX",
+        linha["usar_mediana_viagem"],
+        linha["mediana_viagem"],
+        linha["usar_indicativo_performace"],
+        linha["indicativo_performace"],
+        linha["usar_erro_telemetria"],
+        linha["erro_telemetria"],
+        linha["criar_os_automatica"],
+        linha["enviar_email"],
+        linha["email_usuario1"] or "",
+        linha["email_usuario2"] or "",
+        linha["email_usuario3"] or "",
+        linha["email_usuario4"] or "",
+        linha["email_usuario5"] or "",
+        linha["enviar_whatsapp"],
+        linha["whatsapp_usuario1"] or "",
+        linha["whatsapp_usuario2"] or "",
+        linha["whatsapp_usuario3"] or "",
+        linha["whatsapp_usuario4"] or "",
+        linha["whatsapp_usuario5"] or "",
+        linha["id"],
+    ]
 
 
 ##############################################################################
@@ -580,13 +599,24 @@ def editar_atualizar_regra_monitoramento(
         return f"❌ Erro ao atualizar a regra: {e}"
 
 
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("btn-close-editar-modalerro-carregar-dados-editar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def cb_botao_close_modal_erro_carregar_dados_editar_regra(n_clicks):
+    if n_clicks is None or n_clicks == 0:
+        return dash.no_update
+    
+    return "/regra-gerenciar"
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
 layout = dbc.Container(
     [
         # URL e Store
-        dcc.Location(id='url', refresh=False),
+        dcc.Location(id="url", refresh=False),
         
         # Estado
         dcc.Store(id="store-editar-input-id-editar-regra"),
@@ -606,6 +636,179 @@ layout = dbc.Container(
                 },
             },
             zIndex=10,
+        ),
+        # Modais
+        dmc.Modal(
+            id="editar-modalerro-carregar-dados-editar-regra",
+            centered=True,
+            radius="lg",
+            size="md",
+            closeOnClickOutside=False,
+            closeOnEscape=False,
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="lg",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Erro ao carregar dados!", order=1),
+                    dmc.Text("Ocorreu um erro ao carregar os dados da regra."),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="red",
+                                variant="outline",
+                                id="btn-close-editar-modalerro-carregar-dados-editar-regra",
+                            ),
+                        ],
+                    ),
+                    dmc.Space(h=20),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="editar-modalerro-teste-editar-regra",
+            centered=True,
+            radius="lg",
+            size="md",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="lg",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Erro!", order=1),
+                    dmc.Text("Ocorreu um erro ao testar a regra. Verifique se a regra possui:"),
+                    dmc.List(
+                        [
+                            dmc.ListItem("Nome da regra;"),
+                            dmc.ListItem("Pelo menos um alerta alvo (nova OS, retrabalho, etc);"),
+                            dmc.ListItem("Pelo menos um destino de email ou WhatsApp ativo."),
+                        ],
+                    ),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="red",
+                                variant="outline",
+                                id="btn-close-editar-modalerro-teste-editar-regra",
+                            ),
+                        ],
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="editar-modalsucesso-teste-editar-regra",
+            centered=True,
+            radius="lg",
+            size="lg",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="xl",
+                        size=128,
+                        color="green",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:check-circle-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Sucesso!", order=1),
+                    dmc.Text("A regra foi testada com sucesso."),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="green",
+                                variant="outline",
+                                id="btn-close-editar-modalsucesso-teste-editar-regra",
+                            ),
+                        ],
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="editar-modalerro-atualizar-editar-regra",
+            centered=True,
+            radius="lg",
+            size="md",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="lg",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Erro!", order=1),
+                    dmc.Text("Ocorreu um erro ao atualizar a regra. Verifique se a regra possui:"),
+                    dmc.List(
+                        [
+                            dmc.ListItem("Nome da regra;"),
+                            dmc.ListItem("Pelo menos um alerta alvo (nova OS, retrabalho, etc);"),
+                            dmc.ListItem("Pelo menos um destino de email ou WhatsApp ativo."),
+                        ],
+                    ),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="red",
+                                variant="outline",
+                                id="btn-close-editar-modalerro-atualizar-editar-regra",
+                            ),
+                        ],
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="editar-modalsucesso-atualizar-editar-regra",
+            centered=True,
+            radius="lg",
+            size="lg",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="xl",
+                        size=128,
+                        color="green",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:check-circle-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Sucesso!", order=1),
+                    dmc.Text("A regra foi atualizada com sucesso."),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="green",
+                                variant="outline",
+                                id="btn-close-editar-modalsucesso-atualizar-editar-regra",
+                            ),
+                        ],
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
         ),
 
         # Cabeçalho

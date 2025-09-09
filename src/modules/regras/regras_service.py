@@ -759,4 +759,18 @@ class RegrasService:
         except Exception as e:
             print(f"Erro ao atualizar regra: {e}")
 
+    def get_regra_by_id(self, id_regra):
+        """Função para obter uma regra de monitoramento pelo ID"""
+
+        # Query
+        query = f"""
+            SELECT * FROM regras_monitoramento WHERE id = {id_regra}
+            ORDER BY nome_regra
+        """
+
+        # Executa a query
+        df = pd.read_sql(query, self.pgEngine)
+
+        return df
+
 
