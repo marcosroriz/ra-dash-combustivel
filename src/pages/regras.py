@@ -1,950 +1,314 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Dashboard principal, aqui é listado as últimas viagens dos veículos
-
 ##############################################################################
 # IMPORTS ####################################################################
 ##############################################################################
-# Bibliotecas básicas
-from datetime import datetime, timedelta
-import pandas as pd
-
-# Importar bibliotecas do dash básicas e plotly
-from dash import html, dcc, callback, Input, Output, State
+from dash import html, callback, Input, Output, dcc, ctx, State, callback_context
 import dash
+import re
 
-
-# Importar bibliotecas do bootstrap e ag-grid
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
-
-# Dash componentes Mantine e icones
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
-from dash import callback_context
 
-# Importar nossas constantes e funções utilitárias
+# Utilitários internos
 import locale_utils
-
-# Banco de Dados
 from db import PostgresSingleton
-
-# Imports gerais
-
-# Imports específicos
 from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
-
-# Imports gerais
-from modules.entities_utils import  get_modelos_veiculos_regras
+from modules.entities_utils import get_regras
 
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
 ##############################################################################
-# Conexão com os bancos
+# Conexão com o banco
 pgDB = PostgresSingleton.get_instance()
 pgEngine = pgDB.get_engine()
 
-
-# Cria o serviço
+# Serviço de regras
 regra_service = RegrasService(pgEngine)
 
-# Modelos de veículos
-df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
-lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
-lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
-
-##################################################################################
-# LOADER #####################################################################
-###################################################################################
-
-##############################################################################
-# Callbacks para dados ######################################################
-##############################################################################
-@callback(
-    [
-        Output("tabela-regras-viagens-monitoramento", "rowData"),
-        Output("indicador-quantidade-de-veiculos", "children"),
-        Output("indicador-quantidade-gasto-combustivel", "children"),
-        Output("indicador-media-gasto-combustivel", "children"),
-    ],
-    [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-quantidade-de-motoristas", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
-    ],
-)
-def atualiza_tabela_regra_viagens_monitoramento(
-    data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
-    mediana_viagem,
-    indicativo_performace, erro_telemetria
-):
-    df = regra_service.get_estatistica_regras(
-        data, modelos, motoristas,
-        quantidade_de_viagens, dias_marcados, 
-        mediana_viagem,
-        indicativo_performace, erro_telemetria
-    )
-
-    if df.empty:
-        return [], 0, 0, 0
-
-    df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
-
-    quantidade_veiculo = df['vec_num_id'].nunique()
-
-    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
-
-    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
-
-    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
-
-
-
-@callback(
-        Output("mensagem-sucesso-criar", "children"),
-    [
-        Input("btn-criar-regra-monitoramento", "n_clicks"),
-        Input("input-nome-regra-monitoramento", "value"),
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-quantidade-de-motoristas", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
-        Input("switch-os-automatica", "checked"),
-        Input("switch-enviar-email", "checked"),
-        Input("switch-enviar-whatsapp-regra-moniotramento", "checked"),
-        Input("input-wpp-regra-monitoramento", "value"),
-        Input("input-email-regra-monitoramento", "value"),
-    ],
-    prevent_initial_call=True
-)
-def salvar_regra_monitoramento(
-    n_clicks, nome_regra,
-    data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
-    mediana_viagem, 
-    indicativo_performace, erro_telemetria,
-    criar_os_automatica, enviar_email, enviar_whatsapp,
-    wpp_regra_monitoramento, email_regra_monitoramento
-): 
-    
-    ctx = callback_context  # Obtém o contexto do callback
-    if not ctx.triggered:  
-        return dash.no_update  # Evita execução desnecessária
-    
-    # Verifica se o callback foi acionado pelo botão de download
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if triggered_id != "btn-criar-regra-monitoramento":
-        return dash.no_update  # Ignora mudanças nos outros inputs
-
-    if not n_clicks or n_clicks <= 0: 
-        return dash.no_update
-    
-    regra_service.salvar_regra_monitoramento(
-        nome_regra, data, modelos, motoristas,
-        quantidade_de_viagens, dias_marcados, 
-        mediana_viagem,
-        indicativo_performace, erro_telemetria,
-        criar_os_automatica, enviar_email, 
-        enviar_whatsapp, wpp_regra_monitoramento, email_regra_monitoramento
-
-    )
-    return "✅ Regra salva com sucesso!"
-
-
-@callback(
-    Output("tabela-regras-viagens-monitoramento", "style"),
-    Output("row-labels-adicionais", "style"),
-    Input("btn-preview-regra-monitoramento", "n_clicks"),
-    prevent_initial_call=True
-)
-def toggle_tabela(n_clicks):
-    base_style = {
-        "height": 400,
-        "resize": "vertical",
-        "overflow": "hidden",
-    }
-    if n_clicks % 2 == 1:
-        return {**base_style, "display": "block"}, {"display": "block"}
-    return {**base_style, "display": "none"}, {"display": "none"}
+# Carregar regras existentes
+df_regras = get_regras(pgEngine)
+lista_todas_regras = df_regras.to_dict(orient="records")
+lista_todas_regras.insert(0, {"LABEL": "TODAS"})
 
 
 ##############################################################################
-# Callbacks para switch ######################################################
+# FUNÇÕES AUXILIARES #########################################################
 ##############################################################################
+def prepara_dados_tabela(df_regras):
+    """Adiciona colunas de ação para edição e exclusão na tabela"""
+    df_regras["acao_editar"] = "✏️ Editar"
+    df_regras["acao_apagar"] = "❌ Apagar"
+    return df_regras
 
-@callback(
-    [
-        Output("container-mediana", "style"),
-        Output("select-mediana", "value"),
-    ],
-    [
-        Input("switch-mediana", "checked"),
-        Input("select-mediana", "value"),
-    ]
-)
-def input_mediana(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
 
-    return activate, value
-
-@callback(
-    [
-        Output("container-baixa-performace-indicativo", "style"),
-        Output("select-baixa-performace-indicativo", "value"),
-    ],
-    [
-        Input("switch-baixa-performace-indicativo", "checked"),
-        Input("select-baixa-performace-indicativo", "value"),
-    ]
-)
-def input_baixa_performace_indicativo(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
-    return activate, value
-
-@callback(
-    [
-        Output("container-erro-telemetria", "style"),
-        Output("select-erro-telemetria", "value"),
-    ],
-    [
-        Input("switch-erro-telemetria", "checked"),
-        Input("select-erro-telemetria", "value"),
-    ]
-)
-def input_erro_telemetria(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
-    return activate, value
+def get_lista_regras(df=None):
+    """Converte DataFrame em lista de dicts para tabela"""
+    if df is None:
+        df = regra_service.get_regras()
+    if not df.empty:
+        df = prepara_dados_tabela(df)
+        return df.to_dict(orient="records")
+    return []
 
 
 ##############################################################################
-# Labels #####################################################################
+# CALLBACKS ##################################################################
 ##############################################################################
-def gera_labels_inputs(campo):
-    @callback(
-        Output(f"{campo}-labels", "children"),
-        [
-            Input("input-periodo-dias-monitoramento-regra", "value"),  # datas
-            Input("input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("input-quantidade-de-motoristas", "value"), # Motoristas
-            Input("input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
-            Input("input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
-            Input("select-mediana", "value"),
-            Input("select-baixa-performace-indicativo", "value"),
-            Input("select-erro-telemetria", "value"),
-        ]
-    )
-    def atualiza_labels_inputs(
-        datas, modelos, motoristas,
-        qtd_viagens, dias_marcados,
-        mediana, indicativo, erro
-    ):
-        badges = [
-            dmc.Badge(
-            "Filtro",
-            color="gray",
-            variant="outline",
-            size="lg",
-            style={"fontSize": 16, "padding": "6px 12px"}
-        )
-        ]
 
-        # Datas
-        if datas:
-            data_inicio = pd.to_datetime(datetime.now()- timedelta(days=datas)).strftime("%d/%m/%Y")
-            data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
-            badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
-
-        # Modelos
-        if modelos and "TODOS" not in modelos:
-            for m in modelos:
-                badges.append(dmc.Badge(f"Modelo: {m}", variant="dot"))
-        else:
-            badges.append(dmc.Badge("Todos os modelos", variant="outline"))
-
-        # Outras métricas
-        if motoristas:
-            badges.append(dmc.Badge(f"Min. {motoristas} motoristas diferentes", variant="outline"))
-
-         # Outras métricas
-        if qtd_viagens:
-            badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
-
-        if dias_marcados:
-            badges.append(dmc.Badge(f"{dias_marcados}", variant="outline"))
-
-        if mediana:
-            badges.append(dmc.Badge(f"Abaixo da Mediana: {mediana}%", color="yellow", variant="outline"))
-
-        if indicativo:
-            badges.append(dmc.Badge(f"Indicativo Baixa Performance: {indicativo}%", color="yellow", variant="outline"))
-        if erro:
-            badges.append(dmc.Badge(f"Supeita de Erro Telemetria: {erro}%", color="pink", variant="outline"))
-
-        return [dmc.Group(badges, gap="xs")]
-
-    # Componente de saída
-    return dmc.Group(id=f"{campo}-labels", children=[], gap="xs")
-
-
+# Atualizar tabela de regras existentes
 @callback(
-    Output("input-modelos-monitoramento-regra", "value"),
-    Input("input-modelos-monitoramento-regra", "value"),
+    Output("tabela-de-regras-existentes", "rowData"),
+    Input("input-nome-regra-existentes", "value"),
 )
-def atualizar_modelos_selecao(valores_selecionados):
-    if not valores_selecionados:
-        # Nada selecionado -> assume "TODOS"
-        return ["TODOS"]
+def atualizar_tabela_regras(filtro):
+    df = regra_service.get_regras(filtro)
+    return get_lista_regras(df)
+
+
+# Ajustar seleção no dropdown
+@callback(
+    Output("input-nome-regra-existentes", "value"),
+    Input("input-nome-regra-existentes", "value"),
+)
+def atualizar_filtro_dropdown(valores):
+    if not valores:
+        return ["TODAS"]
 
     ctx = callback_context
     if not ctx.triggered:
-        return valores_selecionados
+        return valores
 
     ultimo_valor = ctx.triggered[0]["value"]
 
-    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
-    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
-        if ultimo_valor == ["TODOS"]:
-            return ["TODOS"]
-        else:
-            return [v for v in valores_selecionados if v != "TODOS"]
+    if "TODAS" in valores and len(valores) > 1:
+        if ultimo_valor == ["TODAS"]:
+            return ["TODAS"]
+        return [v for v in valores if v != "TODAS"]
 
-    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
-    return valores_selecionados
+    return valores
+
+
+# Cancelar exclusão
+@callback(
+    Output("modal-confirma-apagar-gerenciar-regra", "opened", allow_duplicate=True),
+    Input("btn-cancelar-apagar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def cancelar_exclusao(n_clicks):
+    return False if n_clicks else dash.no_update
+
+
+# Confirmar exclusão
+@callback(
+    [
+        Output("modal-confirma-apagar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("modal-sucesso-apagar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("tabela-de-regras-existentes", "rowData", allow_duplicate=True),
+    ],
+    Input("btn-confirma-apagar-regra", "n_clicks"),
+    Input("nome-regra-apagar-gerenciar-regra", "children"),
+    Input("input-nome-regra-existentes", "value"),
+    prevent_initial_call=True
+)
+def confirmar_exclusao(n_clicks, nome_regra, filtro):
+    if not n_clicks:
+        return dash.no_update, dash.no_update, dash.no_update
+
+    match = re.search(r"ID:\s*(\d+)", nome_regra)
+    print(match)
+    if not match:
+        return dash.no_update, dash.no_update, dash.no_update
+
+    id_regra = int(match.group(1))
+    regra_service.deletar_regra_monitoramento(id_regra)
+
+    df = regra_service.get_regras(filtro)
+    
+    return False, True, get_lista_regras(df)
+
+
+# Fechar modal de sucesso
+@callback(
+    Output("modal-sucesso-apagar-gerenciar-regra", "opened", allow_duplicate=True),
+    Input("btn-close-modal-sucesso-apagar-gerenciar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def fechar_modal_sucesso(n_clicks):
+    return False if n_clicks else dash.no_update
+
+
+# Ações da tabela (editar ou apagar)
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Output("modal-confirma-apagar-gerenciar-regra", "opened"),
+    Output("nome-regra-apagar-gerenciar-regra", "children"),
+    Input("tabela-de-regras-existentes", "cellRendererData"),
+    Input("tabela-de-regras-existentes", "virtualRowData"),
+    prevent_initial_call=True,
+)
+def acoes_tabela(linha, linha_virtual):
+    ctx = callback_context
+    if not ctx.triggered or ctx.triggered[0]["prop_id"].split(".")[1] != "cellRendererData":
+        return dash.no_update, dash.no_update, dash.no_update
+
+    if not linha or not linha_virtual:
+        return dash.no_update, dash.no_update, dash.no_update
+
+    dados_regra = linha_virtual[linha["rowIndex"]]
+    nome_regra, id_regra = dados_regra["nome_regra"], dados_regra["id"]
+    acao = linha["colId"]
+
+    if acao == "acao_editar":
+        return f"/regra-editar?id_regra={id_regra}", dash.no_update, dash.no_update
+    if acao == "acao_apagar":
+        return dash.no_update, True, f"{nome_regra} (ID: {id_regra})"
+
+    return dash.no_update, dash.no_update, dash.no_update
+
+# Callback botão criar regra
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("btn-criar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def cb_botao_criar_regra(n_clicks):
+    if n_clicks is None:
+        return dash.no_update
+    
+    print("Clicou no botão criar regra")
+
+    return "/regras-monitoramento"
 
 
 ##############################################################################
-# Layout #####################################################################
+# LAYOUT #####################################################################
 ##############################################################################
 layout = dbc.Container(
     [
+        # Modais
+        dmc.Modal(
+            id="modal-confirma-apagar-gerenciar-regra",
+            centered=True,
+            radius="lg",
+            size="md",
+            opened=False,
+            closeOnClickOutside=False,
+            closeOnEscape=True,
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="lg",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:delete", width=128, height=128),
+                    ),
+                    dmc.Title("Apagar Regra?", order=1),
+                    dmc.Text("Você tem certeza que deseja apagar a regra?"),
+                    dmc.List([dmc.ListItem(id="nome-regra-apagar-gerenciar-regra")]),
+                    dmc.Text("Esta ação não poderá ser desfeita."),
+                    dmc.Group(
+                        [
+                            dmc.Button("Cancelar", id="btn-cancelar-apagar-regra", variant="default"),
+                            dmc.Button("Apagar", color="red", variant="outline", id="btn-confirma-apagar-regra"),
+                        ],
+                        justify="flex-end",
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="modal-sucesso-apagar-gerenciar-regra",
+            centered=True,
+            radius="lg",
+            size="lg",
+            opened=False,
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="xl",
+                        size=128,
+                        color="green",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:check-circle-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Sucesso!", order=1),
+                    dmc.Text("A regra foi apagada com sucesso."),
+                    dmc.Group([dmc.Button("Fechar", color="green", variant="outline", id="btn-close-modal-sucesso-apagar-gerenciar-regra")]),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+
         # Cabeçalho
-        # dmc.Overlay(...)  # Overlay comentado
-
+        html.Hr(),
         dbc.Row(
             [
+                dbc.Col(DashIconify(icon="carbon:rule", width=45), width="auto"),
+                dbc.Col(html.H1([html.Strong("Regras"), "\u00a0 de Monitoramento"]), width=True),
                 dbc.Col(
-                    [
-                        # Cabeçalho e Título
-                        dbc.Row(
-                            [
-                                html.Hr(),
-                                dbc.Row(
-                                    [
-                                        dbc.Col(
-                                            DashIconify(icon="mdi:gas-station", width=45),
-                                            width="auto",
-                                        ),
-                                        dbc.Col(
-                                            html.H1(
-                                                [html.Strong("Regras de Monitoramento da Frota")],
-                                                className="align-self-center",
-                                            ),
-                                            width=True,
-                                        ),
-                                    ],
-                                    align="center",
-                                ),
-                                dmc.Space(h=15),
-                                html.Hr(),
-                            ]
-                        ),
-
-                        # Nome da Regra e Período
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Nome da Regra de Monitoramneto"),
-                                                dbc.Input(
-                                                    id="input-nome-regra-monitoramento",
-                                                    type="text",
-                                                    placeholder="Digite algo...",
-                                                    value="",
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=12,
-                                ),
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Período de Monitoramento (últimos X dias)"),
-                                                dbc.InputGroup(
-                                                    [
-                                                        dbc.Input(
-                                                            id="input-periodo-dias-monitoramento-regra",
-                                                            type="number",
-                                                            placeholder="Dias",
-                                                            value=30,
-                                                            step=1,
-                                                            min=1,
-                                                        ),
-                                                        dbc.InputGroupText("dias"),
-                                                    ]
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Modelos"),
-                                                dcc.Dropdown(
-                                                    id="input-modelos-monitoramento-regra",
-                                                    multi=True,
-                                                    options=[
-                                                        {"label": modelo["LABEL"], "value": modelo["LABEL"]}
-                                                        for modelo in lista_todos_modelos_veiculos
-                                                    ],
-                                                    value=["TODOS"],
-                                                    placeholder="Selecione um ou mais modelos...",
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                            ]
-                        ),
-
-                        dmc.Space(h=10),
-
-                        # Linha e Viagens
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Quantidade mínima de motoristas diferentes"),
-                                                dbc.InputGroup(
-                                                    [
-                                                        dbc.Input(
-                                                            id="input-quantidade-de-motoristas",
-                                                            type="number",
-                                                            placeholder="digite um valor...",
-                                                            value=3,
-                                                            step=1,
-                                                            min=1,
-                                                        ),
-                                                        dbc.InputGroupText("Motoristas"),
-                                                    ]
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Quantidade mínima de viagens no período"),
-                                                dbc.InputGroup(
-                                                    [
-                                                        dbc.Input(
-                                                            id="input-quantidade-de-viagens-monitoramento-regra",
-                                                            type="number",
-                                                            placeholder="digite um valor...",
-                                                            value=5,
-                                                            step=1,
-                                                            min=1,
-                                                        ),
-                                                        dbc.InputGroupText("viagens"),
-                                                    ]
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                            ]
-                        ),
-
-                        dmc.Space(h=10),
-
-                        # Filtros e Switches
-                        dbc.Row(
-                            [
-                                # Dias
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Dias"),
-                                                dbc.RadioItems(
-                                                    id="input-select-dia-linha-combustivel-regra",
-                                                    options=[
-                                                        {"label": "Seg-Sexta", "value": "SEG_SEX"},
-                                                        {"label": "Sabado", "value": "SABADO"},
-                                                        {"label": "Domingo", "value": "DOMINGO"},
-                                                        {"label": "Feriado", "value": "FERIADO"},
-                                                    ],
-                                                    value="SEG_SEX",
-                                                    inline=True,
-                                                ),
-                                            ],
-                                            className="dash-bootstrap h-100",
-                                        ),
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                
-                                # Mediana
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dmc.Switch(
-                                                    id="switch-mediana",
-                                                    label="% Mínima de Viagens Abaixo da Mediana",
-                                                    checked=False,
-                                                ),
-                                                dmc.Space(h=10),
-                                                html.Div(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="select-mediana",
-                                                                type="number",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                            ),
-                                                            dbc.InputGroupText("%"),
-                                                        ]
-                                                    ),
-                                                    id="container-mediana",
-                                                    style={"display": "none", "marginTop": "10px"},
-                                                ),
-                                            ]
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dmc.Space(h=10),
-                                # Baixa performance indicativo
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dmc.Switch(
-                                                    id="switch-baixa-performace-indicativo",
-                                                    label="% Mínima de Viagens com Supeita ou Baixa Performance",
-                                                    checked=False,
-                                                ),
-                                                dmc.Space(h=10),
-                                                html.Div(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="select-baixa-performace-indicativo",
-                                                                type="number",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=0,
-                                                                max=100,
-                                                                step=1,
-                                                            ),
-                                                            dbc.InputGroupText("%"),
-                                                        ]
-                                                    ),
-                                                    id="container-baixa-performace-indicativo",
-                                                    style={"display": "none", "marginTop": "10px"},
-                                                ),
-                                            ]
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-
-                                # Erro telemetria
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dmc.Switch(
-                                                    id="switch-erro-telemetria",
-                                                    label="% Mínima de Viagens com Erro de Telemetria",
-                                                    checked=False,
-                                                ),
-                                                dmc.Space(h=10),
-                                                html.Div(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="select-erro-telemetria",
-                                                                type="number",
-                                                                placeholder="Digite a porcentagem",
-                                                                min=10,
-                                                                max=100,
-                                                                step=1,
-                                                            ),
-                                                            dbc.InputGroupText("%"),
-                                                        ]
-                                                    ),
-                                                    id="container-erro-telemetria",
-                                                    style={"display": "none", "marginTop": "10px"},
-                                                ),
-                                            ]
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.Row(
-                                            [
-                                                dbc.Col(
-                                                    dmc.Switch(
-                                                        id="switch-enviar-email",
-                                                        label="Enviar email",
-                                                        checked=False,
-                                                        size="md",
-                                                    ),
-                                                    width="auto",
-                                                ),
-                                                dbc.Col(width=2),
-                                                dbc.Col(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-email-regra-monitoramento",
-                                                                type="email",
-                                                                placeholder="fulano@odilonsantos.com.br",
-                                                                value=""
-                                                            ),
-                                                            dbc.InputGroupText(
-                                                                DashIconify(icon="mdi:gmail", width=20, height=20)
-                                                            ),
-                                                        ],
-                                                        style={"width": "auto"},
-                                                    ),
-                                                ),
-                                            ],
-                                            align="center",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.Row(
-                                            [
-                                                dbc.Col(
-                                                    dmc.Switch(
-                                                        id="switch-enviar-whatsapp-regra-moniotramento",
-                                                        label="Enviar WhatsApp",
-                                                        checked=False,
-                                                        size="md",
-                                                    ),
-                                                    width="auto",
-                                                ),
-                                                dbc.Col(width=2),
-                                                dbc.Col(
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="input-wpp-regra-monitoramento",
-                                                                type="WhatsApp",
-                                                                placeholder="(62) 99999-9999",
-                                                                value=""
-                                                            ),
-                                                            dbc.InputGroupText(
-                                                                DashIconify(icon="logos:whatsapp-icon", width=20, height=20)
-                                                            ),
-                                                        ],
-                                                        style={"width": "auto"},
-                                                    ),
-                                                ),
-                                            ],
-                                            align="center",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dmc.Space(h=10),
-                                # OS automática
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.Row(
-                                            dbc.Col(
-                                                dmc.Switch(
-                                                    id="switch-os-automatica",
-                                                    label="Criar OS automática",
-                                                    checked=False,
-                                                    size="md",
-                                                ),
-                                                width="auto",
-                                                style={"margin": "0 auto"},
-                                            ),
-                                            justify="center",
-                                            align="center",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=6,  # <-- Mantém o mesmo tamanho
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Horário de envio:"),
-                                                    dmc.TimeInput(
-                                                        debounce=True,
-                                                        id="horario-envio-regra-criar",
-                                                        value="06:00",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-
-                            ]
-                        ),
-                    ],
-                    md=12,
-                ),
-            ]
-        ),
-
-        dmc.Space(h=10),
-
-       # Botões de Preview e Criar Regra
-        dbc.Row(
-            [
-                # Botão Preview
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.Button(
-                                "Preview da Regra",
-                                id="btn-preview-regra-monitoramento",
-                                n_clicks=0,
-                                style={
-                                    "background-color": "#f9a704",
-                                    "color": "white",
-                                    "border": "none",
-                                    "padding": "16px 32px",
-                                    "border-radius": "8px",
-                                    "cursor": "pointer",
-                                    "font-size": "20px",
-                                    "font-weight": "bold",
-                                    "width": "250px",
-                                    "height": "60px",
-                                },
-                            ),
-                            html.Div(
-                                id="mensagem-sucesso-preview",
-                                style={"marginTop": "10px", "fontWeight": "bold"}
-                            ),
-                        ],
-                        style={"textAlign": "center"},
-                    ),
-                    width="auto",
-                ),
-
-                # Botão Criar
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.Button(
-                                "Criar Regra",
-                                id="btn-criar-regra-monitoramento",
-                                n_clicks=0,
-                                style={
-                                    "background-color": "#007bff",
-                                    "color": "white",
-                                    "border": "none",
-                                    "padding": "16px 32px",
-                                    "border-radius": "8px",
-                                    "cursor": "pointer",
-                                    "font-size": "20px",
-                                    "font-weight": "bold",
-                                    "width": "250px",
-                                    "height": "60px",
-                                },
-                            ),
-                            html.Div(
-                                id="mensagem-sucesso-criar",
-                                style={"marginTop": "10px", "fontWeight": "bold"}
-                            ),
-                        ],
-                        style={"textAlign": "center"},
+                    dbc.Button(
+                        [DashIconify(icon="mdi:plus", className="me-1"), "Criar Regra"],
+                        id="btn-criar-regra",
+                        color="success",
+                        style={"padding": "1em"},
                     ),
                     width="auto",
                 ),
             ],
-            justify="center",      # Centraliza horizontalmente
-            align="center",        # Alinha verticalmente
+            align="center",
         ),
+        html.Hr(),
 
-        dmc.Space(h=20),
-
-        # Indicador de veículos
-        dbc.Row(
-            [
+        # Filtro
+        dbc.Card(
+            dbc.Row(
                 dbc.Col(
-                    dbc.Card(
+                    html.Div(
                         [
-                            dbc.CardBody(
-                                dmc.Group(
-                                    [
-                                        dmc.Title(id="indicador-quantidade-gasto-combustivel", order=2),
-                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
-                                    ],
-                                    justify="center",
-                                    mt="md",
-                                    mb="xs",
-                                ),
+                            dbc.Label("Nome da Regra de Monitoramento"),
+                            dcc.Dropdown(
+                                id="input-nome-regra-existentes",
+                                options=[{"label": regra['LABEL'], "value": regra['LABEL']} for regra in lista_todas_regras],
+                                placeholder="Digite o nome da regra...",
+                                value=["TODAS"],
+                                multi=True,
                             ),
-                            dbc.CardFooter("Total de combustível a mais utilizado"),
-                        ],
-                        class_name="card-box-shadow",
-                    ),
-                    md=4,
-                    style={"margin-bottom": "20px"},
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                dmc.Group(
-                                    [
-                                        dmc.Title(id="indicador-quantidade-de-veiculos", order=2),
-                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
-                                    ],
-                                    justify="center",
-                                    mt="md",
-                                    mb="xs",
-                                ),
-                            ),
-                            dbc.CardFooter("Total de veiculos"),
-                        ],
-                        class_name="card-box-shadow",
-                    ),
-                    md=4,
-                    style={"margin-bottom": "20px"},
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                dmc.Group(
-                                    [
-                                        dmc.Title(id="indicador-media-gasto-combustivel", order=2),
-                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
-                                    ],
-                                    justify="center",
-                                    mt="md",
-                                    mb="xs",
-                                ),
-                            ),
-                            dbc.CardFooter("Média de combustível a mais utilizado"),
-                        ],
-                        class_name="card-box-shadow",
-                    ),
-                    md=4,
-                    style={"margin-bottom": "20px"},
-                ),
-            ],
-            justify="center",
-        ),
-        
-        dmc.Space(h=10),
-
-        # Labels adicionais
-        dbc.Row(
-            [
-                dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
-            ],
-                style={"display": "none"},  # começa escondido
-                id="row-labels-adicionais"
-        ),
-
-        dmc.Space(h=20),
-
-        # Tabela de regras
-        html.Div(
-            id="container-tabela-regras",
-            children=[
-                dag.AgGrid(
-                    id="tabela-regras-viagens-monitoramento",
-                    columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
-                    rowData=[],
-                    defaultColDef={"filter": True, "floatingFilter": True},
-                    columnSize="autoSize",
-                    dashGridOptions={
-                        "localeText": locale_utils.AG_GRID_LOCALE_BR,
-                        "rowSelection": "multiple",
-                        "enableCellTextSelection": True,
-                        "ensureDomOrder": True,
-                    },
-                    style={
-                        "height": 400,
-                        "resize": "vertical",
-                        "overflow": "hidden",
-                        "display": "none"  # começa escondida
-                    },
+                        ]
+                    )
                 )
-            ]
+            ),
+            body=True,
         ),
+        dmc.Space(h=15),
 
-    ],
-    style={"margin-top": "20px", "margin-bottom": "20px"},
+        # Tabela
+        dag.AgGrid(
+            id="tabela-de-regras-existentes",
+            columnDefs=regras_tabela.tbl_regras_existentes,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                "enableCellTextSelection": True,
+                "ensureDomOrder": True,
+            },
+            style={"height": 500, "resize": "vertical", "overflow": "hidden"},
+        ),
+    ]
 )
 
-dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento",  icon="carbon:rule-draft", hide_page=True)
+##############################################################################
+# REGISTRO DA PÁGINA #########################################################
+##############################################################################
+dash.register_page(__name__, name="Regras", path="/regras-existentes")

@@ -534,19 +534,22 @@ class RegrasService:
         mediana_viagem,
         indicativo_performace,
         erro_telemetria,
-        criar_os_automatica, 
-        enviar_email,
-        enviar_whatsapp,
-        wpp_regra_monitoramento,
-        email_regra_monitoramento
+        criar_os_automatica=False, 
+        enviar_email=False,
+        enviar_whatsapp=False,
+        wpp_regra_monitoramento=None,  # lista de até 5 números
+        email_regra_monitoramento=None  # lista de até 5 emails
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
-        enviar_email = False if enviar_email is None else enviar_email
-        criar_os_automatica = False if criar_os_automatica is None else criar_os_automatica
-        enviar_whatsapp = False if enviar_whatsapp is None else enviar_whatsapp
 
+        # Garantir que as listas tenham 5 posições
+        email_list = (email_regra_monitoramento or []) + [None]*5
+        email_list = email_list[:5]
+
+        wpp_list = (wpp_regra_monitoramento or []) + [None]*5
+        wpp_list = wpp_list[:5]
 
         try:
             with self.pgEngine.connect() as conn:
@@ -567,10 +570,17 @@ class RegrasService:
                         criado_em,
                         criar_os_automatica,
                         enviar_email,
-                        email_usuario,
+                        email_usuario1,
+                        email_usuario2,
+                        email_usuario3,
+                        email_usuario4,
+                        email_usuario5,
                         enviar_whatsapp,
-                        whatsapp_usuario
-                                      
+                        whatsapp_usuario1,
+                        whatsapp_usuario2,
+                        whatsapp_usuario3,
+                        whatsapp_usuario4,
+                        whatsapp_usuario5
                     ) VALUES (
                         :nome_regra,
                         :periodo,
@@ -587,16 +597,24 @@ class RegrasService:
                         :criado_em,
                         :criar_os_automatica,
                         :enviar_email,
-                        :email_regra_monitoramento,
+                        :email1,
+                        :email2,
+                        :email3,
+                        :email4,
+                        :email5,
                         :enviar_whatsapp,
-                        :wpp_regra_monitoramento
+                        :wpp1,
+                        :wpp2,
+                        :wpp3,
+                        :wpp4,
+                        :wpp5
                     )
                 """)
 
                 conn.execute(insert_sql, {
                     "nome_regra": nome_regra,
                     "periodo": data,
-                    "modelos": modelos,  # deve ser uma lista de strings
+                    "modelos": modelos,  # lista de strings
                     "motoristas": numero_de_motoristas,
                     "dias_analise": dias_marcados,
                     "qtd_viagens": quantidade_de_viagens,
@@ -609,15 +627,24 @@ class RegrasService:
                     "criado_em": datetime.now(),
                     "criar_os_automatica": criar_os_automatica,
                     "enviar_email": enviar_email,
-                    "email_regra_monitoramento": email_regra_monitoramento,
+                    "email1": email_list[0],
+                    "email2": email_list[1],
+                    "email3": email_list[2],
+                    "email4": email_list[3],
+                    "email5": email_list[4],
                     "enviar_whatsapp": enviar_whatsapp,
-                    "wpp_regra_monitoramento": wpp_regra_monitoramento
+                    "wpp1": wpp_list[0],
+                    "wpp2": wpp_list[1],
+                    "wpp3": wpp_list[2],
+                    "wpp4": wpp_list[3],
+                    "wpp5": wpp_list[4]
                 })
 
                 conn.commit()
-            print(criar_os_automatica, enviar_email)
+                print("Regra salva com sucesso")
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
+
 
     def deletar_regra_monitoramento(self, id_regra):
         try:
@@ -633,6 +660,7 @@ class RegrasService:
         except Exception as e:
             print(f"Erro ao deletar a regra: {e}")
 
+
     def atualizar_regra_monitoramento(
         self,
         id_regra,
@@ -642,13 +670,26 @@ class RegrasService:
         numero_de_motoristas,
         quantidade_de_viagens,
         dias_marcados,
-        mediana_viagem,
-        indicativo_performace,
-        erro_telemetria
+        mediana_viagem=None,
+        indicativo_performace=None,
+        erro_telemetria=None,
+        criar_os_automatica=False,
+        enviar_email=False,
+        enviar_whatsapp=False,
+        email_list=None,
+        wpp_list=None,
+        regra_padronizada=None
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
+
+        # Garantir listas de 5 elementos
+        email_list = (email_list or []) + [None]*5
+        email_list = email_list[:5]
+
+        wpp_list = (wpp_list or []) + [None]*5
+        wpp_list = wpp_list[:5]
 
         try:
             with self.pgEngine.connect() as conn:
@@ -665,7 +706,22 @@ class RegrasService:
                         indicativo_performace = :indicativo_performace,
                         usar_indicativo_performace = :usar_indicativo_performace,
                         erro_telemetria = :erro_telemetria,
-                        usar_erro_telemetria = :usar_erro_telemetria
+                        usar_erro_telemetria = :usar_erro_telemetria,
+                        criar_os_automatica = :criar_os_automatica,
+                        enviar_email = :enviar_email,
+                        email_usuario1 = :email1,
+                        email_usuario2 = :email2,
+                        email_usuario3 = :email3,
+                        email_usuario4 = :email4,
+                        email_usuario5 = :email5,
+                        enviar_whatsapp = :enviar_whatsapp,
+                        whatsapp_usuario1 = :wpp1,
+                        whatsapp_usuario2 = :wpp2,
+                        whatsapp_usuario3 = :wpp3,
+                        whatsapp_usuario4 = :wpp4,
+                        whatsapp_usuario5 = :wpp5,
+                        regra_padronizada = :regra_padronizada,
+                        atualizado_em = NOW()
                     WHERE id = :id_regra
                 """)
 
@@ -673,7 +729,7 @@ class RegrasService:
                     "id_regra": id_regra,
                     "nome_regra": nome_regra,
                     "periodo": data,
-                    "modelos": modelos,  # lista de strings
+                    "modelos": modelos,  # lista de strings (_text)
                     "motoristas": numero_de_motoristas,
                     "dias_analise": dias_marcados,
                     "qtd_viagens": quantidade_de_viagens,
@@ -682,10 +738,25 @@ class RegrasService:
                     "indicativo_performace": indicativo_performace,
                     "usar_indicativo_performace": usar_indicativo,
                     "erro_telemetria": erro_telemetria,
-                    "usar_erro_telemetria": usar_erro
+                    "usar_erro_telemetria": usar_erro,
+                    "criar_os_automatica": criar_os_automatica,
+                    "enviar_email": enviar_email,
+                    "email1": email_list[0],
+                    "email2": email_list[1],
+                    "email3": email_list[2],
+                    "email4": email_list[3],
+                    "email5": email_list[4],
+                    "enviar_whatsapp": enviar_whatsapp,
+                    "wpp1": wpp_list[0],
+                    "wpp2": wpp_list[1],
+                    "wpp3": wpp_list[2],
+                    "wpp4": wpp_list[3],
+                    "wpp5": wpp_list[4],
+                    "regra_padronizada": regra_padronizada
                 })
 
                 conn.commit()
         except Exception as e:
             print(f"Erro ao atualizar regra: {e}")
+
 
