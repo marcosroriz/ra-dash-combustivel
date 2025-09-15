@@ -52,8 +52,8 @@ pgEngine = pgDB.get_engine()
 regra_service = RegrasServiceVisaoGeral(pgEngine)
 # Cria o serviço
 
-df_modelos_veiculos = get_regras(pgEngine)
-lista_todos_regras = df_modelos_veiculos.to_dict(orient="records")
+df_regras = get_regras(pgEngine)
+lista_todos_regras = df_regras.to_dict(orient="records")
 
 
 
