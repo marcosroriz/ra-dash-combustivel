@@ -1042,15 +1042,16 @@ layout = dbc.Container(
                                     "height": "60px",
                                 },
                             ),
-                            html.Div(
-                                id="mensagem-sucesso-criar",
-                                style={"marginTop": "10px", "fontWeight": "bold"}
-                            ),
                         ],
                         style={"textAlign": "center"},
                     ),
                     width="auto",
                 ),
+                html.Div(
+                    id="mensagem-sucesso-criar",
+                    style={"marginTop": "10px", "fontWeight": "bold"}
+                ),
+
             ],
             justify="center",      # Centraliza horizontalmente
             align="center",        # Alinha verticalmente

@@ -192,6 +192,7 @@ app_shell = dmc.AppShell(
                 children=dbc.Container(
                     [
                         dcc.Location(id="url", refresh="callback-nav"),
+                        html.Div(id="dummy-redirect"),  # dummy para callback clientside
                         html.Div(id="scroll-hook", style={"display": "none"}),
                         dash.page_container,
                     ],
@@ -237,6 +238,21 @@ app.clientside_callback(
     """,
     Output("scroll-hook", "children"),
     Input("url", "pathname"),
+)
+
+# Chamada da função clientside_callback
+app.clientside_callback(
+    """
+    function(n) {
+        if (n) {
+            window.location.href = "/regras-existentes";
+        }
+        return null;
+    }
+    """,
+    Output("dummy-redirect", "children"),
+    Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
+    prevent_initial_call=True
 )
 
 ##############################################################################

@@ -13,7 +13,7 @@ import re
 from urllib.parse import urlparse, parse_qs
 
 # Importar bibliotecas do dash básicas e plotly
-from dash import html, dcc, callback, Input, Output, State
+from dash import html, dcc, callback, Input, Output, State, clientside_callback
 import dash
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -521,14 +521,46 @@ def editar_verifica_erro_wpp_5(wpp_telefone):
 
 
 ##############################################################################
-# Callbacks para atualizar a regra ###########################################
+# Callbacks para o modal de ATUALIZAR ########################################
 ##############################################################################
 
+# Callback para ABRIR o modal de confirmação de atualização
 @callback(
-    Output("editar-mensagem-sucesso", "children"),
     [
-        Input("editar-btn-atualizar-regra-monitoramento", "n_clicks"),
+        Output("modal-confirma-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("nome-regra-atualizar-gerenciar-regra", "children"),
     ],
+    Input("editar-btn-atualizar-regra-monitoramento", "n_clicks"),
+    State("editar-input-nome-regra-monitoramento", "value"),
+    prevent_initial_call=True,
+)
+def abrir_modal_confirmacao_atualizar(n_clicks, nome_regra):
+    if n_clicks is None or n_clicks == 0:
+        return False, dash.no_update
+    
+    # Exibe o nome da regra no modal para confirmação
+    nome_formatado = f'Nome da Regra: "{nome_regra}"' if nome_regra else "A regra sem nome será atualizada."
+    
+    return True, nome_formatado
+
+# Callback para FECHAR o modal de confirmação com o botão "Cancelar"
+@callback(
+    Output("modal-confirma-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
+    Input("btn-cancelar-atualizar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def fechar_modal_confirmacao_atualizar(n_clicks):
+    return False
+
+# Callback para EXECUTAR a atualização e mostrar o modal de sucesso/erro
+@callback(
+    [
+        Output("modal-confirma-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("modal-sucesso-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("editar-modalerro-atualizar-editar-regra", "opened", allow_duplicate=True),
+        # Output("editar-mensagem-sucesso", "children") # Limpa a mensagem antiga
+    ],
+    Input("btn-confirma-atualizar-regra", "n_clicks"),
     [
         State("editar-input-nome-regra-monitoramento", "value"),
         State("editar-input-periodo-dias-monitoramento-regra", "value"),
@@ -542,13 +574,11 @@ def editar_verifica_erro_wpp_5(wpp_telefone):
         State("editar-switch-os-automatica", "checked"),
         State("editar-switch-enviar-email-regra-criar-combustivel", "checked"),
         State("editar-switch-enviar-wpp-regra-criar-combustivel", "checked"),
-        # Emails
         State("editar-input-email-1-regra-criar-combustivel", "value"),
         State("editar-input-email-2-regra-criar-combustivel", "value"),
         State("editar-input-email-3-regra-criar-combustivel", "value"),
         State("editar-input-email-4-regra-criar-combustivel", "value"),
         State("editar-input-email-5-regra-criar-combustivel", "value"),
-        # WhatsApps
         State("editar-input-wpp-1-regra-criar-combustivel", "value"),
         State("editar-input-wpp-2-regra-criar-combustivel", "value"),
         State("editar-input-wpp-3-regra-criar-combustivel", "value"),
@@ -558,57 +588,68 @@ def editar_verifica_erro_wpp_5(wpp_telefone):
     ],
     prevent_initial_call=True
 )
-def editar_atualizar_regra_monitoramento(
-    n_clicks,
-    nome_regra, data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
-    mediana_viagem,
-    indicativo_performace, erro_telemetria,
-    criar_os_automatica, enviar_email, enviar_whatsapp,
-    email1, email2, email3, email4, email5,
-    wpp1, wpp2, wpp3, wpp4, wpp5,
-    id_regra
-): 
-    ctx = callback_context
-    if not ctx.triggered:
-        return dash.no_update
+def confirmar_e_atualizar_regra(n_clicks, nome_regra, data, modelos, motoristas,
+                                quantidade_de_viagens, dias_marcados, mediana_viagem,
+                                indicativo_performace, erro_telemetria, criar_os_automatica,
+                                enviar_email, enviar_whatsapp, email1, email2, email3, email4, email5,
+                                wpp1, wpp2, wpp3, wpp4, wpp5, id_regra_data):
+    if n_clicks is None or n_clicks == 0:
+        return False, False, False, ""
+    
+    print("Entrando aqui")
 
-    triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if triggered_id != "editar-btn-atualizar-regra-monitoramento":
-        return dash.no_update
-
-    if not n_clicks or n_clicks <= 0: 
-        return dash.no_update
-
-    # Monta listas de emails e WhatsApps
     email_list = [e for e in [email1, email2, email3, email4, email5] if e]
     wpp_list = [w for w in [wpp1, wpp2, wpp3, wpp4, wpp5] if w]
+    
+    id_regra = id_regra_data.get("id_regra") if id_regra_data else None
 
     try:
+        # Validações básicas antes de tentar atualizar
+        if not nome_regra or not id_regra:
+            raise ValueError("O nome e o ID da regra são obrigatórios.")
+
         regra_service.atualizar_regra_monitoramento(
-            id_regra,
-            nome_regra, data, modelos, motoristas,
-            quantidade_de_viagens, dias_marcados, 
-            mediana_viagem,
-            indicativo_performace, erro_telemetria,
-            criar_os_automatica, enviar_email, 
-            enviar_whatsapp, wpp_list, email_list
+            id_regra, nome_regra, data, modelos, motoristas,
+            quantidade_de_viagens, dias_marcados, mediana_viagem,
+            indicativo_performace, erro_telemetria, criar_os_automatica,
+            enviar_email, enviar_whatsapp, email_list, wpp_list
         )
-        return "✅ Regra atualizada com sucesso!"
+        # Fecha o modal de confirmação e abre o de sucesso
+        return False, True, False
     except Exception as e:
-        return f"❌ Erro ao atualizar a regra: {e}"
-
-
+        print(f"Erro ao atualizar a regra: {e}")
+        # Fecha o modal de confirmação e abre o de erro
+        return False, False, True
+    
+# Callback para FECHAR os modais de sucesso e erro
 @callback(
-    Output("url", "href", allow_duplicate=True),
-    Input("btn-close-editar-modalerro-carregar-dados-editar-regra", "n_clicks"),
+    [
+        Output("modal-sucesso-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
+        Output("editar-modalerro-atualizar-editar-regra", "opened", allow_duplicate=True),
+    ],
+    [
+        Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
+        Input("btn-close-editar-modalerro-atualizar-editar-regra", "n_clicks"),
+    ],
     prevent_initial_call=True,
 )
-def cb_botao_close_modal_erro_carregar_dados_editar_regra(n_clicks):
-    if n_clicks is None or n_clicks == 0:
-        return dash.no_update
-    
-    return "/regra-gerenciar"
+def fechar_modais_resultado(n_sucesso, n_erro):
+    return False, False
+
+
+
+# # Callback para REDIRECIONAR APÓS SUCESSO
+# @callback(
+#     Output("url", "pathname", allow_duplicate=True),
+#     Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
+#     prevent_initial_call=True,
+# )
+# def redirecionar_apos_sucesso(n):
+#     if not n:
+#         return dash.no_update
+#     return "/regras-existentes"
+
+
 
 ##############################################################################
 # Layout #####################################################################
@@ -639,32 +680,41 @@ layout = dbc.Container(
         ),
         # Modais
         dmc.Modal(
-            id="editar-modalerro-carregar-dados-editar-regra",
+            id="modal-confirma-atualizar-gerenciar-regra",
             centered=True,
             radius="lg",
             size="md",
+            opened=False,
             closeOnClickOutside=False,
-            closeOnEscape=False,
+            closeOnEscape=True,
             children=dmc.Stack(
                 [
                     dmc.ThemeIcon(
                         radius="lg",
                         size=128,
-                        color="red",
+                        color="blue",
                         variant="light",
-                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
+                        children=DashIconify(icon="material-symbols:edit-document", width=128, height=128),
                     ),
-                    dmc.Title("Erro ao carregar dados!", order=1),
-                    dmc.Text("Ocorreu um erro ao carregar os dados da regra."),
+                    dmc.Title("Atualizar Regra?", order=1),
+                    dmc.Text("Você tem certeza que deseja atualizar a regra com as novas informações?"),
+                    dmc.List(
+                        [
+                            dmc.ListItem(id="nome-regra-atualizar-gerenciar-regra"),
+                        ],
+                    ),
+                    dmc.Text("Esta ação aplicará as novas configurações imediatamente."),
                     dmc.Group(
                         [
+                            dmc.Button("Cancelar", id="btn-cancelar-atualizar-regra", variant="default", color='red'),
                             dmc.Button(
-                                "Fechar",
-                                color="red",
+                                "Atualizar",
+                                color="blue",
                                 variant="outline",
-                                id="btn-close-editar-modalerro-carregar-dados-editar-regra",
+                                id="btn-confirma-atualizar-regra",
                             ),
                         ],
+                        justify="flex-end",
                     ),
                     dmc.Space(h=20),
                 ],
@@ -672,118 +722,13 @@ layout = dbc.Container(
                 gap="md",
             ),
         ),
+        # Modal de sucesso para ATUALIZAÇÃO da regra
         dmc.Modal(
-            id="editar-modalerro-teste-editar-regra",
-            centered=True,
-            radius="lg",
-            size="md",
-            children=dmc.Stack(
-                [
-                    dmc.ThemeIcon(
-                        radius="lg",
-                        size=128,
-                        color="red",
-                        variant="light",
-                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
-                    ),
-                    dmc.Title("Erro!", order=1),
-                    dmc.Text("Ocorreu um erro ao testar a regra. Verifique se a regra possui:"),
-                    dmc.List(
-                        [
-                            dmc.ListItem("Nome da regra;"),
-                            dmc.ListItem("Pelo menos um alerta alvo (nova OS, retrabalho, etc);"),
-                            dmc.ListItem("Pelo menos um destino de email ou WhatsApp ativo."),
-                        ],
-                    ),
-                    dmc.Group(
-                        [
-                            dmc.Button(
-                                "Fechar",
-                                color="red",
-                                variant="outline",
-                                id="btn-close-editar-modalerro-teste-editar-regra",
-                            ),
-                        ],
-                    ),
-                ],
-                align="center",
-                gap="md",
-            ),
-        ),
-        dmc.Modal(
-            id="editar-modalsucesso-teste-editar-regra",
+            id="modal-sucesso-atualizar-gerenciar-regra",
             centered=True,
             radius="lg",
             size="lg",
-            children=dmc.Stack(
-                [
-                    dmc.ThemeIcon(
-                        radius="xl",
-                        size=128,
-                        color="green",
-                        variant="light",
-                        children=DashIconify(icon="material-symbols:check-circle-rounded", width=128, height=128),
-                    ),
-                    dmc.Title("Sucesso!", order=1),
-                    dmc.Text("A regra foi testada com sucesso."),
-                    dmc.Group(
-                        [
-                            dmc.Button(
-                                "Fechar",
-                                color="green",
-                                variant="outline",
-                                id="btn-close-editar-modalsucesso-teste-editar-regra",
-                            ),
-                        ],
-                    ),
-                ],
-                align="center",
-                gap="md",
-            ),
-        ),
-        dmc.Modal(
-            id="editar-modalerro-atualizar-editar-regra",
-            centered=True,
-            radius="lg",
-            size="md",
-            children=dmc.Stack(
-                [
-                    dmc.ThemeIcon(
-                        radius="lg",
-                        size=128,
-                        color="red",
-                        variant="light",
-                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
-                    ),
-                    dmc.Title("Erro!", order=1),
-                    dmc.Text("Ocorreu um erro ao atualizar a regra. Verifique se a regra possui:"),
-                    dmc.List(
-                        [
-                            dmc.ListItem("Nome da regra;"),
-                            dmc.ListItem("Pelo menos um alerta alvo (nova OS, retrabalho, etc);"),
-                            dmc.ListItem("Pelo menos um destino de email ou WhatsApp ativo."),
-                        ],
-                    ),
-                    dmc.Group(
-                        [
-                            dmc.Button(
-                                "Fechar",
-                                color="red",
-                                variant="outline",
-                                id="btn-close-editar-modalerro-atualizar-editar-regra",
-                            ),
-                        ],
-                    ),
-                ],
-                align="center",
-                gap="md",
-            ),
-        ),
-        dmc.Modal(
-            id="editar-modalsucesso-atualizar-editar-regra",
-            centered=True,
-            radius="lg",
-            size="lg",
+            opened=False,
             children=dmc.Stack(
                 [
                     dmc.ThemeIcon(
@@ -801,9 +746,43 @@ layout = dbc.Container(
                                 "Fechar",
                                 color="green",
                                 variant="outline",
-                                id="btn-close-editar-modalsucesso-atualizar-editar-regra",
+                                id="btn-close-modal-sucesso-atualizar-gerenciar-regra",
                             ),
                         ],
+                        justify="center",
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            id="editar-modalerro-atualizar-editar-regra",
+            centered=True,
+            radius="lg",
+            size="lg",
+            opened=False,
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="xl",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="mdi:alert-circle-outline", width=128, height=128),
+                    ),
+                    dmc.Title("Erro!", order=1),
+                    dmc.Text("Não foi possível atualizar a regra. Verifique os dados e tente novamente."),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="red",
+                                variant="outline",
+                                id="btn-close-editar-modalerro-atualizar-editar-regra",
+                            ),
+                        ],
+                        justify="center",
                     ),
                 ],
                 align="center",
@@ -1367,6 +1346,7 @@ layout = dbc.Container(
                             html.Button(
                                 "Atualizar Regra",
                                 id="editar-btn-atualizar-regra-monitoramento",
+                                type="button",
                                 n_clicks=0,
                                 style={
                                     "background-color": "#007bff",
