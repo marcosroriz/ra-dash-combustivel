@@ -83,8 +83,13 @@ tbl_regras_viagens_visao_geral_frota = [
 
 tbl_regras_monitoramento = [
     {"field": "id", "headerName": "ID", "minWidth": 80, "type": ["numericColumn"], "pinned": "left"},
+    {"field": "nome_regra", "headerName": "Nome da Regra", "minWidth": 200, "type": ["text"]},
+    {"field": "criado_em", "headerName": "Criado em", "minWidth": 220, "type": ["dateColumn"]},
+    {"field": "atualizado_em", "headerName": "Atualizado em", "minWidth": 220, "type": ["dateColumn"]},
+    {"field": "dias_analise", "headerName": "Dias Análise", "minWidth": 50, "type": ["numericColumn"]},
     {"field": "motoristas", "headerName": "Motoristas", "minWidth": 200, "type": ["text"], "pinned": "left"},
     {"field": "qtd_viagens", "headerName": "Qtd. Viagens", "minWidth": 120, "type": ["numericColumn"]},
+    
     {
         "field": "mediana_viagem",
         "headerName": "Mediana da Viagem",
@@ -100,19 +105,13 @@ tbl_regras_monitoramento = [
     {"field": "erro_telemetria", "headerName": "Erro Telemetria", "minWidth": 140, "type": ["numericColumn"]},
     {"field": "usar_erro_telemetria", "headerName": "Usar Erro Telemetria", "minWidth": 160, "type": ["booleanColumn"]},
 
-    {"field": "criado_em", "headerName": "Criado em", "minWidth": 150, "type": ["dateColumn"]},
-    {"field": "atualizado_em", "headerName": "Atualizado em", "minWidth": 150, "type": ["dateColumn"]},
-
     {"field": "regra_padronizada", "headerName": "Regra Padronizada", "minWidth": 150, "type": ["text"]},
     {"field": "criar_os_automatica", "headerName": "Criar OS Automática", "minWidth": 160, "type": ["booleanColumn"]},
     {"field": "enviar_email", "headerName": "Enviar Email", "minWidth": 120, "type": ["booleanColumn"]},
     {"field": "enviar_whatsapp", "headerName": "Enviar WhatsApp", "minWidth": 140, "type": ["booleanColumn"]},
 
-    {"field": "nome_regra", "headerName": "Nome da Regra", "minWidth": 200, "type": ["text"]},
     {"field": "periodo", "headerName": "Período", "minWidth": 120, "type": ["text"]},
     {"field": "modelos", "headerName": "Modelos", "minWidth": 200, "type": ["text"]},
-
-    {"field": "dias_analise", "headerName": "Dias Análise", "minWidth": 120, "type": ["numericColumn"]},
 
     {"field": "whatsapp_usuario1", "headerName": "WhatsApp Usuário 1", "minWidth": 200, "type": ["text"]},
     {"field": "whatsapp_usuario2", "headerName": "WhatsApp Usuário 2", "minWidth": 200, "type": ["text"]},

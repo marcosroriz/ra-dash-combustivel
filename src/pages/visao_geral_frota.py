@@ -36,7 +36,7 @@ from db import PostgresSingleton
 import modules.visao_geral_frotas.tabelas as regras_tabela
 from modules.visao_geral_frotas.visao_geral_service import RegrasServiceVisaoGeral
 
-from modules.visao_geral_frotas.entities_utils import get_regras
+from modules.visao_geral_frotas.entities_utils import get_regras, get_regra_where
 
 
 
@@ -75,8 +75,11 @@ def atualiza_tabela_regra_viagens_monitoramento(regra):
 
     if not regra:
         return [], 0, 0, 0
-
+    
     df = regra_service.get_estatistica_veiculos_analise_performance(regra)
+
+    if df.empty:
+        return [], 0, 0, 0
 
     df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
 
@@ -85,7 +88,6 @@ def atualiza_tabela_regra_viagens_monitoramento(regra):
     total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
 
     media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
-
 
     return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
 
@@ -100,13 +102,9 @@ def atualiza_tabela_regra(regra):
 
     if not regra:
         return []
+    df_regra = get_regra_where(pgEngine, regra)
+
     
-    
-    df_regra = df_regras[df_regras['id'] == str(regra)]
-
-
-
-
     return df_regra.to_dict(orient="records")
 
 ##############################################################################
@@ -213,6 +211,19 @@ layout = dbc.Container(
 
         dmc.Space(h=20),
 
+        dag.AgGrid(
+            id="tabela-regras-viagens-analise",
+            columnDefs=regras_tabela.tbl_regras_monitoramento,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                "rowSelection": "multiple",
+            },
+            style={"height": 250, "resize": "vertical", "overflow": "hidden"},
+        ),
+        dmc.Space(h=40),
         # Indicador de total
         dbc.Row(
             [
