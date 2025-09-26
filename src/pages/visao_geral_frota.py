@@ -222,9 +222,26 @@ layout = dbc.Container(
                 ),
             ]
         ),
-
+        dmc.Space(h=40),
+        dbc.Row(
+            [
+                dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
+                dbc.Col(
+                    dbc.Row(
+                        [
+                            html.H4(
+                                "Parâmetros da regra",
+                                className="align-self-center",
+                            ),
+                            dmc.Space(h=5),
+                        ]
+                    ),
+                    width=True,
+                ),
+            ],
+            align="center",
+        ),
         dmc.Space(h=20),
-
         dag.AgGrid(
             id="tabela-regras-viagens-analise",
             columnDefs=regras_tabela.tbl_regras_monitoramento,
@@ -238,6 +255,25 @@ layout = dbc.Container(
             style={"height": 250, "resize": "vertical", "overflow": "hidden"},
         ),
         dmc.Space(h=40),
+        dbc.Row(
+            [
+                dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
+                dbc.Col(
+                    dbc.Row(
+                        [
+                            html.H4(
+                                "Indicadores",
+                                className="align-self-center",
+                            ),
+                            dmc.Space(h=5),
+                        ]
+                    ),
+                    width=True,
+                ),
+            ],
+            align="center",
+        ),
+        dmc.Space(h=20),
         # Indicador de total
         dbc.Row(
             [
@@ -311,7 +347,25 @@ layout = dbc.Container(
         dmc.Space(h=20),
         dcc.Graph(id="graph-regras-modelo"),
         dmc.Space(h=40),
-        
+        dbc.Row(
+            [
+                dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
+                dbc.Col(
+                    dbc.Row(
+                        [
+                            html.H4(
+                                "Veículos que entraram na regra",
+                                className="align-self-center",
+                            ),
+                            dmc.Space(h=5),
+                        ]
+                    ),
+                    width=True,
+                ),
+            ],
+            align="center",
+        ),
+        dmc.Space(h=20),
         # Tabela
         dag.AgGrid(
             id="tabela-regras-viagens-analise-performance-frota-regra",
