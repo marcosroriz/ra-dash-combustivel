@@ -89,7 +89,25 @@ def atualiza_tabela_regra_viagens_monitoramento(regra):
 
     return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
 
+@callback(
+    Output("tabela-regras-viagens-analise", "rowData"),
+    [
+        Input("input-select-regra-visao-geral", "value"),
+    ],
+)
 
+def atualiza_tabela_regra(regra):
+
+    if not regra:
+        return []
+    
+    
+    df_regra = df_regras[df_regras['id'] == str(regra)]
+
+
+
+
+    return df_regra.to_dict(orient="records")
 
 ##############################################################################
 # Callbacks para switch ######################################################

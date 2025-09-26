@@ -1,6 +1,6 @@
 import pandas as pd
 
-def get_regras(dbEngine):
+def get_regras(dbEngine)-> pd.DataFrame:
     try:
     # Lista de OS
         with dbEngine.begin() as conn: 
