@@ -13,6 +13,7 @@ import pandas as pd
 # Importar bibliotecas do dash básicas e plotly
 from dash import html, dcc, callback, Input, Output
 import dash
+import plotly.graph_objects as go
 
 # Importar bibliotecas do bootstrap e ag-grid
 import dash_bootstrap_components as dbc
@@ -23,6 +24,7 @@ from dash import callback_context
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
+
 
 # Importar nossas constantes e funções utilitárias
 import locale_utils
@@ -35,8 +37,10 @@ from db import PostgresSingleton
 # Imports específicos
 import modules.visao_geral_frotas.tabelas as regras_tabela
 from modules.visao_geral_frotas.visao_geral_service import RegrasServiceVisaoGeral
+from modules.visao_geral_frotas.graficos import gera_grafico_regras_comb
 
-from modules.visao_geral_frotas.entities_utils import get_regras, get_regra_where
+
+from modules.visao_geral_frotas.entities_utils import get_regras, get_regra_where, calcular_proporcao_regras_modelos
 
 
 
@@ -49,7 +53,7 @@ pgDB = PostgresSingleton.get_instance()
 pgEngine = pgDB.get_engine()
 
 
-regra_service = RegrasServiceVisaoGeral(pgEngine)
+visão_regra_service = RegrasServiceVisaoGeral(pgEngine)
 # Cria o serviço
 
 df_regras = get_regras(pgEngine)
@@ -66,6 +70,7 @@ lista_todos_regras = df_regras.to_dict(orient="records")
     Output("indicador-veiculos-com-problemas-visao-geral-frota", "children"),
     Output("indicador-combustivel-excedente-total-visao-geral-frota", "children"),
     Output("indicador-combustivel-excedente-por-veiculo-visao-geral-frota", "children"),
+    Output("graph-regras-modelo", "figure"),
     [
         Input("input-select-regra-visao-geral", "value"),
     ],
@@ -74,12 +79,12 @@ lista_todos_regras = df_regras.to_dict(orient="records")
 def atualiza_tabela_regra_viagens_monitoramento(regra):
 
     if not regra:
-        return [], 0, 0, 0
+        return [], 0, 0, 0, go.Figure()
     
-    df = regra_service.get_estatistica_veiculos_analise_performance(regra)
+    df = visão_regra_service.get_estatistica_veiculos_analise_performance(regra)
 
     if df.empty:
-        return [], 0, 0, 0
+        return [], 0, 0, 0, go.Figure()
 
     df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
 
@@ -89,7 +94,16 @@ def atualiza_tabela_regra_viagens_monitoramento(regra):
 
     media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
 
-    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
+
+    #######################################################
+    df_veiculos_modelo = df[['vec_num_id']]
+    
+    df_proporcao = calcular_proporcao_regras_modelos(pgEngine, df_veiculos_modelo)
+    print(df_proporcao)
+
+    fig_regras_modelo = gera_grafico_regras_comb(df_proporcao)
+
+    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel, fig_regras_modelo
 
 @callback(
     Output("tabela-regras-viagens-analise", "rowData"),
@@ -295,7 +309,9 @@ layout = dbc.Container(
         ),
 
         dmc.Space(h=20),
-
+        dcc.Graph(id="graph-regras-modelo"),
+        dmc.Space(h=40),
+        
         # Tabela
         dag.AgGrid(
             id="tabela-regras-viagens-analise-performance-frota-regra",
