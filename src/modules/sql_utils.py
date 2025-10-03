@@ -25,7 +25,7 @@ def subquery_os(lista_os, prefix="", termo_all="TODAS"):
     query = ""
     if termo_all not in lista_os:
         query = f"""AND {prefix}"DESCRICAO DO SERVICO" IN ({', '.join([f"'{x}'" for x in lista_os])})"""
-    
+
     return query
 
 
@@ -83,8 +83,9 @@ def subquery_modelos_regras(lista_modelos, prefix="", termo_all="TODOS", usa_whe
         clausula = "WHERE" if usa_where else "AND"
         modelos_sql = ", ".join([f"'{x}'" for x in lista_modelos])
         return f'{clausula} {prefix}"vec_model" IN ({modelos_sql})'
-    
+
     return ""
+
 
 def subquery_sentido_combustivel(lista_sentido, prefix="", termo_all="TODOS"):
     query = ""
@@ -95,15 +96,16 @@ def subquery_sentido_combustivel(lista_sentido, prefix="", termo_all="TODOS"):
     return query
 
 
-def subquery_linha_combustivel(lista_linhas, prefix=""):
-    # query = ""
-    if not lista_linhas or "TODAS" in lista_linhas:
-        return ""  # Não adiciona a cláusula IN se a lista estiver vazia ou for "TODOS":
-    query = f"""AND {prefix} encontrou_numero_linha IN ({', '.join([f"'{x}'" for x in lista_linhas])})"""
+def subquery_linha_combustivel(lista_linhas, prefix="", termo_all="TODAS"):
+    query = ""
+    # Não adiciona a cláusula IN se a lista tiver "TODAS"
+    if termo_all not in lista_linhas:
+        query = f"""AND {prefix} encontrou_numero_linha IN ({', '.join([f"'{x}'" for x in lista_linhas])})"""
+
     return query
+
 
 def subquery_regras_monitoramento(lista_regras, prefix=""):
     if not lista_regras or "TODAS" in lista_regras:
         return ""
     return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
-

@@ -194,6 +194,7 @@ app_shell = dmc.AppShell(
                         dcc.Location(id="url", refresh="callback-nav"),
                         html.Div(id="dummy-redirect"),  # dummy para callback clientside
                         html.Div(id="scroll-hook", style={"display": "none"}),
+                        dcc.Store(id="store-window-size"),
                         dash.page_container,
                     ],
                     fluid=True,
@@ -226,6 +227,7 @@ def toggle_navbar(opened, navbar):
     return navbar
 
 
+# Hook para levar para o topo ao mudar a url
 app.clientside_callback(
     """
     function(pathname) {
@@ -239,6 +241,22 @@ app.clientside_callback(
     Output("scroll-hook", "children"),
     Input("url", "pathname"),
 )
+
+# Script para armazerar o tamanho do navegador
+app.clientside_callback(
+    """
+    function(n) {
+        return {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            device: window.innerWidth < 768 ? "Mobile" : "Desktop"
+        };
+    }
+    """,
+    Output("store-window-size", "data"),
+    Input("url", "pathname"),
+)
+
 
 # Chamada da função clientside_callback
 app.clientside_callback(
