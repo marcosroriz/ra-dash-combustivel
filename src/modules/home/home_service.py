@@ -271,3 +271,48 @@ class HomeService:
         df["litros_excedentes"] = df["litros_excedentes"].round(2)
 
         return df
+    
+    def get_(self):
+        query = f"""
+            WITH rmtc_viagens_analise_mix_padronizado AS (
+                SELECT 
+                    CASE
+                        WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
+                        WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
+                        WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
+                        WHEN vec_model ILIKE 'O500%%' THEN 'O500'
+                        WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
+                        WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
+                        WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
+                        ELSE vec_model
+                    END AS vec_model_padronizado,
+                    r.*
+                FROM rmtc_viagens_analise_mix r
+            )
+            SELECT
+                vec_model,
+                COUNT(*) AS total_viagens,
+                AVG(km_por_litro) AS media_km_litro,
+                SUM(total_comb_l) AS total_consumo_litros,
+                SUM(
+                    ABS(
+                        total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+                    )
+                ) AS total_litros_excedentes,
+                100 * (
+                    SUM(
+                        ABS(
+                            total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+                        )
+                    )::NUMERIC
+                    / SUM(total_comb_l)::NUMERIC
+                ) AS perc_excedente
+            FROM 
+                rmtc_viagens_analise_mix_padronizado
+            WHERE 
+                CAST("dia" AS DATE) BETWEEN DATE '2025-09-01' AND DATE '2025-11-01'
+                AND analise_num_amostras_90_dias > 10
+                AND km_por_litro BETWEEN 1 AND 10
+            GROUP BY 
+                vec_model;
+"""

@@ -77,3 +77,32 @@ def gerar_grafico_pizza_sinteze_geral(df, labels, values, metadata_browser):
 
     # Retorna o gráfico
     return fig
+
+
+def gerar_grafico_barras_sinteze_modelos(df, metadata_browser):
+    """Gera o gráfico de barras com síntese por modelo da tela inicial"""
+
+    bar_chart = px.bar(
+        df,
+        x="vec_model",
+        y=[
+            "NORMAL",
+            "SUSPEITA BAIXA PERFORMANCE (<= 1.0 STD)",
+            "BAIXA PERFORMANCE (<= 1.5 STD)",
+            "BAIXA PERFOMANCE (<= 2 STD)",
+            "ERRO TELEMETRIA (>= 2.0 STD)"
+        ],
+        barmode="stack",
+        color_discrete_sequence=[tema.COR_NORMAL,
+                        tema.COR_COMB_10_STD,
+                        tema.COR_COMB_15_STD,
+                        tema.COR_COMB_20_STD,
+                        tema.COR_COMB_ERRO],
+        labels={
+            "value": "Percentagem",
+            "DESCRICAO DO MODELO": "Modelo",
+            "variable": "Status",
+            "PERC_NAO_TEVE_PROBLEMA": "Não teve problema",
+        },
+    )
+    return bar_chart
