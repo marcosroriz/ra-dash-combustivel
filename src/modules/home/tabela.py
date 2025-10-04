@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# Arquivo que centraliza as tabelas utilizadas na página home
+
+# Tabela com o consumo dos veículos (home)
+tbl_consumo_veiculo_visao_geral = [
+    {
+        "field": "vec_num_id",
+        "headerName": "VEÍCULO",
+        "minWidth": 120,
+        "maxWidth": 120,
+        "pinned": "left",
+    },
+    {
+        "field": "acao",
+        "headerName": "Perfil",
+        "cellRenderer": "Button",
+        "cellRendererParams": {"className": "btn btn-outline-primary btn-sm"},
+        "minWidth": 150,
+        "pinned": "left",
+    },
+    {
+        "field": "vec_model",
+        "headerName": "Modelo",
+        "minWidth": 220,
+    },
+    {
+        "field": "media_km_por_litro",
+        "headerName": "km/L Médio",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 130,
+        "type": ["numericColumn"],
+    },
+        {
+        "field": "total_consumo_litros",
+        "headerName": "TOTAL CONSUMIDO (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "litros_excedentes",
+        "headerName": "LITROS EXCEDENTES (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "total_viagens",
+        "headerName": "TOTAL DE VIAGENS",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 140,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "perc_total_abaixo_mediana",
+        "headerName": "% ABAIXO DA MEDIANA",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 160,
+        "valueFormatter": {"function": "params.value.toLocaleString('pt-BR') + '%'"},
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "perc_baixa_perfomance",
+        "headerName": "% BAIXA PERFORMANCE",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 180,
+        "valueFormatter": {"function": "params.value.toLocaleString('pt-BR') + '%'"},
+        "type": ["numericColumn"],
+        "sort": "desc",
+        "sortable": True,
+    },
+    {
+        "field": "perc_erro_telemetria",
+        "headerName": "% ERRO TELEMETRIA",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 160,
+        "filter": "agNumberColumnFilter",
+        "valueFormatter": {"function": "params.value.toLocaleString('pt-BR') + '%'"},
+        "type": ["numericColumn"],
+    },
+]

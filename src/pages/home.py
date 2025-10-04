@@ -40,6 +40,8 @@ from modules.entities_utils import *
 # Imports específicos
 from modules.home.home_service import HomeService
 import modules.home.graficos as home_graficos
+import modules.home.tabela as home_tabela
+
 from modules.monitoramento.monitoramento_service import MonitoramentoService
 import modules.monitoramento.tabela as monitoramento_tabela
 import modules.monitoramento.graficos as monitoramento_graficos
@@ -121,6 +123,67 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 
     return True
 
+def gera_labels_inputs_visao_geral(campo):
+    # Cria o callback
+    @callback(
+        [
+            Output(component_id=f"{campo}-labels", component_property="children"),
+        ],
+        [
+            Input("input-intervalo-datas-visao-geral", "value"),
+            Input("input-select-modelos-visao-geral", "value"),
+            Input("input-select-linhas-monitoramento", "value"),
+            Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+            Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+        ],
+    )
+    def atualiza_labels_inputs_visal_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
+        labels_antes = [
+            # DashIconify(icon="material-symbols:filter-arrow-right", width=20),
+            dmc.Badge("Filtro", color="gray", variant="outline"),
+        ]
+
+        datas_label = []
+        if not (datas is None or not datas) and datas[0] is not None and datas[1] is not None:
+            # Formata as datas
+            data_inicio_str = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
+            data_fim_str = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
+
+            datas_label = [dmc.Badge(f"{data_inicio_str} a {data_fim_str}", variant="outline")]
+
+        lista_modelos_labels = []
+        lista_linha_labels = []
+        km_l_labels = []
+
+        if lista_modelos is None or not lista_modelos or "TODOS" in lista_modelos:
+            lista_modelos_labels.append(dmc.Badge("Todos os modelos", variant="outline"))
+        else:
+            for modelo in lista_modelos:
+                lista_modelos_labels.append(dmc.Badge(modelo, variant="dot"))
+
+        if lista_linha is None or not lista_linha or "TODAS" in lista_linha:
+            lista_linha_labels.append(dmc.Badge("Todas as linhas", variant="outline"))
+        else:
+            for linha in lista_linha:
+                lista_linha_labels.append(dmc.Badge(linha, variant="dot"))
+
+        km_l_labels.append(dmc.Badge(f"{km_l_min} ≤ km/L ≤ {km_l_max} ", variant="outline"))
+
+        return [
+            dmc.Group(
+                labels_antes
+                + datas_label
+                + lista_modelos_labels
+                + lista_linha_labels
+                + km_l_labels
+            )
+        ]
+
+    # Cria o componente
+    return dmc.Group(id=f"{campo}-labels", children=[])
+
+
+
 
 # @callback(
 #     Output("input-select-veiculos-monitoramento", "options"),
@@ -147,32 +210,53 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 ##############################################################################
 
 
-# @callback(
-#     Output("tabela-perc-viagens-monitoramento", "rowData"),
-#     [
-#         Input("input-intervalo-datas-monitorameto", "value"),
-#         Input("input-select-modelos-monitoramento", "value"),
-#         Input("input-select-linhas-monitoramento", "value"),
-#         Input("input-quantidade-de-viagens-monitoramento", "value"),
-#         Input("input-select-dia-linha-combustivel", "value"),
-#         Input("input-excluir-km-l-menor-que-monitoramento", "value"),
-#         Input("input-excluir-km-l-maior-que-monitoramento", "value"),
-#     ],
-# )
-# def atualiza_tabela_perc_viagens_monitoramento(
-#     dia, modelos, linha, quantidade_de_viagens, dias_marcados, excluir_km_l_menor_que, excluir_km_l_maior_que
-# ):
-#     print("Datas: ", dia)
-#     print("Modelos: ", modelos)
-#     print("Linha: ", linha)
-#     print("Quantidade de viagens: ", quantidade_de_viagens)
-#     print("Dias marcados: ", dias_marcados)
-#     print("Excluir km/L menor que: ", excluir_km_l_menor_que)
-#     print("Excluir km/L maior que: ", excluir_km_l_maior_que)
+@callback(
+    Output("tabela-consumo-veiculo-visao-geral", "rowData"),
+    [
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    ],
+)
+def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
 
-#     df = monitoramento_service.get_estatistica_veiculos(dia, linha, dias_marcados)
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
 
-#     return df.to_dict(orient="records")
+    return df.to_dict(orient="records")
+
+
+# Callback para fazer o download quando o botão exportar para excel for clicado
+@callback(
+    Output("download-excel-tabela-combustivel-visao-geral", "data"),
+    [
+        Input("btn-exportar-excel-tabela-combustivel-visao-geral", "n_clicks"),
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
+        return dash.no_update
+
+    # Obtem os dados
+    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
+
+    # Gera o excel
+    excel_data = gerar_excel(df)
+
+    # Dia de hoje formatado
+    dia_hoje_str = date.today().strftime("%d-%m-%Y")
+
+    return dcc.send_bytes(excel_data, f"tabela_consumo_combustivel_{dia_hoje_str}.xlsx")
+
 
 ##############################################################################
 # Callbacks para os indicadores ##############################################
@@ -233,7 +317,9 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, linha
         return (
             f"{int(df_indicador.iloc[0]["litros_excedentes"]):,} L".replace(",", "."),
             f"R$ {int(preco_diesel * df_indicador.iloc[0]["litros_excedentes"]):,}".replace(",", "."),
-            f"Total gasto com combustível excedente (R$) / Considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(".", ",")
+            f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
+                ".", ","
+            ),
         )
 
 
@@ -258,14 +344,6 @@ def plota_grafico_pizza_sintese_geral(datas, lista_modelos, linha, km_l_min, km_
     # Valida input
     # if not input_valido(datas, min_dias, lista_modelos, lista_oficinas, lista_secaos, lista_os):
     #     return go.Figure()
-
-    print("PARAMETROS:")
-    print("Datas: ", datas)
-    print("Modelos: ", lista_modelos)
-    print("Linha: ", linha)
-    print("km/L mínimo: ", km_l_min)
-    print("km/L máximo: ", km_l_max)
-    print("Metadata browser: ", metadata_browser)
 
     # Obtem os dados
     df = home_service.get_sinteze_status_viagens(datas, lista_modelos, linha, km_l_min, km_l_max)
@@ -701,17 +779,17 @@ layout = dbc.Container(
                     dbc.Row(
                         [
                             html.H4(
-                                "Detalhamento de viagens nesta linha",
+                                "Detalhamento do consumo dos veículos",
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            # dbc.Col(gera_labels_inputs_veiculos("input-geral-combustivel-1"), width=True),
+                            dbc.Col(gera_labels_inputs_visao_geral("labels-tabela-veiculos-visao-geral"), width=True),
                             dbc.Col(
                                 html.Div(
                                     [
                                         html.Button(
                                             "Exportar para Excel",
-                                            id="btn-exportar-comb",
+                                            id="btn-exportar-excel-tabela-combustivel-visao-geral",
                                             n_clicks=0,
                                             style={
                                                 "background-color": "#007bff",  # Azul
@@ -724,7 +802,7 @@ layout = dbc.Container(
                                                 "font-weight": "bold",
                                             },
                                         ),
-                                        dcc.Download(id="download-excel-tabela-combustivel-1"),
+                                        dcc.Download(id="download-excel-tabela-combustivel-visao-geral"),
                                     ],
                                     style={"text-align": "right"},
                                 ),
@@ -738,6 +816,19 @@ layout = dbc.Container(
             align="center",
         ),
         dmc.Space(h=20),
+        dag.AgGrid(
+            # enableEnterpriseModules=True,
+            id="tabela-consumo-veiculo-visao-geral",
+            columnDefs=home_tabela.tbl_consumo_veiculo_visao_geral,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
         dag.AgGrid(
             id="tabela-perc-viagens-monitoramento",
             columnDefs=monitoramento_tabela.tbl_perc_viagens_monitoramento,
