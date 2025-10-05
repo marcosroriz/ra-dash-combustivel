@@ -12,7 +12,7 @@ import pandas as pd
 
 # Importar bibliotecas do dash básicas e plotly
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State
+from dash import Dash, html, dcc, callback, Input, Output, State, callback_context
 import plotly.graph_objects as go
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -72,6 +72,7 @@ preco_diesel = get_preco_diesel()
 # Callbacks para os inputs ###################################################
 ##############################################################################
 
+
 # Função para validar o input
 def input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
     if datas is None or not datas or None in datas or len(datas) != 2:
@@ -87,6 +88,7 @@ def input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return False
 
     return True
+
 
 def gera_labels_inputs_visao_geral(campo):
     # Cria o callback
@@ -144,6 +146,7 @@ def gera_labels_inputs_visao_geral(campo):
 # Callbacks para as tabelas ##################################################
 ##############################################################################
 
+
 @callback(
     Output("tabela-consumo-veiculo-visao-geral", "rowData"),
     [
@@ -154,12 +157,38 @@ def gera_labels_inputs_visao_geral(campo):
         Input("input-excluir-km-l-maior-que-visao-geral", "value"),
     ],
 )
-def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return []
-    
-    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
+
+    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
+
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    return df.to_dict(orient="records")
+
+
+@callback(
+    Output("tabela-consumo-linhas-visao-geral", "rowData"),
+    [
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    ],
+)
+def cb_tabela_consumo_linhas_visal_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
+    # Valida input
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
+        return []
+
+    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     # Ação de visualização
     df["acao"] = "🔍 Detalhar"
@@ -183,16 +212,18 @@ def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, linha, km_l_min
     ],
     prevent_initial_call=True,
 )
-def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista_modelos, linha, km_l_min, km_l_max):
+def cb_download_excel_tabela_consumo_veiculos_visal_geral(
+    n_clicks, datas, lista_modelos, lista_linha, km_l_min, km_l_max
+):
     if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
         return dash.no_update
-    
+
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return dash.no_update
 
     # Obtem os dados
-    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     # Gera a coluna de custo
     df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
@@ -207,32 +238,6 @@ def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista
 
 
 @callback(
-    Output("tabela-consumo-linhas-visao-geral", "rowData"),
-    [
-        Input("input-intervalo-datas-visao-geral", "value"),
-        Input("input-select-modelos-visao-geral", "value"),
-        Input("input-select-linhas-monitoramento", "value"),
-        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
-        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
-    ],
-)
-def cb_tabela_consumo_linhas_visal_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
-     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
-        return []
-    
-    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, linha, km_l_min, km_l_max)
-
-    # Ação de visualização
-    df["acao"] = "🔍 Detalhar"
-
-    # Preço
-    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
-
-    return df.to_dict(orient="records")
-
-
-@callback(
     Output("download-excel-tabela-linhas-visao-geral", "data"),
     [
         Input("btn-exportar-excel-tabela-linhas-visao-geral", "n_clicks"),
@@ -244,12 +249,14 @@ def cb_tabela_consumo_linhas_visal_geral(datas, lista_modelos, linha, km_l_min, 
     ],
     prevent_initial_call=True,
 )
-def cb_download_excel_tabela_consumo_linhas_visal_geral(n_clicks, datas, lista_modelos, linha, km_l_min, km_l_max):
+def cb_download_excel_tabela_consumo_linhas_visal_geral(
+    n_clicks, datas, lista_modelos, lista_linha, km_l_min, km_l_max
+):
     if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
         return dash.no_update
 
     # Obtem os dados
-    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     # Gera a coluna de custo
     df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
@@ -261,6 +268,85 @@ def cb_download_excel_tabela_consumo_linhas_visal_geral(n_clicks, datas, lista_m
     dia_hoje_str = date.today().strftime("%d-%m-%Y")
 
     return dcc.send_bytes(excel_data, f"tabela_consumo_linhas_{dia_hoje_str}.xlsx")
+
+
+# Callback para redirecionar o usuário para outra página ao clicar no botão detalhar
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("tabela-consumo-veiculo-visao-geral", "cellRendererData"),
+    Input("tabela-consumo-veiculo-visao-geral", "virtualRowData"),
+    Input("input-intervalo-datas-visao-geral", "value"),
+    Input("input-select-modelos-visao-geral", "value"),
+    Input("input-select-linhas-monitoramento", "value"),
+    Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+    Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    prevent_initial_call=True,
+)
+def cb_botao_detalhar_tabela_consumo_veiculos_visal_geral(
+    tabela_linha, tabela_linha_virtual, datas, lista_modelos, lista_linha, km_l_min, km_l_max
+):
+    ctx = callback_context  # Obtém o contexto do callback
+    if not ctx.triggered:
+        return dash.no_update  # Evita execução desnecessária
+
+    # Verifica se o callback foi acionado pelo botão de visualização
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[1]
+
+    if triggered_id != "cellRendererData":
+        return dash.no_update
+
+    tabela_linha_alvo = tabela_linha_virtual[tabela_linha["rowIndex"]]
+
+    url_params = [
+        f"vec_num_id={tabela_linha_alvo['vec_num_id']}",
+        f"data_inicio={pd.to_datetime(datas[0]).strftime('%Y-%m-%d')}",
+        f"data_fim={pd.to_datetime(datas[1]).strftime('%Y-%m-%d')}",
+        f"lista_linhas={lista_linha}",
+        f"km_l_min={km_l_min}",
+        f"km_l_max={km_l_max}",
+    ]
+    url_params_str = "&".join(url_params)
+
+    return f"/combustivel-por-veiculo?{url_params_str}"
+
+
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("tabela-consumo-linhas-visao-geral", "cellRendererData"),
+    Input("tabela-consumo-linhas-visao-geral", "virtualRowData"),
+    Input("input-intervalo-datas-visao-geral", "value"),
+    Input("input-select-modelos-visao-geral", "value"),
+    Input("input-select-linhas-monitoramento", "value"),
+    Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+    Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    prevent_initial_call=True,
+)
+def cb_botao_detalhar_tabela_consumo_linha_visal_geral(
+    tabela_linha, tabela_linha_virtual, datas, lista_modelos, lista_linha, km_l_min, km_l_max
+):
+    ctx = callback_context  # Obtém o contexto do callback
+    if not ctx.triggered:
+        return dash.no_update  # Evita execução desnecessária
+
+    # Verifica se o callback foi acionado pelo botão de visualização
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[1]
+
+    if triggered_id != "cellRendererData":
+        return dash.no_update
+
+    tabela_linha_alvo = tabela_linha_virtual[tabela_linha["rowIndex"]]
+
+    url_params = [
+        f"linha={tabela_linha_alvo['encontrou_numero_linha']}",
+        f"data_inicio={pd.to_datetime(datas[0]).strftime('%Y-%m-%d')}",
+        f"data_fim={pd.to_datetime(datas[1]).strftime('%Y-%m-%d')}",
+        f"lista_linhas={lista_linha}",
+        f"km_l_min={km_l_min}",
+        f"km_l_max={km_l_max}",
+    ]
+    url_params_str = "&".join(url_params)
+
+    return f"/combustivel-por-linha?{url_params_str}"
 
 
 ##############################################################################
@@ -279,13 +365,13 @@ def cb_download_excel_tabela_consumo_linhas_visal_geral(n_clicks, datas, lista_m
         Input("input-excluir-km-l-maior-que-visao-geral", "value"),
     ],
 )
-def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return ""
 
     # Obtem os dados
-    df_indicador = home_service.get_indicador_consumo_medio_km_l(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df_indicador = home_service.get_indicador_consumo_medio_km_l(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     if df_indicador.empty:
         return ""
@@ -308,13 +394,15 @@ def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, linha, km_l_min,
         Input("input-excluir-km-l-maior-que-visao-geral", "value"),
     ],
 )
-def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
-        return ""
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
+        return "", "", ""
 
     # Obtem os dados
-    df_indicador = home_service.get_indicador_consumo_litros_excedente(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df_indicador = home_service.get_indicador_consumo_litros_excedente(
+        datas, lista_modelos, lista_linha, km_l_min, km_l_max
+    )
 
     if df_indicador.empty:
         return "", "", ""
@@ -345,13 +433,13 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, linha
         Input("store-window-size", "data"),
     ],
 )
-def plota_grafico_pizza_sintese_geral(datas, lista_modelos, linha, km_l_min, km_l_max, metadata_browser):
+def plota_grafico_pizza_sintese_geral(datas, lista_modelos, lista_linha, km_l_min, km_l_max, metadata_browser):
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return go.Figure()
 
     # Obtem os dados
-    df = home_service.get_sinteze_status_viagens(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df = home_service.get_sinteze_status_viagens(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     # Prepara os dados para o gráfico
     labels = [
@@ -385,13 +473,13 @@ def plota_grafico_pizza_sintese_geral(datas, lista_modelos, linha, km_l_min, km_
         Input("store-window-size", "data"),
     ],
 )
-def plota_grafico_barra_consumo_modelo(datas, lista_modelos, linha, km_l_min, km_l_max, metadata_browser):
+def plota_grafico_barra_consumo_modelo(datas, lista_modelos, lista_linha, km_l_min, km_l_max, metadata_browser):
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
         return go.Figure()
 
     # Obtem os dados
-    df = home_service.get_sinteze_consumo_modelos(datas, lista_modelos, linha, km_l_min, km_l_max)
+    df = home_service.get_sinteze_consumo_modelos(datas, lista_modelos, lista_linha, km_l_min, km_l_max)
 
     # Gera o gráfico
     fig = home_graficos.gerar_grafico_barra_consumo_modelos_geral(df, metadata_browser)
@@ -401,7 +489,7 @@ def plota_grafico_barra_consumo_modelo(datas, lista_modelos, linha, km_l_min, km
 ##############################################################################
 # Registro da página #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Home (Monitoramento)", path="/")
+dash.register_page(__name__, name="Home", path="/")
 
 ##############################################################################
 # Layout #####################################################################
