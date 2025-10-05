@@ -162,8 +162,27 @@ header = dmc.Group(
         dmc.Group(
             [
                 dmc.Burger(id="burger-button", opened=False, hiddenFrom="md"),
-                html.Img(src=app.get_asset_url("logo.png"), height=40),
-                dmc.Text(["Retrabalho (RA-UFG)"], size="2.3rem", fw=700),
+                # Logo Mobile
+                html.Img(
+                    src=app.get_asset_url("logo_small.png"),
+                    height=32,
+                    className="logo-mobile",
+                ),
+                # Logo Desktop 
+                html.Img(
+                    src=app.get_asset_url("logo.png"),
+                    height=40,
+                    className="logo-desktop",
+                ),
+                # Título
+                dmc.Stack(
+                    [
+                        dmc.Text("Painel de", size="sm", fw=400),
+                        dmc.Text("Combustível", size="2rem", fw=700),
+                    ],
+                    gap=0,
+                    align="flex-start",
+                ),
             ]
         ),
         dmc.Group(
@@ -204,7 +223,7 @@ app_shell = dmc.AppShell(
             ),
         ),
     ],
-    header={"height": 90},
+    header={"height": 100},
     navbar={
         "width": 300,
         "breakpoint": "sm",

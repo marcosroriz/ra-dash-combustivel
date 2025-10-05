@@ -489,7 +489,7 @@ def plota_grafico_barra_consumo_modelo(datas, lista_modelos, lista_linha, km_l_m
 ##############################################################################
 # Registro da página #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Home", path="/")
+dash.register_page(__name__, name="Visão Geral", path="/")
 
 ##############################################################################
 # Layout #####################################################################
@@ -513,7 +513,8 @@ layout = dbc.Container(
                                         dbc.Col(
                                             html.H1(
                                                 [
-                                                    html.Strong("Visão geral do consumo da Frota"),
+                                                    "Visão Geral do Consumo da \u00a0",
+                                                    html.Strong("Frota"),
                                                 ],
                                                 className="align-self-center",
                                             ),
