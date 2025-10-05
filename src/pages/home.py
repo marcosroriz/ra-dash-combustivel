@@ -513,7 +513,7 @@ layout = dbc.Container(
                                         dbc.Col(
                                             html.H1(
                                                 [
-                                                    "Visão Geral do Consumo da \u00a0",
+                                                    "Visão Geral da \u00a0",
                                                     html.Strong("Frota"),
                                                 ],
                                                 className="align-self-center",
@@ -551,6 +551,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -578,6 +579,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                             ]
                         ),
@@ -610,6 +612,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -638,6 +641,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=3,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -666,6 +670,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=3,
+                                    className="mb-3 mb-md-0",
                                 ),
                             ]
                         ),

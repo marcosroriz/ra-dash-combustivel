@@ -177,8 +177,9 @@ header = dmc.Group(
                 # Título
                 dmc.Stack(
                     [
-                        dmc.Text("Painel de", size="sm", fw=400),
-                        dmc.Text("Combustível", size="2rem", fw=700),
+                        dmc.Text("Painel de Monitoramento de", size="sm", fw=400, visibleFrom="sm"),
+                        dmc.Text("Monitoramento de", size="sm", fw=400, hiddenFrom="sm"),
+                        dmc.Text("Combustível", size="1.5rem", fw=700),
                     ],
                     gap=0,
                     align="flex-start",
