@@ -9,12 +9,10 @@
 # Bibliotecas básicas
 from datetime import date
 import pandas as pd
-import json
 
 # Importar bibliotecas do dash básicas e plotly
 import dash
 from dash import Dash, html, dcc, callback, Input, Output, State
-import plotly.express as px
 import plotly.graph_objects as go
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -23,34 +21,23 @@ import dash_ag_grid as dag
 
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
-import dash_iconify
 from dash_iconify import DashIconify
 
-
 # Importar nossas constantes e funções utilitárias
-import tema
 import locale_utils
 
 # Banco de Dados
 from db import PostgresSingleton
 
 # Imports gerais
-from modules.entities_utils import *
+from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel, gerar_excel
 
 # Imports específicos
 from modules.home.home_service import HomeService
 import modules.home.graficos as home_graficos
 import modules.home.tabela as home_tabela
 
-from modules.monitoramento.monitoramento_service import MonitoramentoService
-import modules.monitoramento.tabela as monitoramento_tabela
-import modules.monitoramento.graficos as monitoramento_graficos
-
-from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
-import modules.combustivel_por_linha.graficos as combustivel_graficos
-import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
-
-from modules.regras.regras_service import RegrasService
+# Preço do diesel
 from modules.preco_combustivel_api import get_preco_diesel
 
 ##############################################################################
@@ -62,8 +49,6 @@ pgEngine = pgDB.get_engine()
 
 # Cria o serviço
 home_service = HomeService(pgEngine)
-monitoramento_service = MonitoramentoService(pgEngine)
-regras_service = RegrasService(pgEngine)
 
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
@@ -75,11 +60,6 @@ df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
-# Lista de regras padronizadas
-# Preparando inputs
-df_regras = get_regras_padronizadas(pgEngine)
-lista_todas_regras = df_regras.to_dict(orient="records")
-
 # Pega o preço do diesel via API
 preco_diesel = get_preco_diesel()
 
@@ -87,38 +67,23 @@ preco_diesel = get_preco_diesel()
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
-# Callbacks para input
-@callback(
-    Output("input-nome-regra-padronizada", "value"),
-    Input("input-nome-regra-padronizada", "value"),
-    prevent_initial_call=True,
-)
-def filtra_todas_opcao(valor_selecionado):
-    if valor_selecionado is None:
-        return None
-    return valor_selecionado
-
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
 ##############################################################################
 
-
 # Função para validar o input
-def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
-    if datas is None or not datas or None in datas:
+def input_valido(datas, lista_modelos, lista_linha, km_l_min, km_l_max):
+    if datas is None or not datas or None in datas or len(datas) != 2:
         return False
 
     if lista_modelos is None or not lista_modelos or None in lista_modelos:
         return False
 
-    if linha is None:
+    if lista_linha is None or not lista_linha or None in lista_linha:
         return False
 
-    if lista_sentido is None or not lista_sentido or None in lista_sentido:
-        return False
-
-    if lista_dias_semana is None or not lista_dias_semana or None in lista_dias_semana:
+    if km_l_min < 0 or km_l_min >= km_l_max or km_l_max >= 20:
         return False
 
     return True
@@ -169,46 +134,15 @@ def gera_labels_inputs_visao_geral(campo):
 
         km_l_labels.append(dmc.Badge(f"{km_l_min} ≤ km/L ≤ {km_l_max} ", variant="outline"))
 
-        return [
-            dmc.Group(
-                labels_antes
-                + datas_label
-                + lista_modelos_labels
-                + lista_linha_labels
-                + km_l_labels
-            )
-        ]
+        return [dmc.Group(labels_antes + datas_label + lista_modelos_labels + lista_linha_labels + km_l_labels)]
 
     # Cria o componente
     return dmc.Group(id=f"{campo}-labels", children=[])
 
 
-
-
-# @callback(
-#     Output("input-select-veiculos-monitoramento", "options"),
-#     [
-#         Input("input-intervalo-datas-monitorameto", "value"),
-#         Input("input-select-modelos-monitoramento", "value"),
-#         Input("input-select-linhas-monitoramento", "value"),
-#         Input("input-select-dia-linha-combustivel", "value"),
-#         Input("input-excluir-km-l-menor-que-monitoramento", "value"),
-#         Input("input-excluir-km-l-maior-que-monitoramento", "value"),
-#     ],
-# )
-# def atualiza_veiculos_dia(dia, modelos, linha, dias_marcados, excluir_km_l_menor_que, excluir_km_l_maior_que):
-#     if dia is None:
-#         return []
-
-#     df = monitoramento_service.get_veiculos_rodaram_no_dia(dia)
-
-#     return [{"label": veiculo["label"], "value": veiculo["value"]} for veiculo in df.to_dict(orient="records")]
-
-
 ##############################################################################
 # Callbacks para as tabelas ##################################################
 ##############################################################################
-
 
 @callback(
     Output("tabela-consumo-veiculo-visao-geral", "rowData"),
@@ -221,10 +155,17 @@ def gera_labels_inputs_visao_geral(campo):
     ],
 )
 def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+    # Valida input
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return []
+    
     df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
 
     # Ação de visualização
     df["acao"] = "🔍 Detalhar"
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
 
     return df.to_dict(orient="records")
 
@@ -245,9 +186,16 @@ def cb_tabela_consumo_veiculos_visal_geral(datas, lista_modelos, linha, km_l_min
 def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista_modelos, linha, km_l_min, km_l_max):
     if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
         return dash.no_update
+    
+    # Valida input
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return dash.no_update
 
     # Obtem os dados
     df = home_service.get_tabela_consumo_veiculos(datas, lista_modelos, linha, km_l_min, km_l_max)
+
+    # Gera a coluna de custo
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
 
     # Gera o excel
     excel_data = gerar_excel(df)
@@ -256,6 +204,63 @@ def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista
     dia_hoje_str = date.today().strftime("%d-%m-%Y")
 
     return dcc.send_bytes(excel_data, f"tabela_consumo_combustivel_{dia_hoje_str}.xlsx")
+
+
+@callback(
+    Output("tabela-consumo-linhas-visao-geral", "rowData"),
+    [
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    ],
+)
+def cb_tabela_consumo_linhas_visal_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
+     # Valida input
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return []
+    
+    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, linha, km_l_min, km_l_max)
+
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    return df.to_dict(orient="records")
+
+
+@callback(
+    Output("download-excel-tabela-linhas-visao-geral", "data"),
+    [
+        Input("btn-exportar-excel-tabela-linhas-visao-geral", "n_clicks"),
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def cb_download_excel_tabela_consumo_linhas_visal_geral(n_clicks, datas, lista_modelos, linha, km_l_min, km_l_max):
+    if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
+        return dash.no_update
+
+    # Obtem os dados
+    df = home_service.get_tabela_consumo_linhas(datas, lista_modelos, linha, km_l_min, km_l_max)
+
+    # Gera a coluna de custo
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    # Gera o excel
+    excel_data = gerar_excel(df)
+
+    # Dia de hoje formatado
+    dia_hoje_str = date.today().strftime("%d-%m-%Y")
+
+    return dcc.send_bytes(excel_data, f"tabela_consumo_linhas_{dia_hoje_str}.xlsx")
 
 
 ##############################################################################
@@ -276,14 +281,14 @@ def cb_download_excel_tabela_consumo_veiculos_visal_geral(n_clicks, datas, lista
 )
 def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
     # Valida input
-    # if not input_valido(datas, min_dias, lista_modelos, lista_oficinas, lista_secaos, lista_os):
-    #     return go.Figure()
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return ""
 
     # Obtem os dados
     df_indicador = home_service.get_indicador_consumo_medio_km_l(datas, lista_modelos, linha, km_l_min, km_l_max)
 
     if df_indicador.empty:
-        return "-"
+        return ""
     else:
         return str(round(df_indicador.iloc[0]["media_km_por_l"], 2)).replace(".", ",") + " km/L"
 
@@ -305,8 +310,8 @@ def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, linha, km_l_min,
 )
 def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, linha, km_l_min, km_l_max):
     # Valida input
-    # if not input_valido(datas, min_dias, lista_modelos, lista_oficinas, lista_secaos, lista_os):
-    #     return go.Figure()
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return ""
 
     # Obtem os dados
     df_indicador = home_service.get_indicador_consumo_litros_excedente(datas, lista_modelos, linha, km_l_min, km_l_max)
@@ -342,8 +347,8 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, linha
 )
 def plota_grafico_pizza_sintese_geral(datas, lista_modelos, linha, km_l_min, km_l_max, metadata_browser):
     # Valida input
-    # if not input_valido(datas, min_dias, lista_modelos, lista_oficinas, lista_secaos, lista_os):
-    #     return go.Figure()
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
+        return go.Figure()
 
     # Obtem os dados
     df = home_service.get_sinteze_status_viagens(datas, lista_modelos, linha, km_l_min, km_l_max)
@@ -368,62 +373,29 @@ def plota_grafico_pizza_sintese_geral(datas, lista_modelos, linha, km_l_min, km_
     return fig
 
 
-# Callback para grafico de total de Veiculos por modelo
+# Callback para o grafico de modelo
 @callback(
-    Output("grafico-veiculos-modelo-regra", "figure"),
-    Input("input-nome-regra-padronizada", "value"),
-    prevent_initial_call=True,
+    Output("graph-barra-consumo-modelo-visao-geral", "figure"),
+    [
+        Input("input-intervalo-datas-visao-geral", "value"),
+        Input("input-select-modelos-visao-geral", "value"),
+        Input("input-select-linhas-monitoramento", "value"),
+        Input("input-excluir-km-l-menor-que-visao-geral", "value"),
+        Input("input-excluir-km-l-maior-que-visao-geral", "value"),
+        Input("store-window-size", "data"),
+    ],
 )
-def grafico_veiculos_por_modelo_regra(valor_selecionado):
-
-    regra = regras_service.get_regras([valor_selecionado])
-
-    if regra.empty:
+def plota_grafico_barra_consumo_modelo(datas, lista_modelos, linha, km_l_min, km_l_max, metadata_browser):
+    # Valida input
+    if not input_valido(datas, lista_modelos, linha, km_l_min, km_l_max):
         return go.Figure()
 
-    regra_dict = regra.to_dict(orient="records")
-
-    for regra in regra_dict:
-        kwargs = {
-            "data": int(regra.get("periodo")),
-            "modelos": regra.get("modelos"),
-            "numero_de_motoristas": regra.get("motoristas"),
-            "quantidade_de_viagens": regra.get("qtd_viagens"),
-            "dias_marcados": regra.get("dias_analise"),
-            "mediana_viagem": regra.get("mediana_viagem"),
-            "indicativo_performace": regra.get("indicativo_performace"),
-            "erro_telemetria": regra.get("erro_telemetria"),
-        }
-        result = regras_service.get_estatistica_regras(**kwargs)
-
-    fig = monitoramento_graficos.plot_veiculos_por_modelo(result)
-
-    return fig
-
-
-# Callback para gráfico de combustível por veículo ao longo do dia
-@callback(
-    [
-        Output("graph-monitoramento-viagens-veiculo", "figure"),
-        Output("tabela-monitoramento-viagens-veiculo", "rowData"),
-    ],
-    [
-        Input("input-select-veiculos-monitoramento", "value"),
-        Input("input-select-detalhamento-monitoramento-grafico-viagens", "value"),
-    ],
-    State("input-intervalo-datas-monitorameto", "value"),
-)
-def atualiza_grafico_monitoramento_viagens_veiculo(veiculo, opcoes_detalhamento, dia):
-    if veiculo is None or veiculo == "" or dia is None:
-        return go.Figure(), []
-
-    # Pega as viagens do veículo
-    df = monitoramento_service.get_viagens_do_veiculo(dia, veiculo)
+    # Obtem os dados
+    df = home_service.get_sinteze_consumo_modelos(datas, lista_modelos, linha, km_l_min, km_l_max)
 
     # Gera o gráfico
-    fig = monitoramento_graficos.gerar_grafico_monitoramento_viagens_veiculo(df, opcoes_detalhamento)
-
-    return fig, df.to_dict(orient="records")
+    fig = home_graficos.gerar_grafico_barra_consumo_modelos_geral(df, metadata_browser)
+    return fig
 
 
 ##############################################################################
@@ -436,7 +408,6 @@ dash.register_page(__name__, name="Home (Monitoramento)", path="/")
 ##############################################################################
 layout = dbc.Container(
     [
-        dcc.Store(id="dash-monitoramento-por-linha-store"),
         dbc.Row(
             [
                 dbc.Col(
@@ -738,20 +709,7 @@ layout = dbc.Container(
                 ),
             ]
         ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    DashIconify(icon="material-symbols:insights", width=45),
-                    width="auto",
-                ),
-                dbc.Col(
-                    html.H4("Indicadores", className="align-self-center"),
-                ),
-                dmc.Space(h=20),
-            ]
-        ),
-        dbc.Row(dmc.Space(h=40)),
-        # Grafico geral de combustível por linha
+        # Grafico geral de combustível por modelo
         dmc.Space(h=30),
         dbc.Row(
             [
@@ -760,7 +718,7 @@ layout = dbc.Container(
                     dbc.Row(
                         [
                             html.H4(
-                                "Gráfico: Consumo de combustível por linha",
+                                "Consumo de combustível por modelo",
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
@@ -771,6 +729,7 @@ layout = dbc.Container(
             ],
             align="center",
         ),
+        dcc.Graph(id="graph-barra-consumo-modelo-visao-geral"),
         dmc.Space(h=40),
         dbc.Row(
             [
@@ -829,137 +788,43 @@ layout = dbc.Container(
             # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
             style={"height": 400, "resize": "vertical", "overflow": "hidden"},
         ),
-        dag.AgGrid(
-            id="tabela-perc-viagens-monitoramento",
-            columnDefs=monitoramento_tabela.tbl_perc_viagens_monitoramento,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        dmc.Space(h=20),
-        # Detalhamaento por Veículo
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:bus-wrench", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Detalhamento por veículo ",
-                                className="align-self-center",
-                            ),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=20),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            html.Div(
-                                [
-                                    dbc.Label("Veículo"),
-                                    dcc.Dropdown(
-                                        id="input-select-veiculos-monitoramento",
-                                        options=[],
-                                        placeholder="Veículo",
-                                        value="",
-                                    ),
-                                ],
-                                className="dash-bootstrap",
-                            ),
-                        ],
-                        className="h-100",
-                        body=True,
-                    ),
-                    md=6,
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            html.Div(
-                                [
-                                    dbc.Label("Anotações"),
-                                    dbc.RadioItems(
-                                        id="input-select-detalhamento-monitoramento-grafico-viagens",
-                                        options=[
-                                            {
-                                                "label": "Padrão",
-                                                "value": "PADRÃO",
-                                            },
-                                            {
-                                                "label": "Motorista",
-                                                "value": "MOTORISTA",
-                                            },
-                                            {
-                                                "label": "Linha",
-                                                "value": "LINHA",
-                                            },
-                                        ],
-                                        value="PADRÃO",
-                                        inline=True,
-                                    ),
-                                ],
-                                className="dash-bootstrap h-100",
-                            ),
-                        ],
-                        className="h-100",
-                        body=True,
-                    ),
-                    md=6,
-                ),
-            ],
-            className="dash-bootstrap",
-        ),
-        dcc.Graph(id="graph-monitoramento-viagens-veiculo"),
-        dag.AgGrid(
-            id="tabela-monitoramento-viagens-veiculo",
-            columnDefs=monitoramento_tabela.tbl_detalhamento_viagens_monitoramento,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        html.Div(id="custom-component-dmc-btn-value-changed"),
-        # dag.AgGrid(
-        #     id="tabela-combustivel",
-        #     dangerously_allow_code=True,
-        #     columnDefs=column_defs,
-        #     rowData=data,
-        #     defaultColDef={"filter": True, "floatingFilter": True},
-        #     columnSize="autoSize",
-        #     dashGridOptions={
-        #         "localeText": locale_utils.AG_GRID_LOCALE_BR,
-        #     },
-        #     style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        # ),
         dmc.Space(h=40),
         dbc.Row(
             [
-                dbc.Col(DashIconify(icon="mdi:map", width=45), width="auto"),
+                dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
                 dbc.Col(
                     dbc.Row(
                         [
                             html.H4(
-                                "Mapa da Linha",
+                                "Detalhamento do consumo das linhas",
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            # dbc.Col(gera_labels_inputs_veiculos("input-geral-mapa-linha"), width=True),
+                            dbc.Col(gera_labels_inputs_visao_geral("labels-tabela-linhas-visao-geral"), width=True),
+                            dbc.Col(
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            "Exportar para Excel",
+                                            id="btn-exportar-excel-tabela-linhas-visao-geral",
+                                            n_clicks=0,
+                                            style={
+                                                "background-color": "#007bff",  # Azul
+                                                "color": "white",
+                                                "border": "none",
+                                                "padding": "10px 20px",
+                                                "border-radius": "8px",
+                                                "cursor": "pointer",
+                                                "font-size": "16px",
+                                                "font-weight": "bold",
+                                            },
+                                        ),
+                                        dcc.Download(id="download-excel-tabela-linhas-visao-geral"),
+                                    ],
+                                    style={"text-align": "right"},
+                                ),
+                                width="auto",
+                            ),
                         ]
                     ),
                     width=True,
@@ -968,42 +833,19 @@ layout = dbc.Container(
             align="center",
         ),
         dmc.Space(h=20),
-        html.Div(id="mapa-linha-onibus"),
-        dmc.Space(h=20),
-        # Campo de busca
-        dbc.Row(
-            [
-                html.H2("Regras Padronizadas"),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            html.Div(
-                                [
-                                    dbc.Label("Regra de Monitoramento"),
-                                    dcc.Dropdown(
-                                        id="input-nome-regra-padronizada",
-                                        options=[
-                                            {
-                                                "label": regra["LABEL"],
-                                                "value": regra["LABEL"],
-                                            }
-                                            for regra in lista_todas_regras
-                                        ],
-                                        placeholder="Selecione a regra...",
-                                        value=None,
-                                        multi=False,
-                                    ),
-                                ],
-                                className="dash-bootstrap",
-                            ),
-                        ],
-                        body=True,
-                    ),
-                    md=12,
-                ),
-                dmc.Space(h=20),
-                html.Div([html.H2("Quantidade de Veiculos por Modelo"), dcc.Graph(id="grafico-veiculos-modelo-regra")]),
-            ]
+        dag.AgGrid(
+            # enableEnterpriseModules=True,
+            id="tabela-consumo-linhas-visao-geral",
+            columnDefs=home_tabela.tbl_consumo_linhas_visao_geral,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
         ),
+        dmc.Space(h=40),
     ]
 )

@@ -30,7 +30,7 @@ def get_modelos_veiculos_com_combustivel(dbEngine):
         SELECT 
             DISTINCT "vec_model" AS "LABEL"
         FROM 
-            rmtc_viagens_analise rva 
+            rmtc_viagens_analise_mix rva 
         WHERE 
             "vec_model" IS NOT NULL
         ORDER BY
@@ -64,7 +64,7 @@ def get_linhas_possui_info_combustivel(dbEngine):
         SELECT 
             DISTINCT "encontrou_numero_linha" as "LABEL"
         FROM 
-            rmtc_viagens_analise rva 
+            rmtc_viagens_analise_mix rva 
         WHERE 
             "encontrou_numero_linha" IS NOT NULL
             AND 

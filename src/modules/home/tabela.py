@@ -53,6 +53,20 @@ tbl_consumo_veiculo_visao_geral = [
         "type": ["numericColumn"],
     },
     {
+        "field": "custo_excedente",
+        "headerName": "CUSTO EXCEDENTE (R$)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 200,
+        "filter": "agNumberColumnFilter",
+        "valueFormatter": {
+            "function": "'R$ ' + (params.value.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 }))"
+        },
+        "sort": "desc",
+        "sortable": True,
+        "type": ["numericColumn"],
+    },
+    {
         "field": "total_viagens",
         "headerName": "TOTAL DE VIAGENS",
         "wrapHeaderText": True,
@@ -80,8 +94,6 @@ tbl_consumo_veiculo_visao_geral = [
         "maxWidth": 180,
         "valueFormatter": {"function": "params.value.toLocaleString('pt-BR') + '%'"},
         "type": ["numericColumn"],
-        "sort": "desc",
-        "sortable": True,
     },
     {
         "field": "perc_erro_telemetria",
@@ -91,6 +103,85 @@ tbl_consumo_veiculo_visao_geral = [
         "maxWidth": 160,
         "filter": "agNumberColumnFilter",
         "valueFormatter": {"function": "params.value.toLocaleString('pt-BR') + '%'"},
+        "type": ["numericColumn"],
+    },
+]
+
+
+# Tabela com o consumo das linhas (home)
+tbl_consumo_linhas_visao_geral = [
+    {
+        "field": "encontrou_numero_linha",
+        "headerName": "VEÍCULO",
+        "minWidth": 120,
+        "maxWidth": 120,
+        "pinned": "left",
+    },
+    {
+        "field": "acao",
+        "headerName": "Perfil",
+        "cellRenderer": "Button",
+        "cellRendererParams": {"className": "btn btn-outline-primary btn-sm"},
+        "minWidth": 150,
+        "pinned": "left",
+    },
+    {
+        "field": "media_tam_linha",
+        "headerName": "TAMANHO DA LINHA (km)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 170,
+        "type": ["numericColumn"],
+    },
+        {
+        "field": "media_km_por_litro",
+        "headerName": "km/L MÉDIO",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "total_combustivel_gasto",
+        "headerName": "LITROS GASTOS (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "litros_excedentes",
+        "headerName": "LITROS EXCEDENTES (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "custo_excedente",
+        "headerName": "CUSTO EXCEDENTE (R$)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 200,
+        "filter": "agNumberColumnFilter",
+        "valueFormatter": {
+            "function": "'R$ ' + (params.value.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 }))"
+        },
+        "sort": "desc",
+        "sortable": True,
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "total_viagens",
+        "headerName": "TOTAL DE VIAGENS",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 140,
+        "filter": "agNumberColumnFilter",
         "type": ["numericColumn"],
     },
 ]

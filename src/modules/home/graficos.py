@@ -79,30 +79,22 @@ def gerar_grafico_pizza_sinteze_geral(df, labels, values, metadata_browser):
     return fig
 
 
-def gerar_grafico_barras_sinteze_modelos(df, metadata_browser):
-    """Gera o gráfico de barras com síntese por modelo da tela inicial"""
+# Rotinas para gerar os Gráficos
+def gerar_grafico_barra_consumo_modelos_geral(df, metadata_browser):
+    """Gera o gráfico de barra com o consumo dos modelos"""
 
-    bar_chart = px.bar(
+    fig = px.bar(
         df,
         x="vec_model",
-        y=[
-            "NORMAL",
-            "SUSPEITA BAIXA PERFORMANCE (<= 1.0 STD)",
-            "BAIXA PERFORMANCE (<= 1.5 STD)",
-            "BAIXA PERFOMANCE (<= 2 STD)",
-            "ERRO TELEMETRIA (>= 2.0 STD)"
-        ],
-        barmode="stack",
-        color_discrete_sequence=[tema.COR_NORMAL,
-                        tema.COR_COMB_10_STD,
-                        tema.COR_COMB_15_STD,
-                        tema.COR_COMB_20_STD,
-                        tema.COR_COMB_ERRO],
-        labels={
-            "value": "Percentagem",
-            "DESCRICAO DO MODELO": "Modelo",
-            "variable": "Status",
-            "PERC_NAO_TEVE_PROBLEMA": "Não teve problema",
-        },
+        y="media_km_litro",
+        color="vec_model",
+        text="media_km_litro",
+        labels={"media_km_litro": "km/L médio", "vec_model": "Modelo"},
     )
-    return bar_chart
+
+    # Remove o espaçamento lateral do gráfico no dispositivo móvel
+    if metadata_browser and metadata_browser["device"] == "Mobile":
+        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
+
+    # Retorna o gráfico
+    return fig

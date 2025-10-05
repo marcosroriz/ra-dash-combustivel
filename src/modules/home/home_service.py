@@ -47,6 +47,76 @@ class HomeService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
+    
+    def get_sinteze_consumo_modelos(self, datas, lista_modelos, lista_linhas, km_l_min, km_l_max):
+        """Função para obter a classificação do consumo dos modelos"""
+
+        # Extraí a data inicial e final
+        data_inicio_str = datas[0]
+        data_fim_str = datas[1]
+
+        # Subqueries
+        subquery_modelos_str = subquery_modelos_combustivel(lista_modelos, termo_all="TODOS")
+        subquery_linha_combustivel_str = subquery_linha_combustivel(lista_linhas, termo_all="TODAS")
+
+        query = f"""
+        WITH rmtc_viagens_analise_mix_padronizado AS (
+            SELECT 
+                CASE
+                    WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
+                    WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
+                    WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
+                    WHEN vec_model ILIKE 'O500%%' THEN 'O500'
+                    WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
+                    WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
+                    WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
+                    ELSE vec_model
+                END AS vec_model_padronizado,
+                r.*
+            FROM rmtc_viagens_analise_mix r
+        )
+        SELECT
+            vec_model,
+            COUNT(*) AS total_viagens,
+            AVG(km_por_litro) AS media_km_litro,
+            SUM(total_comb_l) AS total_consumo_litros,
+            SUM(
+                ABS(
+                    total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+                )
+            ) AS total_litros_excedentes,
+            100 * (
+                SUM(
+                    ABS(
+                        total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+                    )
+                )::NUMERIC 
+                / SUM(total_comb_l)::NUMERIC
+            ) AS perc_excedente
+        FROM 
+            rmtc_viagens_analise_mix_padronizado
+        WHERE 
+            encontrou_linha = true
+	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
+	        AND analise_num_amostras_90_dias >= 10
+ 	        AND km_por_litro >= {km_l_min}
+	        AND km_por_litro <= {km_l_max}
+            {subquery_modelos_str}
+            {subquery_linha_combustivel_str}
+        GROUP BY 
+            vec_model
+        """
+        # Executa a query
+        df = pd.read_sql(query, self.dbEngine)
+
+
+        # Arrendonda as colunas necessárias
+        df["media_km_litro"] = df["media_km_litro"].round(2)
+        df["total_consumo_litros"] = df["total_consumo_litros"].round(2)
+        df["total_litros_excedentes"] = df["total_litros_excedentes"].round(2)
+        df["perc_excedente"] = df["perc_excedente"].round(2)
+
+        return df
 
     def get_indicador_consumo_medio_km_l(self, datas, lista_modelos, lista_linhas, km_l_min, km_l_max):
         """Função para obter o indicador de consumo médio de km/L"""
@@ -207,7 +277,6 @@ class HomeService:
         ORDER BY
             perc_baixa_perfomance DESC;
         """
-        print(query)
 
         # Executa a query
         df = pd.read_sql(query, self.dbEngine)
@@ -260,59 +329,16 @@ class HomeService:
         ORDER BY
             total_viagens DESC;
         """
-        print(query)
 
         # Executa a query
         df = pd.read_sql(query, self.dbEngine)
 
         # Arrendonda as colunas necessárias
-        df["media_tam_linha"] = df["media_tam_linha"].round(2)
+        df["media_tam_linha"] = df["media_tam_linha"].round(3)
+        df["media_km_por_litro"] = df["media_km_por_litro"].round(2)
         df["total_combustivel_gasto"] = df["total_combustivel_gasto"].round(2)
         df["litros_excedentes"] = df["litros_excedentes"].round(2)
 
         return df
     
-    def get_(self):
-        query = f"""
-            WITH rmtc_viagens_analise_mix_padronizado AS (
-                SELECT 
-                    CASE
-                        WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
-                        WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
-                        WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
-                        WHEN vec_model ILIKE 'O500%%' THEN 'O500'
-                        WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
-                        WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
-                        WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
-                        ELSE vec_model
-                    END AS vec_model_padronizado,
-                    r.*
-                FROM rmtc_viagens_analise_mix r
-            )
-            SELECT
-                vec_model,
-                COUNT(*) AS total_viagens,
-                AVG(km_por_litro) AS media_km_litro,
-                SUM(total_comb_l) AS total_consumo_litros,
-                SUM(
-                    ABS(
-                        total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
-                    )
-                ) AS total_litros_excedentes,
-                100 * (
-                    SUM(
-                        ABS(
-                            total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
-                        )
-                    )::NUMERIC
-                    / SUM(total_comb_l)::NUMERIC
-                ) AS perc_excedente
-            FROM 
-                rmtc_viagens_analise_mix_padronizado
-            WHERE 
-                CAST("dia" AS DATE) BETWEEN DATE '2025-09-01' AND DATE '2025-11-01'
-                AND analise_num_amostras_90_dias > 10
-                AND km_por_litro BETWEEN 1 AND 10
-            GROUP BY 
-                vec_model;
-"""
+   
