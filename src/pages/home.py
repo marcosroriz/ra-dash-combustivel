@@ -513,7 +513,7 @@ layout = dbc.Container(
                                         dbc.Col(
                                             html.H1(
                                                 [
-                                                    html.Strong("Monitoramento da Frota"),
+                                                    html.Strong("Visão geral do consumo da Frota"),
                                                 ],
                                                 className="align-self-center",
                                             ),
