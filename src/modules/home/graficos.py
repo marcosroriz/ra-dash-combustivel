@@ -73,7 +73,16 @@ def gerar_grafico_pizza_sinteze_geral(df, labels, values, metadata_browser):
 
     # Remove o espaçamento lateral do gráfico no dispositivo móvel
     if metadata_browser and metadata_browser["device"] == "Mobile":
-        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
+        fig.update_layout(margin=dict(t=100, b=20, l=20, r=20))
+        fig.update_layout(
+            legend=dict(
+                orientation="h",  # Legenda horizontal
+                yanchor="top",  # Ancora no topo
+                xanchor="center",  # Centraliza
+                y=-0.1,  # Coloca abaixo
+                x=0.5,  # Alinha com o centro
+            ),
+        )
 
     # Retorna o gráfico
     return fig
@@ -95,6 +104,15 @@ def gerar_grafico_barra_consumo_modelos_geral(df, metadata_browser):
     # Remove o espaçamento lateral do gráfico no dispositivo móvel
     if metadata_browser and metadata_browser["device"] == "Mobile":
         fig.update_layout(margin=dict(t=20, b=20, l=20, r=20))
+        fig.update_layout(
+            legend=dict(
+                orientation="h",  # Legenda horizontal
+                yanchor="top",  # Ancora no topo
+                xanchor="center",  # Centraliza
+                y=-0.1,  # Coloca abaixo
+                x=0.5,  # Alinha com o centro
+            ),
+        )
 
     # Retorna o gráfico
     return fig
