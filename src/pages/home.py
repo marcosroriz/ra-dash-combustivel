@@ -285,8 +285,6 @@ def cb_download_excel_tabela_consumo_linhas_visal_geral(
 def cb_botao_detalhar_tabela_consumo_veiculos_visal_geral(
     tabela_linha, tabela_linha_virtual, datas, lista_modelos, lista_linha, km_l_min, km_l_max
 ):
-    print("AQUI NO CALLBACK")
-
     ctx = callback_context  # Obtém o contexto do callback
     if not ctx.triggered:
         return dash.no_update  # Evita execução desnecessária

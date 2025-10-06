@@ -62,13 +62,6 @@ def gerar_grafico_pizza_sinteze_geral(df, labels, values, metadata_browser):
     fig.update_layout(
         margin=dict(t=100, b=0),  # Remove as margens
         height=420,  # Ajuste conforme necessário
-        # legend=dict(
-        #     orientation="h",  # Legenda horizontal
-        #     yanchor="top",  # Ancora no topo
-        #     xanchor="center",  # Centraliza
-        #     y=-0.1,  # Coloca abaixo
-        #     x=0.5,  # Alinha com o centro
-        # ),
     )
 
     # Remove o espaçamento lateral do gráfico no dispositivo móvel
