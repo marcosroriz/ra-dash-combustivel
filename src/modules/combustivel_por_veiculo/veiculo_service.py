@@ -46,7 +46,7 @@ class VeiculoService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
-    
+
     def get_indicador_consumo_medio_km_l(self, datas, vec_num_id, lista_linhas, km_l_min, km_l_max):
         """Função para obter o indicador de consumo médio de km/L"""
         # Extraí a data inicial e final
@@ -102,7 +102,7 @@ class VeiculoService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
-    
+
     def get_historico_viagens(self, datas, vec_num_id, lista_linhas, km_l_min, km_l_max):
         """Função para obter o histórico das viagens analisadas"""
 
@@ -132,6 +132,7 @@ class VeiculoService:
         )
         SELECT
             m."Name" AS nome_motorista,
+            3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos) AS velocidade_media_kmh,
             r.*
         FROM 
             rmtc_viagens_analise_mix_padronizado r
@@ -164,9 +165,166 @@ class VeiculoService:
         # Ajusta NaN
         df["nome_motorista"] = df["nome_motorista"].fillna("Não informado")
 
-        # Arredonda 
+        # Arredonda
         df["km_por_litro"] = df["km_por_litro"].round(2)
         df["analise_valor_mediana_90_dias"] = df["analise_valor_mediana_90_dias"].round(2)
+        df["velocidade_media_kmh"] = df["velocidade_media_kmh"].round(2)
         df["analise_diff_mediana_90_dias"] = df["analise_diff_mediana_90_dias"].round(2)
+
+        return df
+
+    def get_histograma_viagens_veiculo(
+        self,
+        datas,
+        vec_num_id,
+        lista_linhas,
+        km_l_min,
+        km_l_max,
+        viagem_vec_model,
+        viagem_linha,
+        viagem_sentido,
+        viagem_time_slot,
+        viagem_dia_semana,
+        viagem_dia_eh_feriado,
+    ):
+        # Extraí a data inicial e final
+        data_inicio_str = datas[0]
+        data_fim_str = datas[1]
+
+        # Subqueries
+        subquery_dia_semana_str = ""
+        if viagem_dia_semana == 1:
+            subquery_dia_semana_str = "AND dia_numerico = 1"
+        elif viagem_dia_semana == 7:
+            subquery_dia_semana_str = "AND dia_numerico = 7"
+        else:
+            subquery_dia_semana_str = "AND dia_numerico BETWEEN 2 AND 6"
+
+        # Query
+        query = f"""
+        SELECT
+            m."Name" AS nome_motorista,
+            ABS(
+                total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+            ) AS litros_excedentes,
+            3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos) AS velocidade_media_kmh,
+            r.*
+        FROM
+            rmtc_viagens_analise_mix AS r
+        LEFT JOIN
+            motoristas_api AS m
+            ON r."DriverId" = m."DriverId"
+        WHERE
+            encontrou_linha = TRUE
+	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
+	        AND analise_num_amostras_90_dias >= 10
+ 	        AND km_por_litro >= {km_l_min}
+	        AND km_por_litro <= {km_l_max}
+            AND vec_model = '{viagem_vec_model}'
+            AND time_slot = '{viagem_time_slot}'
+            AND encontrou_numero_sublinha = '{viagem_linha}'
+            AND dia_eh_feriado = {viagem_dia_eh_feriado}
+            AND encontrou_sentido_linha='{viagem_sentido}'
+            {subquery_dia_semana_str}
+        ORDER BY
+            rmtc_timestamp_inicio DESC;
+        """
+        print(query)
+        # Executa a query
+        df = pd.read_sql(query, self.dbEngine)
+
+        # Ajusta datas
+        df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
+        df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
+        df["timestamp_br_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+        df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+        df["encontrou_tempo_viagem_segundos"] = df["encontrou_tempo_viagem_segundos"].astype(int)
+        df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_segundos"] / 60
+        df["dia_dt"] = pd.to_datetime(df["dia"]).dt.date
+
+        # Ajusta NaN
+        df["nome_motorista"] = df["nome_motorista"].fillna("Não informado")
+
+        # Arredonda
+        df["km_por_litro"] = df["km_por_litro"].round(2)
+        df["analise_valor_mediana_90_dias"] = df["analise_valor_mediana_90_dias"].round(2)
+        df["velocidade_media_kmh"] = df["velocidade_media_kmh"].round(2)
+        df["analise_diff_mediana_90_dias"] = df["analise_diff_mediana_90_dias"].round(2)
+
+        # Traduz dia da semana para label
+        # 1 = Domingo, 2 = Segunda, 3 = Terça, 4 = Quarta, 5 = Quinta, 6 = Sexta, 7 = Sábado
+        dia_semana_map = {
+            1: "Domingo",
+            2: "Segunda",
+            3: "Terça",
+            4: "Quarta",
+            5: "Quinta",
+            6: "Sexta",
+            7: "Sábado"
+        }
+        df["dia_semana_label"] = df["dia_numerico"].map(dia_semana_map)
+
+        return df
+
+    def get_tabela_lista_viagens_veiculo(self, datas, vec_num_id, lista_linhas, km_l_min, km_l_max):
+        """Função para obter os dados da tabela com as viagens realizadsa por um veiculo"""
+        # Extraí a data inicial e final
+        data_inicio_str = datas[0]
+        data_fim_str = datas[1]
+
+        # Subqueries
+        subquery_linha_combustivel_str = subquery_linha_combustivel(lista_linhas, termo_all="TODAS")
+
+        query = f"""
+        SELECT
+            *,
+            ABS(total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)) AS litros_excedentes,
+            3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos) AS velocidade_media_kmh,
+            m."Name" AS nome_motorista
+        FROM
+            rmtc_viagens_analise_mix r
+        LEFT JOIN 
+            motoristas_api m 
+            ON r."DriverId" = m."DriverId"
+        WHERE
+            encontrou_linha = true
+            AND analise_num_amostras_90_dias > 10
+            AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
+            AND km_por_litro >= {km_l_min}
+            AND km_por_litro <= {km_l_max}
+            AND vec_num_id = '{vec_num_id}'
+            {subquery_linha_combustivel_str}
+        ORDER BY
+            rmtc_timestamp_inicio DESC;
+        """
+        # Executa a query
+        df = pd.read_sql(query, self.dbEngine)
+
+        # Ordena
+        df = df.sort_values(by=["dia", "encontrou_timestamp_inicio"], ascending=[False, False])
+
+        # Ajusta datas
+        df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
+        df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
+        df["timestamp_br_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+        df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"]) - pd.Timedelta(hours=3)
+        df["timestamp_br_inicio_str"] = df["timestamp_br_inicio"].dt.strftime("%H:%M:%S")
+        df["timestamp_br_fim_str"] = df["timestamp_br_fim"].dt.strftime("%H:%M:%S")
+        df["dia_label"] = pd.to_datetime(df["dia"]).dt.strftime("%d/%m/%Y")
+
+        # Duração
+        df["encontrou_tempo_viagem_segundos"] = df["encontrou_tempo_viagem_segundos"].astype(int)
+        df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_segundos"] / 60
+
+        # Arrendonda as colunas necessárias
+        df["km_por_litro"] = df["km_por_litro"].round(2)
+        df["litros_excedentes"] = df["litros_excedentes"].round(2)
+        df["velocidade_media_kmh"] = df["velocidade_media_kmh"].round(2)
+        df["total_comb_l"] = df["total_comb_l"].round(2)
+        df["analise_valor_mediana_90_dias"] = df["analise_valor_mediana_90_dias"].round(2)
+        df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_minutos"].round(0)
+
+        # Ajusta NaN
+        df["nome_motorista"] = df["nome_motorista"].fillna("Não informado")
 
         return df

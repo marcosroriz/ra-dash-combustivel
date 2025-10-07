@@ -43,7 +43,8 @@ from modules.entities_utils import (
 
 # Imports específicos
 from modules.combustivel_por_veiculo.veiculo_service import VeiculoService
-import modules.combustivel_por_veiculo.graficos  as veiculo_graficos
+import modules.combustivel_por_veiculo.graficos as veiculo_graficos
+import modules.combustivel_por_veiculo.tabela as veiculo_tabela
 
 from modules.home.home_service import HomeService
 import modules.home.graficos as home_graficos
@@ -197,6 +198,32 @@ def cb_sincroniza_input_veiculo_store(
     return input_dict
 
 
+@callback(
+    Output("pag-veiculo-store-historico-viagens-veiculo", "data"),
+    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+)
+def cb_sincroniza_input_historico_timeline(data):
+    # Input padrão
+    state_dict = {"valido": False, "df": pd.DataFrame()}
+
+    if not data or not data["valido"]:
+        return state_dict
+
+    # Obtem os dados
+    datas = data["datas"]
+    vec_num_id = data["id_veiculo"]
+    lista_linha = data["lista_linhas"]
+    km_l_min = data["km_l_min"]
+    km_l_max = data["km_l_max"]
+
+    df = veiculo_service.get_historico_viagens(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
+
+    state_dict["valido"] = True
+    state_dict["df"] = df.to_dict(orient="records")
+
+    return state_dict
+
+
 def formata_float_para_real(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
@@ -206,10 +233,34 @@ def formata_float_para_real(valor):
 ##############################################################################
 
 
+@callback(
+    Output("pag-veiculo-tabela-consumo-linhas-visao-veiculo", "rowData"),
+    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+)
+def cb_pag_veiculo_tabela_lista_viagens(data):
+    # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
+    if not data or not data["valido"]:
+        return []
+
+    # Obtem os dados
+    datas = data["datas"]
+    vec_num_id = data["id_veiculo"]
+    lista_linha = data["lista_linhas"]
+    km_l_min = data["km_l_min"]
+    km_l_max = data["km_l_max"]
+
+    # Obtem os dados
+    df = veiculo_service.get_tabela_lista_viagens_veiculo(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    return df.to_dict(orient="records")
+
+
 ##############################################################################
 # Callbacks para os indicadores ##############################################
 ##############################################################################
-
 
 
 # Callback para o indicador de consumo médio de km/L
@@ -228,7 +279,6 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
     lista_linha = data["lista_linhas"]
     km_l_min = data["km_l_min"]
     km_l_max = data["km_l_max"]
-
 
     # Obtem os dados
     df_indicador = veiculo_service.get_indicador_consumo_medio_km_l(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
@@ -260,7 +310,9 @@ def cb_pag_veiculo_indicador_total_consumo_excedente_visao_veiculo(data):
     km_l_max = data["km_l_max"]
 
     # Obtem os dados
-    df_indicador = veiculo_service.get_indicador_consumo_litros_excedente(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
+    df_indicador = veiculo_service.get_indicador_consumo_litros_excedente(
+        datas, vec_num_id, lista_linha, km_l_min, km_l_max
+    )
 
     if df_indicador.empty:
         return "", "", ""
@@ -272,6 +324,7 @@ def cb_pag_veiculo_indicador_total_consumo_excedente_visao_veiculo(data):
                 ".", ","
             ),
         )
+
 
 ##############################################################################
 # Callbacks para os gráficos #################################################
@@ -321,26 +374,116 @@ def cb_plota_grafico_pizza_sintese_veiculo(data, metadata_browser):
 # Callback para o grafico de historico de viagens
 @callback(
     Output("pag-veiculo-graph-timeline-consumo-veiculo", "figure"),
-    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+    Input("pag-veiculo-store-historico-viagens-veiculo", "data"),
     Input("store-window-size", "data"),
+    Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
+    Input("pag-veiculo-graph-timeline-consumo-veiculo", "relayoutData"),
 )
-def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser):
+def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_selecionado, range_selecionado):
     # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
     if not data or not data["valido"]:
         return go.Figure()
 
     # Obtem os dados
+    df = pd.DataFrame(data["df"])
+    if df.empty:
+        return go.Figure()
+    
+    # Formata datas no df, pois a serialização converte para string
+    df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
+    df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
+    df["timestamp_br_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+    df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+    df["encontrou_tempo_viagem_segundos"] = df["encontrou_tempo_viagem_segundos"].astype(int)
+    df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_segundos"] / 60
+    df["dia_dt"] = pd.to_datetime(df["dia"]).dt.date
+
+    # Obtem o ponto selecionado (se houver)
+    df_ponto_selecionado = None
+    if ponto_selecionado is not None:
+        df_ponto_selecionado = df[df["timestamp_br_inicio"] == ponto_selecionado["points"][0]["x"]]
+        print(ponto_selecionado)
+        print(df_ponto_selecionado)
+
+    # Gera o gráfico
+    fig = veiculo_graficos.gerar_grafico_timeline_consumo_veiculo(
+        df, metadata_browser, df_ponto_selecionado, range_selecionado
+    )
+    return fig
+
+
+@callback(
+    Output("pag-veiculo-graph-histograma-viagens-veiculo", "figure"),
+    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+    Input("store-window-size", "data"),
+    Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
+)
+def mostrar_ponto_selecionado(data, metadata_browser, ponto_selecionado):
+    # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
+    if not data or not data["valido"]:
+        return go.Figure()
+
+    # Caso não tenha ponto selecionado, retorna gráfico nulo
+    if ponto_selecionado is None:
+        return go.Figure()
+
+    # Obtem os dados do store
     datas = data["datas"]
     vec_num_id = data["id_veiculo"]
     lista_linha = data["lista_linhas"]
     km_l_min = data["km_l_min"]
     km_l_max = data["km_l_max"]
 
-    df = veiculo_service.get_historico_viagens(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
+    # Extraí os dados do ponto
+    ponto_custom_data = ponto_selecionado["points"][0]["customdata"]
+    viagem_consumo_kml = ponto_custom_data[0]
+    viagem_linha = ponto_custom_data[3]
+    viagem_sentido = ponto_custom_data[4]
+    viagem_time_slot = ponto_custom_data[8]
+    vec_model = ponto_custom_data[9]
+    viagem_dia = ponto_custom_data[10]
+    viagem_eh_feriado = ponto_custom_data[11]
+
+    # Executa a consulta
+    df = veiculo_service.get_histograma_viagens_veiculo(
+        datas,
+        vec_num_id,
+        lista_linha,
+        km_l_min,
+        km_l_max,
+        vec_model,
+        viagem_linha,
+        viagem_sentido,
+        viagem_time_slot,
+        viagem_dia,
+        viagem_eh_feriado,
+    )
 
     # Gera o gráfico
-    fig = veiculo_graficos.gerar_grafico_timeline_consumo_veiculo(df, metadata_browser)
+    fig = veiculo_graficos.gerar_grafico_histograma_viagens(
+        df, viagem_atual_consumo=viagem_consumo_kml, metadata_browser=metadata_browser
+    )
+
     return fig
+
+
+@callback(Output("range-output", "children"), Input("pag-veiculo-graph-timeline-consumo-veiculo", "relayoutData"))
+def detectar_mudanca_range(relayoutData):
+    # print("ENTROU NO CB DO RANGE")
+    # print(relayoutData)
+    # if not relayoutData:
+    #     return "Nenhuma alteração de faixa ainda."
+
+    # # The range is usually under 'xaxis.range[0]' and 'xaxis.range[1]'
+    # if "xaxis.range[0]" in relayoutData:
+    #     start = relayoutData["xaxis.range[0]"]
+    #     end = relayoutData["xaxis.range[1]"]
+    #     print(f"Novo range: {start} até {end}")
+    #     return f"Novo range: {start} até {end}"
+    # elif "xaxis.autorange" in relayoutData:
+    #     return "Range redefinido para automático."
+    # return str(relayoutData)
+    return ""
 
 
 ##############################################################################
@@ -353,8 +496,11 @@ dash.register_page(__name__, name="Veículo", path="/combustivel-por-veiculo")
 ##############################################################################
 layout = dbc.Container(
     [
+        html.Div(id="click-output"),
+        html.Div(id="range-output"),
         # Estado
         dcc.Store(id="pag-veiculo-store-input-dados-veiculo"),
+        dcc.Store(id="pag-veiculo-store-historico-viagens-veiculo"),
         dbc.Row(
             [
                 dbc.Col(
@@ -676,6 +822,82 @@ layout = dbc.Container(
             align="center",
         ),
         dcc.Graph(id="pag-veiculo-graph-timeline-consumo-veiculo"),
+        dmc.Space(h=40),
+        dbc.Row(
+            [
+                dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
+                dbc.Col(
+                    dbc.Row(
+                        [
+                            html.H4(
+                                "Detalhamento das viagens do veículo",
+                                className="align-self-center",
+                            ),
+                            dmc.Space(h=5),
+                            # dbc.Col(ger("labels-tabela-linhas-visao-geral"), width=True),
+                            dbc.Col(
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            "Exportar para Excel",
+                                            id="pag-veiculo-btn-exportar-excel-tabela-linhas-visao-veiculo",
+                                            n_clicks=0,
+                                            style={
+                                                "background-color": "#007bff",  # Azul
+                                                "color": "white",
+                                                "border": "none",
+                                                "padding": "10px 20px",
+                                                "border-radius": "8px",
+                                                "cursor": "pointer",
+                                                "font-size": "16px",
+                                                "font-weight": "bold",
+                                            },
+                                        ),
+                                        dcc.Download(id="pag-veiculo-download-excel-tabela-linhas-visao-veiculo"),
+                                    ],
+                                    style={"text-align": "right"},
+                                ),
+                                width="auto",
+                            ),
+                        ]
+                    ),
+                    width=True,
+                ),
+            ],
+            align="center",
+        ),
+        dmc.Space(h=20),
+        dbc.Row(
+            [
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.I(
+                                "Dica: use os filtros na tabela para facilitar a análise dos dados.",
+                                style={"color": "gray", "font-size": "14px"},
+                            )
+                        ],
+                        style={"text-align": "right"},
+                    ),
+                    md=6,
+                ),
+                dbc.Col(dcc.Graph(id="pag-veiculo-graph-histograma-viagens-veiculo"), md=6),
+            ]
+        ),
+        dmc.Space(h=20),
+        dag.AgGrid(
+            # enableEnterpriseModules=True,
+            id="pag-veiculo-tabela-consumo-linhas-visao-veiculo",
+            columnDefs=veiculo_tabela.tbl_consumo_veiculo_visao_veiculo,
+            rowData=[],
+            defaultColDef={"filter": True, "floatingFilter": True},
+            columnSize="autoSize",
+            dashGridOptions={
+                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            },
+            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+        ),
         dmc.Space(h=40),
     ]
 )

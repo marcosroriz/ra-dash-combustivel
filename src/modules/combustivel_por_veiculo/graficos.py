@@ -80,7 +80,7 @@ def gerar_grafico_pizza_sinteze_veiculo(df, labels, values, metadata_browser):
     # Retorna o gráfico
     return fig
 
-def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser):
+def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_selecionado=None, range_selecionado=None):
     status_colors = {
         "NORMAL": tema.COR_NORMAL,
         "SUSPEITA BAIXA PERFORMANCE (<= 1.0 STD)": tema.COR_COMB_10_STD,
@@ -124,6 +124,12 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser):
                         "encontrou_sentido_linha",
                         "encontrou_tempo_viagem_minutos",
                         "nome_motorista",
+                        "velocidade_media_kmh",
+                        "time_slot",
+                        "vec_model",
+                        "dia_numerico",
+                        "dia_eh_feriado",
+                        "tamanho_linha_km_sobreposicao"
                     ]
                 ],
                 hovertemplate=(
@@ -134,12 +140,31 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser):
                     + "<b>Linha:</b> %{customdata[3]}<br>"
                     + "<b>Sentido:</b> %{customdata[4]}<br>"
                     + "<b>Duração da viagem:</b> %{customdata[5]:.0f} minutos<br>"
-                    + "<b>Motorista:</b> %{customdata[6]}<br><extra></extra>"
+                    + "<b>Distância percorrida:</b> %{customdata[12]:.3f} km<br>"
+                    + "<b>Motorista:</b> %{customdata[6]}<br>"
+                    + "<b>Velocidade Média:</b> %{customdata[7]:.2f} km/h<br><extra></extra>"
                 ),
 
             ),
         )
-
+    
+    # Ponto selecionado
+    if df_ponto_selecionado is not None:
+         # Adiciona um destaque ao ponto selecionado
+        fig.add_trace(
+            go.Scatter(
+                x=df_ponto_selecionado["timestamp_br_inicio"],
+                y=df_ponto_selecionado["km_por_litro"],
+                mode="markers",
+                name="Viagem selecionada",
+                marker=dict(
+                    size=20, # outer size (larger for “border”)
+                    color="rgba(255,255,255,0)",  # transparent fill
+                    line=dict(color="black", width=3),
+                ),
+                hoverinfo="skip",
+            )
+        )
 
     # Adicional labels
     fig.update_layout(
@@ -156,14 +181,10 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser):
 
     )
 
-    # Seta x dinâmico
-    x_max = df["timestamp_br_inicio"].max() + pd.Timedelta(hours=2)
-    x_start = x_max - pd.DateOffset(day=1)
-
+    # Configura a Timeline
     fig.update_xaxes(
-        range=[x_start, x_max],
         rangeslider_visible=True,
-        rangeslider=dict(borderwidth=2),
+        rangeslider=dict(borderwidth=2, thickness=0.12),
         rangeselector=dict(
             buttons=list([
                 dict(count=1, label="1 dia", step="day", stepmode="backward"),
@@ -174,9 +195,64 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser):
         )
     )
 
+    # Seta os limites da timeline
+    x_max = df["timestamp_br_inicio"].max() + pd.Timedelta(hours=2)
+    x_start = x_max - pd.DateOffset(day=1)
+
+    print("----------------------------------------")
+    print("RANGE SELECIONADO:", range_selecionado)
+    print("----------------------------------------")
+    # Se não houver ponto selecionado, seta o range inicial para o último dia
+    if "xaxis.range" not in range_selecionado and "xaxis.range[0]" not in range_selecionado:
+        fig.update_xaxes(range=[x_start, x_max])
+    else:
+        if "xaxis.range" in range_selecionado:
+            x_start = pd.to_datetime(range_selecionado["xaxis.range"][0])
+            x_max = pd.to_datetime(range_selecionado["xaxis.range"][1])
+        elif "xaxis.range[0]" in range_selecionado:
+            x_start = pd.to_datetime(range_selecionado["xaxis.range[0]"])
+            x_max = pd.to_datetime(range_selecionado["xaxis.range[1]"])
+        
+        fig.update_xaxes(range=[x_start, x_max])
+
+    # Aumenta a altura para melhorar a visualização
     fig.update_layout(
         height=600,
     )
 
     return fig
 
+
+
+def gerar_grafico_histograma_viagens(df, viagem_atual_consumo, metadata_browser):
+    # Gera o box plot
+    fig = px.box(
+        df,
+        x="vec_model",
+        y="km_por_litro",
+        points="all",
+        hover_data=["vec_num_id", "encontrou_numero_linha", "encontrou_numero_sublinha", "encontrou_sentido_linha", "nome_motorista", "velocidade_media_kmh",
+                    "time_slot", "dia_semana_label", "dia_eh_feriado"],
+        labels={
+            "encontrou_numero_sublinha": "Sublinha",
+            "encontrou_numero_linha": "Numero da Linha",
+            "encontrou_sentido_linha": "Sentido da Linha",
+            "vec_model": "Modelo do Veículo",
+            "km_por_litro": "km/L",
+            "vec_num_id": "ID do Veículo",
+            "nome_motorista": "Motorista",
+            "velocidade_media_kmh": "Velocidade Média (km/h)",
+            "time_slot": "Faixa Horária",
+            "dia_semana_label": "Dia do Mês",
+            "dia_eh_feriado": "É feriado?",
+        },
+    )
+
+    fig.add_hline(
+        y=viagem_atual_consumo,
+        line=dict(color="red", width=3, dash="dot"),
+        annotation_text=f"Viagem selecionada ({viagem_atual_consumo:.2f} km/L)",
+        annotation_position="top right"
+    )
+
+    return fig

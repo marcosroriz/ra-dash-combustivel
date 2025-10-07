@@ -1,0 +1,151 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# Arquivo que centraliza as tabelas utilizadas na página de detalhamento do veículo
+
+# Tabela com o consumo dos veículos (veiculo)
+tbl_consumo_veiculo_visao_veiculo = [
+    {
+        "field": "vec_num_id",
+        "headerName": "VEÍCULO",
+        "minWidth": 120,
+        "maxWidth": 120,
+        "pinned": "left",
+    },
+    {
+        "field": "analise_status_90_dias",
+        "headerName": "Status da Viagem",
+        "minWidth": 220,
+        "pinned": "left",
+    },
+    {
+        "field": "dia_label",
+        "headerName": "Dia",
+        "minWidth": 150,
+        "sort": "desc",
+        "sortable": True,
+    },
+    {
+        "field": "num_viagem",
+        "headerName": "# Viagem",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "minWidth": 100,
+    },
+    {
+        "field": "time_slot",
+        "headerName": "Slot de Tempo",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 130,
+    },
+    {
+        "field": "timestamp_br_inicio_str",
+        "headerName": "Início da Viagem",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 140,
+    },
+    {
+        "field": "timestamp_br_fim_str",
+        "headerName": "Fim da Viagem",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 140,
+    },
+    {
+        "field": "encontrou_tempo_viagem_minutos",
+        "headerName": "Duração da Viagem (min)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 180,
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "velocidade_media_kmh",
+        "headerName": "Velocidade Média (km/h)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 180,
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "encontrou_numero_linha",
+        "headerName": "Linha",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "minWidth": 120,
+    },
+    {
+        "field": "encontrou_numero_sublinha",
+        "headerName": "Sublinha",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "minWidth": 120,
+    },
+    {
+        "field": "encontrou_sentido_linha",
+        "headerName": "Sentido",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 140,
+    },
+    {
+        "field": "nome_motorista",
+        "headerName": "Motorista",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "minWidth": 220,
+    },
+    {
+        "field": "km_por_litro",
+        "headerName": "km/L Médio",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 130,
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "analise_valor_mediana_90_dias",
+        "headerName": "km/L Esperado",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "filter": "agNumberColumnFilter",
+        "maxWidth": 130,
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "total_comb_l",
+        "headerName": "TOTAL CONSUMIDO (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "litros_excedentes",
+        "headerName": "LITROS EXCEDENTES (L)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 170,
+        "filter": "agNumberColumnFilter",
+        "type": ["numericColumn"],
+    },
+    {
+        "field": "custo_excedente",
+        "headerName": "CUSTO EXCEDENTE (R$)",
+        "wrapHeaderText": True,
+        "autoHeaderHeight": True,
+        "maxWidth": 200,
+        "filter": "agNumberColumnFilter",
+        "valueFormatter": {
+            "function": "'R$ ' + (params.value.toLocaleString('pt-BR', { maximumFractionDigits: 2, minimumFractionDigits: 2 }))"
+        },
+        "type": ["numericColumn"],
+    },
+]
+
