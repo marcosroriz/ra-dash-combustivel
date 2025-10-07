@@ -188,8 +188,9 @@ class VeiculoService:
         viagem_dia_eh_feriado,
     ):
         # Extraí a data inicial e final
-        data_inicio_str = datas[0]
         data_fim_str = datas[1]
+        # Pega 90 dias antes de viagens
+        data_inicio_str = (pd.to_datetime(datas[1]) - pd.DateOffset(days=90)).strftime("%Y-%m-%d")
 
         # Subqueries
         subquery_dia_semana_str = ""

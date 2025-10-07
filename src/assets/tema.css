@@ -41,6 +41,10 @@
   .btnExcel {
     display: none !important;
   }
+
+  .labels-filtro {
+    display: none;
+  }
 }
 
 /* Center the header text vertically */

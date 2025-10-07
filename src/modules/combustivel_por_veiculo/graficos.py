@@ -199,9 +199,6 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
     x_max = df["timestamp_br_inicio"].max() + pd.Timedelta(hours=2)
     x_start = x_max - pd.DateOffset(day=1)
 
-    print("----------------------------------------")
-    print("RANGE SELECIONADO:", range_selecionado)
-    print("----------------------------------------")
     # Se não houver ponto selecionado, seta o range inicial para o último dia
     if "xaxis.range" not in range_selecionado and "xaxis.range[0]" not in range_selecionado:
         fig.update_xaxes(range=[x_start, x_max])
@@ -215,10 +212,26 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
         
         fig.update_xaxes(range=[x_start, x_max])
 
-    # Aumenta a altura para melhorar a visualização
+    # Aumenta a altura para melhorar a visualização, tira algumas margens
     fig.update_layout(
         height=600,
+        margin=dict(l=20, r=20, t=30, b=40),  # tighten margins
     )
+
+    # Remove o espaçamento lateral do gráfico no dispositivo móvel
+    if metadata_browser and metadata_browser["device"] == "Mobile":
+        fig.update_layout(margin=dict(t=100, b=20, l=40, r=20))
+        fig.update_layout(
+            legend=dict(
+                orientation="h",  # Legenda horizontal
+                yanchor="top",  # Ancora no topo
+                xanchor="center",  # Centraliza
+                y=-0.8,  # Coloca abaixo
+                x=0.5,  # Alinha com o centro,
+                font=dict(size=11),  # reduz a fonte
+            ),
+        )
+        
 
     return fig
 

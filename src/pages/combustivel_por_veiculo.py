@@ -37,8 +37,8 @@ from db import PostgresSingleton
 from modules.entities_utils import (
     get_linhas_possui_info_combustivel,
     get_modelos_veiculos_com_combustivel,
-    gerar_excel,
     get_veiculos_com_combustivel,
+    gerar_excel,
 )
 
 # Imports específicos
@@ -71,6 +71,9 @@ lista_todas_linhas.insert(0, {"LABEL": "TODAS"})
 # Veículos
 df_veiculos = get_veiculos_com_combustivel(pgEngine)
 lista_todos_veiculos = df_veiculos.to_dict(orient="records")
+
+# Modelos e Veiculos
+df_modelos = get_modelos_veiculos_com_combustivel(pgEngine)
 
 # Pega o preço do diesel via API
 preco_diesel = get_preco_diesel()
@@ -157,6 +160,55 @@ def input_valido(datas, vec_num_id, lista_linha, km_l_min, km_l_max):
     return True
 
 
+def gera_labels_inputs_pag_veicuo(campo):
+    # Cria o callback
+    @callback(
+        Output(component_id=f"{campo}-labels", component_property="children"),
+        Input("pag-veiculo-store-input-dados-veiculo", "data"),
+    )
+    def pag_veiculo_atualiza_labels_inputs_veiculo(data):
+        labels_antes = [
+            # DashIconify(icon="material-symbols:filter-arrow-right", width=20),
+            dmc.Badge("Filtro", color="gray", variant="outline"),
+        ]
+
+        # Obtem os dados
+        datas = data["datas"]
+        vec_num_id = data["id_veiculo"]
+        vec_model = data["vec_model"]
+        lista_linha = data["lista_linhas"]
+        km_l_min = data["km_l_min"]
+        km_l_max = data["km_l_max"]
+
+        datas_label = []
+        if not (datas is None or not datas) and datas[0] is not None and datas[1] is not None:
+            # Formata as datas
+            data_inicio_str = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
+            data_fim_str = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
+
+            datas_label = [dmc.Badge(f"{data_inicio_str} a {data_fim_str}", variant="outline")]
+
+        dados_veiculos_labels = []
+        lista_linha_labels = []
+        km_l_labels = []
+
+        dados_veiculos_labels.append(dmc.Badge(str(vec_num_id), variant="outline"))
+        dados_veiculos_labels.append(dmc.Badge(str(vec_model), variant="outline"))
+
+        if lista_linha is None or not lista_linha or "TODAS" in lista_linha:
+            lista_linha_labels.append(dmc.Badge("Todas as linhas", variant="outline"))
+        else:
+            for linha in lista_linha:
+                lista_linha_labels.append(dmc.Badge(linha, variant="dot"))
+
+        km_l_labels.append(dmc.Badge(f"{km_l_min} ≤ km/L ≤ {km_l_max} ", variant="outline"))
+
+        return [dmc.Group(labels_antes + datas_label + dados_veiculos_labels + lista_linha_labels + km_l_labels)]
+
+    # Cria o componente
+    return dmc.Group(id=f"{campo}-labels", children=[], className="labels-filtro")
+
+
 ##############################################################################
 # Callbacks para o estado ####################################################
 ##############################################################################
@@ -183,6 +235,7 @@ def cb_sincroniza_input_veiculo_store(
     input_dict = {
         "valido": False,
         "id_veiculo": id_veiculo,
+        "vec_model": "",
         "datas": datas,
         "lista_linhas": lista_linhas,
         "km_l_min": km_l_min,
@@ -195,6 +248,9 @@ def cb_sincroniza_input_veiculo_store(
     else:
         input_dict["valido"] = False
 
+    # Modelos
+    if not df_modelos[df_modelos["vec_num_id"] == id_veiculo].empty:
+        input_dict["vec_model"] = df_modelos[df_modelos["vec_num_id"] == id_veiculo]["LABEL"].values[0]
     return input_dict
 
 
@@ -388,7 +444,7 @@ def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_sele
     df = pd.DataFrame(data["df"])
     if df.empty:
         return go.Figure()
-    
+
     # Formata datas no df, pois a serialização converte para string
     df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
     df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
@@ -555,6 +611,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -613,6 +670,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -641,6 +699,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=3,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -814,6 +873,7 @@ layout = dbc.Container(
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
+                            dbc.Col(gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-historico-veiculo"), width=True),
                         ]
                     ),
                     width=True,
@@ -834,7 +894,7 @@ layout = dbc.Container(
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            # dbc.Col(ger("labels-tabela-linhas-visao-geral"), width=True),
+                            dbc.Col(gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-detalhamento-veiculo"), width=True),
                             dbc.Col(
                                 html.Div(
                                     [
@@ -852,6 +912,7 @@ layout = dbc.Container(
                                                 "font-size": "16px",
                                                 "font-weight": "bold",
                                             },
+                                            className="btnExcel"
                                         ),
                                         dcc.Download(id="pag-veiculo-download-excel-tabela-linhas-visao-veiculo"),
                                     ],
@@ -881,7 +942,7 @@ layout = dbc.Container(
                     ),
                     md=6,
                 ),
-                dbc.Col(dcc.Graph(id="pag-veiculo-graph-histograma-viagens-veiculo"), md=6),
+                dbc.Col(dcc.Graph(id="pag-veiculo-graph-histograma-viagens-veiculo", config=locale_utils.plotly_locale_config), md=6),
             ]
         ),
         dmc.Space(h=20),

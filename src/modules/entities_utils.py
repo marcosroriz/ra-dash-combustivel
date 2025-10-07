@@ -22,6 +22,7 @@ def get_linhas(dbEngine):
         dbEngine,
     )
 
+
 def get_veiculos_com_combustivel(dbEngine):
     # Veículos que possuem informações de consumo
     return pd.read_sql(
@@ -43,7 +44,8 @@ def get_modelos_veiculos_com_combustivel(dbEngine):
     return pd.read_sql(
         """
         SELECT 
-            DISTINCT "vec_model" AS "LABEL"
+            DISTINCT "vec_model" AS "LABEL",
+            "vec_num_id"
         FROM 
             rmtc_viagens_analise_mix rva 
         WHERE 

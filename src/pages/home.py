@@ -139,7 +139,7 @@ def gera_labels_inputs_visao_geral(campo):
         return [dmc.Group(labels_antes + datas_label + lista_modelos_labels + lista_linha_labels + km_l_labels)]
 
     # Cria o componente
-    return dmc.Group(id=f"{campo}-labels", children=[])
+    return dmc.Group(id=f"{campo}-labels", children=[], className="labels-filtro")
 
 
 ##############################################################################
@@ -854,6 +854,7 @@ layout = dbc.Container(
                                                 "font-size": "16px",
                                                 "font-weight": "bold",
                                             },
+                                            className="btnExcel"
                                         ),
                                         dcc.Download(id="download-excel-tabela-combustivel-visao-geral"),
                                     ],
@@ -912,6 +913,7 @@ layout = dbc.Container(
                                                 "font-size": "16px",
                                                 "font-weight": "bold",
                                             },
+                                            className="btnExcel"
                                         ),
                                         dcc.Download(id="download-excel-tabela-linhas-visao-geral"),
                                     ],
