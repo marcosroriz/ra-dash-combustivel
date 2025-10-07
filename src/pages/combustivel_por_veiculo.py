@@ -434,8 +434,9 @@ def cb_plota_grafico_pizza_sintese_veiculo(data, metadata_browser):
     Input("store-window-size", "data"),
     Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
     Input("pag-veiculo-graph-timeline-consumo-veiculo", "relayoutData"),
+    Input("pag-veiculo-anotacoes-timeline", "value")
 )
-def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_selecionado, range_selecionado):
+def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_selecionado, range_selecionado, anotacao_no_grafico):
     # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
     if not data or not data["valido"]:
         return go.Figure()
@@ -463,7 +464,7 @@ def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_sele
 
     # Gera o gráfico
     fig = veiculo_graficos.gerar_grafico_timeline_consumo_veiculo(
-        df, metadata_browser, df_ponto_selecionado, range_selecionado
+        df, metadata_browser, df_ponto_selecionado, range_selecionado, anotacao_no_grafico
     )
     return fig
 
@@ -873,7 +874,29 @@ layout = dbc.Container(
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            dbc.Col(gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-historico-veiculo"), width=True),
+                            dbc.Col(
+                                # gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-historico-veiculo"),
+                                dbc.Row(
+                                    [
+                                        dmc.RadioGroup(
+                                            children=dmc.Group(
+                                                [
+                                                    dmc.Badge("Filtro", color="gray", variant="outline"),
+                                                    dmc.Radio("Sem anotações", value="anotacoes_sem"),
+                                                    dmc.Radio("Motoristas", value="anotacoes_motoristas"),
+                                                    dmc.Radio("Linhas", value="anotacoes_linhas"),
+                                                ],
+                                                my=10,
+                                            ),
+                                            id="pag-veiculo-anotacoes-timeline",
+                                            value="anotacoes_sem",
+                                            size="sm",
+                                            mb=10,
+                                        ),
+                                    ]
+                                ),
+                                width=True,
+                            ),
                         ]
                     ),
                     width=True,
@@ -894,7 +917,10 @@ layout = dbc.Container(
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            dbc.Col(gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-detalhamento-veiculo"), width=True),
+                            dbc.Col(
+                                gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-detalhamento-veiculo"),
+                                width=True,
+                            ),
                             dbc.Col(
                                 html.Div(
                                     [
@@ -912,7 +938,7 @@ layout = dbc.Container(
                                                 "font-size": "16px",
                                                 "font-weight": "bold",
                                             },
-                                            className="btnExcel"
+                                            className="btnExcel",
                                         ),
                                         dcc.Download(id="pag-veiculo-download-excel-tabela-linhas-visao-veiculo"),
                                     ],
@@ -942,7 +968,12 @@ layout = dbc.Container(
                     ),
                     md=6,
                 ),
-                dbc.Col(dcc.Graph(id="pag-veiculo-graph-histograma-viagens-veiculo", config=locale_utils.plotly_locale_config), md=6),
+                dbc.Col(
+                    dcc.Graph(
+                        id="pag-veiculo-graph-histograma-viagens-veiculo", config=locale_utils.plotly_locale_config
+                    ),
+                    md=6,
+                ),
             ]
         ),
         dmc.Space(h=20),

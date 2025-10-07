@@ -6,8 +6,10 @@
 # Imports básicos
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
 
 # Imports gráficos
+import matplotlib.colors as mcolors
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -80,7 +82,7 @@ def gerar_grafico_pizza_sinteze_veiculo(df, labels, values, metadata_browser):
     # Retorna o gráfico
     return fig
 
-def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_selecionado=None, range_selecionado=None):
+def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_selecionado=None, range_selecionado=None, anotacao_no_grafico=None):
     status_colors = {
         "NORMAL": tema.COR_NORMAL,
         "SUSPEITA BAIXA PERFORMANCE (<= 1.0 STD)": tema.COR_COMB_10_STD,
@@ -195,6 +197,53 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
         )
     )
 
+    # Lida com anotações
+    menor_km_por_litro = df["km_por_litro"].min()
+    maior_km_por_litro = df["km_por_litro"].max()
+    lista_dados_anotado = []
+    if anotacao_no_grafico == "anotacoes_motoristas":
+        lista_dados_anotado = __get_lista_motoristas_timeline(df)
+    elif anotacao_no_grafico == "anotacoes_linhas":
+        lista_dados_anotado = __get_lista_linhas_timeline(df)
+
+    if len(lista_dados_anotado) > 0:
+        for i, dados_anotado in enumerate(lista_dados_anotado):
+            start_idx, end_idx, label_dado = dados_anotado
+            df_motorista = df.iloc[start_idx:end_idx]
+
+            i_cor_hex = tema.PALETA_CORES_DISCRETA[i % len(tema.PALETA_CORES_DISCRETA)]
+            i_cor_rgb = "rgb" + str(mcolors.to_rgb(i_cor_hex))
+            i_cor_rgba = "rgba" + str(mcolors.to_rgba(i_cor_hex, alpha=0.2))
+            
+            x0 = df_motorista["timestamp_br_inicio"].min() - pd.Timedelta(minutes=10)
+            x1 = df_motorista["timestamp_br_inicio"].max() + pd.Timedelta(minutes=10)
+            y0 = menor_km_por_litro - 0.25
+            y1 = maior_km_por_litro + 0.25
+
+            # Adiciona o retângulo do motorista/linha
+            fig.add_shape(
+                type="rect",
+                xref="x", yref="y",
+                x0=x0, x1=x1 + pd.Timedelta(minutes=10),
+                y0=y0, y1=y1,
+                line=dict(color=i_cor_rgb, width=1.5, dash="dot"),
+                fillcolor=i_cor_rgba,
+                layer="below"
+            )
+
+            # Adiciona o nome
+            fig.add_annotation(
+                x=x0,
+                y=y1,
+                text=f"{label_dado.split()[0]}",
+                showarrow=False,
+                font=dict(size=10, color=i_cor_rgb),
+                xanchor="left",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.7)"
+            )
+       
+
     # Seta os limites da timeline
     x_max = df["timestamp_br_inicio"].max() + pd.Timedelta(hours=2)
     x_start = x_max - pd.DateOffset(day=1)
@@ -215,7 +264,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
     # Aumenta a altura para melhorar a visualização, tira algumas margens
     fig.update_layout(
         height=600,
-        margin=dict(l=20, r=20, t=30, b=40),  # tighten margins
+        margin=dict(l=20, r=20, t=50, b=50),
     )
 
     # Remove o espaçamento lateral do gráfico no dispositivo móvel
@@ -234,6 +283,61 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
         
 
     return fig
+
+
+
+def __get_lista_motoristas_timeline(df):
+    df_sorted = df.sort_values(by="timestamp_br_inicio")
+    start_idx = 0   
+    end_idx = 0
+    motorista_inicial = df_sorted.iloc[0]["nome_motorista"]
+
+    lista_motoristas = []
+    for k, v in df_sorted.iterrows():
+        nome_motorista_atual = v["nome_motorista"]
+        # Se for o último item, adiciona o último grupo
+        if k == len(df_sorted) - 1:
+            end_idx = k + 1
+            lista_motoristas.append((start_idx, end_idx, motorista_inicial))
+
+        # Verifica se o motorista é igual ao anterior, se for, pula para o próximo
+        if nome_motorista_atual == motorista_inicial:
+            continue
+        else:
+            # Trocou o motorista, então vamos marcar a troca
+            end_idx = k
+            lista_motoristas.append((start_idx, end_idx, motorista_inicial))
+            motorista_inicial = nome_motorista_atual
+            start_idx = k
+
+    return lista_motoristas
+
+
+def __get_lista_linhas_timeline(df):
+    df_sorted = df.sort_values(by="timestamp_br_inicio")
+    start_idx = 0   
+    end_idx = 0
+    linha_inicial = df_sorted.iloc[0]["encontrou_numero_linha"]
+
+    lista_linhas = []
+    for k, v in df_sorted.iterrows():
+        linha_atual = v["encontrou_numero_linha"]
+        # Se for o último item, adiciona o último grupo
+        if k == len(df_sorted) - 1:
+            end_idx = k + 1
+            lista_linhas.append((start_idx, end_idx, linha_inicial))
+
+        # Verifica se a linha é igual a anterior, se for, pula para o próximo
+        if linha_atual == linha_inicial:
+            continue
+        else:
+            # Trocou a linha, então vamos marcar a troca
+            end_idx = k
+            lista_linhas.append((start_idx, end_idx, linha_inicial))
+            linha_inicial = linha_atual
+            start_idx = k
+
+    return lista_linhas
 
 
 
