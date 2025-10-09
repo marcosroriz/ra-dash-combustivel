@@ -375,8 +375,14 @@ def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, lista_linha, km_
 
     if df_indicador.empty:
         return ""
+    
+    # Obtem o valor do indicador
+    valor = df_indicador.iloc[0]["media_km_por_l"]
+
+    if pd.isna(valor) or valor is None:
+        return ""
     else:
-        return str(round(df_indicador.iloc[0]["media_km_por_l"], 2)).replace(".", ",") + " km/L"
+        return str(round(valor, 2)).replace(".", ",") + " km/L"
 
 
 # Callback para o indicador de consumo médio de km/L
@@ -406,10 +412,16 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, lista
 
     if df_indicador.empty:
         return "", "", ""
+
+    # Obtém o valor do indicador    
+    valor = df_indicador.iloc[0]["litros_excedentes"]
+
+    if pd.isna(valor) or valor is None:
+        return "", "", ""
     else:
         return (
-            f"{int(df_indicador.iloc[0]["litros_excedentes"]):,} L".replace(",", "."),
-            f"R$ {int(preco_diesel * df_indicador.iloc[0]["litros_excedentes"]):,}".replace(",", "."),
+            f"{int(valor):,} L".replace(",", "."),
+            f"R$ {int(valor):,}".replace(",", "."),
             f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
                 ".", ","
             ),
