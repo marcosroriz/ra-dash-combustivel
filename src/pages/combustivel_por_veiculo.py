@@ -100,7 +100,9 @@ lista_eventos_com_gps = df_eventos_com_gps["EventTypeId"].unique()
 
 # Função auxiliar para transformar string '[%27A%27,%20%27B%27]' → ['A', 'B']
 def parse_list_param_pag_veiculo(param):
-    if param:
+    if isinstance(param, list):
+        return param
+    elif isinstance(param, str):
         try:
             return ast.literal_eval(param)
         except:
@@ -273,7 +275,7 @@ def cb_sincroniza_input_veiculo_store(
 )
 def cb_sincroniza_input_historico_timeline(data):
     # Input padrão
-    state_dict = {"valido": False, "df": pd.DataFrame()}
+    state_dict = {"valido": False, "df": []}
 
     if not data or not data["valido"]:
         return state_dict
@@ -354,8 +356,14 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
 
     if df_indicador.empty:
         return ""
+    
+    # Obtem o valor do indicador
+    valor = df_indicador.iloc[0]["media_km_por_l"]
+
+    if pd.isna(valor) or valor is None:
+        return ""
     else:
-        return str(round(df_indicador.iloc[0]["media_km_por_l"], 2)).replace(".", ",") + " km/L"
+        return str(round(valor, 2)).replace(".", ",") + " km/L"
 
 
 # Callback para o indicador de consumo médio de km/L
@@ -369,7 +377,7 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
 )
 def cb_pag_veiculo_indicador_total_consumo_excedente_visao_veiculo(data):
     if not data or not data["valido"]:
-        return ""
+        return "", "", ""
 
     # Obtem os dados
     datas = data["datas"]
@@ -385,10 +393,16 @@ def cb_pag_veiculo_indicador_total_consumo_excedente_visao_veiculo(data):
 
     if df_indicador.empty:
         return "", "", ""
+    
+    # Obtém o valor do indicador    
+    valor = df_indicador.iloc[0]["litros_excedentes"]
+
+    if pd.isna(valor) or valor is None:
+        return "", "", ""
     else:
         return (
-            f"{int(df_indicador.iloc[0]["litros_excedentes"]):,} L".replace(",", "."),
-            f"R$ {int(preco_diesel * df_indicador.iloc[0]["litros_excedentes"]):,}".replace(",", "."),
+            f"{int(valor):,} L".replace(",", "."),
+            f"R$ {int(preco_diesel * valor):,}".replace(",", "."),
             f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
                 ".", ","
             ),
