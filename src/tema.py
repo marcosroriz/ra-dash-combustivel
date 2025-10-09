@@ -35,3 +35,10 @@ COR_PADRAO = px.colors.qualitative.D3[0]
 COR_SUCESSO = px.colors.qualitative.D3[2]
 COR_ERRO = px.colors.qualitative.D3[3]
 COR_ALERTA = px.colors.qualitative.D3[1]
+
+
+COR_NORMAL = px.colors.qualitative.D3[2]
+COR_COMB_10_STD = px.colors.qualitative.D3[8]
+COR_COMB_15_STD = px.colors.qualitative.D3[1]
+COR_COMB_20_STD = px.colors.qualitative.D3[3]
+COR_COMB_ERRO = px.colors.qualitative.D3[5]

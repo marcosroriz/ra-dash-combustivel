@@ -19,7 +19,11 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_auth
 import dash_mantine_components as dmc
-from dash import Dash, _dash_renderer, html, callback, Input, Output, State
+from dash import Dash, _dash_renderer, dcc, html, callback, Input, Output, State
+
+# Dash componentes Mantine e icones
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 
 # Graficos
 import plotly.graph_objs as go
@@ -88,13 +92,13 @@ pio.templates.default = "tema"
 
 # Dash
 app = Dash(
-    "Análise de Combustível",
-    # assets_folder="/var/www/ra-dash-combustivel/src/assets",
-    # pages_folder="/var/www/ra-dash-combustivel/src/pages",
+    "Dashboard de OSs",
+    # assets_folder="/var/www/ra-retrabalho/src/assets",
+    # pages_folder="/var/www/ra-retrabalho/src/pages",
     external_stylesheets=stylesheets,
     external_scripts=scripts,
     use_pages=True,
-    suppress_callback_exceptions=True
+    suppress_callback_exceptions=True,
 )
 
 # Server
@@ -104,11 +108,53 @@ server = app.server
 # Menu / Navbar
 def criarMenu(dirVertical=True):
     return dbc.Nav(
-        [dbc.NavLink(page["name"], href=page["relative_path"], active="exact") for page in dash.page_registry.values()],
+        [
+            # dbc.NavLink(
+            #     html.Span(
+            #         [
+            #             DashIconify(icon=page["icon"], width=16, className="me-1"),
+            #             dmc.Space(w=2),
+            #             dmc.Text(page["name"], size="sm"),
+            #         ],
+            #         style={"display": "flex", "alignItems": "center"},
+            #     ),
+            #     href=page["relative_path"],
+            #     class_name="me-2",
+            #     active="exact",
+            # )
+            dbc.NavLink(page["name"], href=page["relative_path"], active="exact")
+            for page in dash.page_registry.values()
+            if not page.get("hide_page", False)
+        ],
+        class_name="dash-bootstrap",
         vertical=dirVertical,
         pills=True,
     )
 
+
+# def criarMenuAlt(dirVertical=True):
+#     return dmc.Group(
+#         [
+#             html.A(
+#                 dmc.Button("Visao Geral", leftSection=DashIconify(icon="material-symbols:home"), variant="outline"),
+#                 href="/",
+#             ),
+#             dmc.Menu(
+#                 [
+#                     dmc.MenuTarget(
+#                         dmc.Button("Análise", leftSection=DashIconify(icon="tabler:search"), variant="outline")
+#                     ),
+#                     dmc.MenuDropdown(
+#                         [
+#                             dmc.MenuItem("Colaborador", leftSection=DashIconify(icon="mdi:worker")),
+#                             dmc.MenuItem("Tipo de Serviço", leftSection=DashIconify(icon="ic:baseline-category")),
+#                             dmc.MenuItem("Ordem de Serviço", leftSection=DashIconify(icon="fluent-mdl2:repair")),
+#                         ]
+#                     ),
+#                 ]
+#             ),
+#         ]
+#     )
 
 # Cabeçalho
 header = dmc.Group(
@@ -116,8 +162,28 @@ header = dmc.Group(
         dmc.Group(
             [
                 dmc.Burger(id="burger-button", opened=False, hiddenFrom="md"),
-                html.Img(src=app.get_asset_url("logo.png"), height=40),
-                dmc.Text(["Combustível (RA-UFG)"], size="2.3rem", fw=700),
+                # Logo Mobile
+                html.Img(
+                    src=app.get_asset_url("logo_small.png"),
+                    height=32,
+                    className="logo-mobile",
+                ),
+                # Logo Desktop 
+                html.Img(
+                    src=app.get_asset_url("logo.png"),
+                    height=40,
+                    className="logo-desktop",
+                ),
+                # Título
+                dmc.Stack(
+                    [
+                        dmc.Text("Painel de Monitoramento de", size="sm", fw=400, visibleFrom="sm"),
+                        dmc.Text("Monitoramento de", size="sm", fw=400, hiddenFrom="sm"),
+                        dmc.Text("Combustível", size="1.5rem", fw=700),
+                    ],
+                    gap=0,
+                    align="flex-start",
+                ),
             ]
         ),
         dmc.Group(
@@ -135,6 +201,7 @@ header = dmc.Group(
     px="md",
 )
 
+
 # Corpo do app
 app_shell = dmc.AppShell(
     [
@@ -142,12 +209,22 @@ app_shell = dmc.AppShell(
         dmc.AppShellNavbar(id="navbar", children=criarMenu(dirVertical=True), py="md", px=4),
         dmc.AppShellMain(
             dmc.DatesProvider(
-                children=dbc.Container([dash.page_container], fluid=True, className="dbc dbc-ag-grid"),
+                children=dbc.Container(
+                    [
+                        dcc.Location(id="url", refresh="callback-nav"),
+                        html.Div(id="dummy-redirect"),  # dummy para callback clientside
+                        html.Div(id="scroll-hook", style={"display": "none"}),
+                        dcc.Store(id="store-window-size"),
+                        dash.page_container,
+                    ],
+                    fluid=True,
+                    className="dbc dbc-ag-grid",
+                ),
                 settings={"locale": "pt"},
             ),
         ),
     ],
-    header={"height": 90},
+    header={"height": 100},
     navbar={
         "width": 300,
         "breakpoint": "sm",
@@ -170,6 +247,52 @@ def toggle_navbar(opened, navbar):
     return navbar
 
 
+# Hook para levar para o topo ao mudar a url
+app.clientside_callback(
+    """
+    function(pathname) {
+        setTimeout(function() {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        }, 1000);  // Pequeno delay
+        return "";
+    }
+
+    """,
+    Output("scroll-hook", "children"),
+    Input("url", "pathname"),
+)
+
+# Script para armazerar o tamanho do navegador
+app.clientside_callback(
+    """
+    function(n) {
+        return {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            device: window.innerWidth < 768 ? "Mobile" : "Desktop"
+        };
+    }
+    """,
+    Output("store-window-size", "data"),
+    Input("url", "pathname"),
+)
+
+
+# Chamada da função clientside_callback
+app.clientside_callback(
+    """
+    function(n) {
+        if (n) {
+            window.location.href = "/regras-existentes";
+        }
+        return null;
+    }
+    """,
+    Output("dummy-redirect", "children"),
+    Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
+    prevent_initial_call=True
+)
+
 ##############################################################################
 # Auth #######################################################################
 ##############################################################################
@@ -190,14 +313,7 @@ if __name__ == "__main__":
     PROFILE = os.getenv("PROFILE", "False").lower() in ("true", "1", "yes")
     PROF_DIR = os.getenv("PROFILE_DIR", "profile")
 
-    print(f"Host: {APP_HOST}")
-    print(f"Port: {APP_PORT}")
-    print(f"Debug: {APP_DEBUG}")
-    print(f"Profile: {PROFILE}")
-    print(f"Profile Directory: {PROF_DIR}")
-
     if PROFILE:
-        print("ENTROUA QUI")
         app.server.config["PROFILE"] = True
         app.server.wsgi_app = ProfilerMiddleware(
             app.server.wsgi_app,
@@ -207,4 +323,4 @@ if __name__ == "__main__":
             profile_dir=PROF_DIR,
         )
 
-    app.run(host=APP_HOST, debug=True, port=APP_PORT)
+    app.run(host=APP_HOST, debug=APP_DEBUG, port=APP_PORT)
