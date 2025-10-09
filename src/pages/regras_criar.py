@@ -65,6 +65,168 @@ preco_diesel = get_preco_diesel()
 # LOADER #####################################################################
 ###################################################################################
 
+##############################################################################
+# Callbacks para os inputs ###################################################
+##############################################################################
+
+
+# Função para validar o input
+def input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+    if dias_monitoramento is None or dias_monitoramento <= 0:
+        return False
+
+    if qtd_min_motoristas is None or qtd_min_motoristas <= 0:
+        return False
+
+    if qtd_min_viagens is None or qtd_min_viagens <= 0:
+        return False
+
+    if lista_modelos is None or not lista_modelos or None in lista_modelos:
+        return False
+
+    return True
+
+
+def verifica_erro_email(email_destino):
+    if not email_destino:
+        return False
+
+    email_limpo = email_destino.strip()
+
+    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email_limpo):
+        return True
+
+    return False
+
+
+@callback(
+    Output("pag-criar-regra-input-email-1", "error"),
+    Input("pag-criar-regra-input-email-1", "value"),
+)
+def verifica_erro_email_1(email_destino):
+    return verifica_erro_email(email_destino)
+
+
+@callback(
+    Output("pag-criar-regra-input-email-2", "error"),
+    Input("pag-criar-regra-input-email-2", "value"),
+)
+def verifica_erro_email_2(email_destino):
+    return verifica_erro_email(email_destino)
+
+
+@callback(
+    Output("pag-criar-regra-input-email-3", "error"),
+    Input("pag-criar-regra-input-email-3", "value"),
+)
+def verifica_erro_email_3(email_destino):
+    return verifica_erro_email(email_destino)
+
+
+@callback(
+    Output("pag-criar-regra-input-email-4", "error"),
+    Input("pag-criar-regra-input-email-4", "value"),
+)
+def verifica_erro_email_4(email_destino):
+    return verifica_erro_email(email_destino)
+
+
+@callback(
+    Output("pag-criar-regra-input-email-5", "error"),
+    Input("pag-criar-regra-input-email-5", "value"),
+)
+def verifica_erro_email_5(email_destino):
+    return verifica_erro_email(email_destino)
+
+
+# Função para validar o input de telefone
+def verifica_erro_wpp(wpp_telefone):
+    # Se estive vazio, não considere erro
+    if not wpp_telefone:
+        return False
+
+    wpp_limpo = wpp_telefone.replace(" ", "")
+
+    padroes_validos = [
+        r"^\(\d{2}\)\d{5}-\d{4}$",  # (62)99999-9999
+        r"^\(\d{2}\)\d{4}-\d{4}$",  # (62)9999-9999
+        r"^\d{2}\d{5}-\d{4}$",  # 6299999-9999
+        r"^\d{2}\d{4}-\d{4}$",  # 629999-9999
+        r"^\d{10}$",  # 6299999999 (fixo)
+        r"^\d{11}$",  # 62999999999 (celular)
+    ]
+
+    if not any(re.match(padrao, wpp_limpo) for padrao in padroes_validos):
+        return True
+
+    return False
+
+
+@callback(
+    Output("pag-criar-regra-input-wpp-1", "error"),
+    Input("pag-criar-regra-input-wpp-1", "value"),
+)
+def verifica_erro_wpp_1(wpp_telefone):
+    return verifica_erro_wpp(wpp_telefone)
+
+
+@callback(
+    Output("pag-criar-regra-input-wpp-2", "error"),
+    Input("pag-criar-regra-input-wpp-2", "value"),
+)
+def verifica_erro_wpp_2(wpp_telefone):
+    return verifica_erro_wpp(wpp_telefone)
+
+
+@callback(
+    Output("pag-criar-regra-input-wpp-3", "error"),
+    Input("pag-criar-regra-input-wpp-3", "value"),
+)
+def verifica_erro_wpp_3(wpp_telefone):
+    return verifica_erro_wpp(wpp_telefone)
+
+
+@callback(
+    Output("pag-criar-regra-input-wpp-4", "error"),
+    Input("pag-criar-regra-input-wpp-4", "value"),
+)
+def verifica_erro_wpp_4(wpp_telefone):
+    return verifica_erro_wpp(wpp_telefone)
+
+
+@callback(
+    Output("pag-criar-regra-input-wpp-5", "error"),
+    Input("pag-criar-regra-input-wpp-5", "value"),
+)
+def verifica_erro_wpp_5(wpp_telefone):
+    return verifica_erro_wpp(wpp_telefone)
+
+
+@callback(
+    Output("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+    Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+)
+def atualizar_modelos_selecao(valores_selecionados):
+    if not valores_selecionados:
+        # Nada selecionado -> assume "TODOS"
+        return ["TODOS"]
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return valores_selecionados
+
+    ultimo_valor = ctx.triggered[0]["value"]
+
+    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
+    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
+        if ultimo_valor == ["TODOS"]:
+            return ["TODOS"]
+        else:
+            return [v for v in valores_selecionados if v != "TODOS"]
+
+    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
+    return valores_selecionados
+
 
 ##############################################################################
 # Callbacks para dados ######################################################
@@ -169,8 +331,45 @@ def cb_pag_criar_regra_botao_detalhar_consumo_veiculo(
     return f"/combustivel-por-veiculo?{url_params_str}"
 
 
+##############################################################################
+# Callbacks para salvar a regra ##############################################
+##############################################################################
+
+
+# Callback para o botão de fechar o modal de erro ao salvar a regra
 @callback(
-    Output("pag-criar-regra-btn-criar-regra-mensagem-sucesso-criar", "children"),
+    Output("modal-erro-salvar-regra", "opened", allow_duplicate=True),
+    Input("btn-close-modal-erro-salvar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def fecha_modal_erro_salvar_regra(n_clicks_btn_fechar):
+    if n_clicks_btn_fechar and n_clicks_btn_fechar > 0:
+        return False
+    else:
+        return dash.no_update
+
+
+# Callback para o botão de fechar o modal de sucesso ao salvar a regra
+@callback(
+    [
+        Output("modal-sucesso-salvar-regra", "opened", allow_duplicate=True),
+        Output("url", "href", allow_duplicate=True),
+    ],
+    Input("btn-close-modal-sucesso-salvar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def fecha_modal_sucesso_salvar_regra(n_clicks_btn_fechar):
+    if n_clicks_btn_fechar and n_clicks_btn_fechar > 0:
+        return [False, "/regras-gerenciar"]
+    else:
+        return [dash.no_update, dash.no_update]
+
+
+@callback(
+    [
+        Output("modal-erro-salvar-regra", "opened", allow_duplicate=True),
+        Output("modal-sucesso-salvar-regra", "opened", allow_duplicate=True),
+    ],
     [
         Input("pag-criar-regra-btn-criar-regra-monitoramento", "n_clicks"),
         Input("pag-criar-regra-input-nome-regra-monitoramento", "value"),
@@ -203,63 +402,109 @@ def cb_pag_criar_regra_botao_detalhar_consumo_veiculo(
 def cb_salvar_regra_monitoramento_combustivel(
     n_clicks,
     nome_regra,
-    data,
-    modelos,
-    motoristas,
-    quantidade_de_viagens,
+    dias_monitoramento,
+    lista_modelos,
+    qtd_min_motoristas,
+    qtd_min_viagens,
     dias_marcados,
-    mediana_viagem,
-    indicativo_performace,
-    erro_telemetria,
+    limite_mediana,
+    limite_baixa_perfomance,
+    limite_erro_telemetria,
     criar_os_automatica,
     enviar_email,
     enviar_whatsapp,
-    email1,
-    email2,
-    email3,
-    email4,
-    email5,
-    wpp1,
-    wpp2,
-    wpp3,
-    wpp4,
-    wpp5,
+    email_destino_1,
+    email_destino_2,
+    email_destino_3,
+    email_destino_4,
+    email_destino_5,
+    wpp_telefone_1,
+    wpp_telefone_2,
+    wpp_telefone_3,
+    wpp_telefone_4,
+    wpp_telefone_5,
 ):
     ctx = callback_context
     if not ctx.triggered:
-        return dash.no_update
+        return dash.no_update, dash.no_update
 
     triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if triggered_id != "pag-criar-regra-btn-criar-regra-monitoramento":
-        return dash.no_update
+        return dash.no_update, dash.no_update
 
     if not n_clicks or n_clicks <= 0:
-        return dash.no_update
+        return dash.no_update, dash.no_update
 
-    # Monta listas de emails e WhatsApps
-    email_list = [e for e in [email1, email2, email3, email4, email5] if e]
-    wpp_list = [w for w in [wpp1, wpp2, wpp3, wpp4, wpp5] if w]
+    # Valida Resto do input
+    if not input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+        return [True, False]
 
-    try:
-        regra_service.salvar_regra_monitoramento(
-            nome_regra,
-            data,
-            modelos,
-            motoristas,
-            quantidade_de_viagens,
-            dias_marcados,
-            mediana_viagem,
-            indicativo_performace,
-            erro_telemetria,
-            criar_os_automatica,
-            enviar_email,
-            enviar_whatsapp,
-            wpp_list,
-            email_list,
-        )
-        return "✅ Regra salva com sucesso!"
-    except Exception as e:
-        return f"❌ Erro ao salvar a regra: {e}"
+    # Valida nome da regra
+    if not nome_regra:
+        return [True, False]
+
+    # Verifica se pelo menos um email ou wpp está ativo
+    if not enviar_email and not enviar_whatsapp:
+        return [True, False]
+
+    # Valida se há pelo menos um telefone de whatsapp válido caso esteja ativo
+    wpp_telefones = [wpp_telefone_1, wpp_telefone_2, wpp_telefone_3, wpp_telefone_4, wpp_telefone_5]
+    wpp_tel_validos = []
+    if enviar_whatsapp:
+        wpp_tel_validos = [wpp for wpp in wpp_telefones if wpp != "" and not verifica_erro_wpp(wpp)]
+        if len(wpp_tel_validos) == 0:
+            return [True, False]
+
+    # Valida se há pelo menos um email válido caso esteja ativo
+    email_destinos = [email_destino_1, email_destino_2, email_destino_3, email_destino_4, email_destino_5]
+    email_destinos_validos = []
+    if enviar_email:
+        email_destinos_validos = [email for email in email_destinos if email != "" and not verifica_erro_email(email)]
+        if len(email_destinos_validos) == 0:
+            return [True, False]
+
+    target_wpp_telefones = wpp_telefones
+    target_wpp_telefones_validos = [wpp if wpp and not verifica_erro_wpp(wpp) else None for wpp in target_wpp_telefones]
+
+    target_email_destinos = email_destinos
+    target_email_destinos_validos = [
+        email if email and not verifica_erro_email(email) else None for email in target_email_destinos
+    ]
+
+    payload = {
+        "nome_regra": nome_regra,
+        "periodo": dias_monitoramento,
+        "modelos_veiculos": lista_modelos,
+        "qtd_min_motoristas": qtd_min_motoristas,
+        "dias_marcados": dias_marcados,
+        "qtd_min_viagens": qtd_min_viagens,
+        "limite_mediana": limite_mediana,
+        "usar_mediana_viagem": limite_mediana is not None,
+        "limite_baixa_perfomance": limite_baixa_perfomance,
+        "usar_indicativo_baixa_performace": limite_baixa_perfomance is not None,
+        "limite_erro_telemetria": limite_erro_telemetria,
+        "usar_erro_telemetria": limite_erro_telemetria is not None,
+        "criar_os_automatica": criar_os_automatica,
+        "target_email": enviar_email,
+        "target_email_dest1": target_email_destinos_validos[0],
+        "target_email_dest2": target_email_destinos_validos[1],
+        "target_email_dest3": target_email_destinos_validos[2],
+        "target_email_dest4": target_email_destinos_validos[3],
+        "target_email_dest5": target_email_destinos_validos[4],
+        "target_wpp": enviar_whatsapp,
+        "target_wpp_dest1": target_wpp_telefones_validos[0],
+        "target_wpp_dest2": target_wpp_telefones_validos[1],
+        "target_wpp_dest3": target_wpp_telefones_validos[2],
+        "target_wpp_dest4": target_wpp_telefones_validos[3],
+        "target_wpp_dest5": target_wpp_telefones_validos[4],
+    }
+
+    regra_criada_com_sucesso = regra_service.criar_regra_monitoramento(payload)
+
+    if regra_criada_com_sucesso:
+        return [False, True]
+    else:
+        return [True, False]
 
 
 @callback(
@@ -427,154 +672,83 @@ def gera_labels_inputs_pag_criar_regra(campo):
     return dmc.Group(id=f"{campo}-labels", children=[], gap="xs")
 
 
-@callback(
-    Output("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
-    Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
-)
-def atualizar_modelos_selecao(valores_selecionados):
-    if not valores_selecionados:
-        # Nada selecionado -> assume "TODOS"
-        return ["TODOS"]
-
-    ctx = callback_context
-    if not ctx.triggered:
-        return valores_selecionados
-
-    ultimo_valor = ctx.triggered[0]["value"]
-
-    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
-    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
-        if ultimo_valor == ["TODOS"]:
-            return ["TODOS"]
-        else:
-            return [v for v in valores_selecionados if v != "TODOS"]
-
-    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
-    return valores_selecionados
-
-
-######################## Corrigir input #############################
-# Função para validar o input de email de destino
-def verifica_erro_email(email_destino):
-    if not email_destino:
-        return False
-
-    email_limpo = email_destino.strip()
-
-    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email_limpo):
-        return True
-
-    return False
-
-
-@callback(
-    Output("pag-criar-regra-input-email-1", "error"),
-    Input("pag-criar-regra-input-email-1", "value"),
-)
-def verifica_erro_email_1(email_destino):
-    return verifica_erro_email(email_destino)
-
-
-@callback(
-    Output("pag-criar-regra-input-email-2", "error"),
-    Input("pag-criar-regra-input-email-2", "value"),
-)
-def verifica_erro_email_2(email_destino):
-    return verifica_erro_email(email_destino)
-
-
-@callback(
-    Output("pag-criar-regra-input-email-3", "error"),
-    Input("pag-criar-regra-input-email-3", "value"),
-)
-def verifica_erro_email_3(email_destino):
-    return verifica_erro_email(email_destino)
-
-
-@callback(
-    Output("pag-criar-regra-input-email-4", "error"),
-    Input("pag-criar-regra-input-email-4", "value"),
-)
-def verifica_erro_email_4(email_destino):
-    return verifica_erro_email(email_destino)
-
-
-@callback(
-    Output("pag-criar-regra-input-email-5", "error"),
-    Input("pag-criar-regra-input-email-5", "value"),
-)
-def verifica_erro_email_5(email_destino):
-    return verifica_erro_email(email_destino)
-
-
-# Função para validar o input de telefone
-def verifica_erro_wpp(wpp_telefone):
-    # Se estive vazio, não considere erro
-    if not wpp_telefone:
-        return False
-
-    wpp_limpo = wpp_telefone.replace(" ", "")
-
-    padroes_validos = [
-        r"^\(\d{2}\)\d{5}-\d{4}$",  # (62)99999-9999
-        r"^\(\d{2}\)\d{4}-\d{4}$",  # (62)9999-9999
-        r"^\d{2}\d{5}-\d{4}$",  # 6299999-9999
-        r"^\d{2}\d{4}-\d{4}$",  # 629999-9999
-        r"^\d{10}$",  # 6299999999 (fixo)
-        r"^\d{11}$",  # 62999999999 (celular)
-    ]
-
-    if not any(re.match(padrao, wpp_limpo) for padrao in padroes_validos):
-        return True
-
-    return False
-
-
-@callback(
-    Output("pag-criar-regra-input-wpp-1", "error"),
-    Input("pag-criar-regra-input-wpp-1", "value"),
-)
-def verifica_erro_wpp_1(wpp_telefone):
-    return verifica_erro_wpp(wpp_telefone)
-
-
-@callback(
-    Output("pag-criar-regra-input-wpp-2", "error"),
-    Input("pag-criar-regra-input-wpp-2", "value"),
-)
-def verifica_erro_wpp_2(wpp_telefone):
-    return verifica_erro_wpp(wpp_telefone)
-
-
-@callback(
-    Output("pag-criar-regra-input-wpp-3", "error"),
-    Input("pag-criar-regra-input-wpp-3", "value"),
-)
-def verifica_erro_wpp_3(wpp_telefone):
-    return verifica_erro_wpp(wpp_telefone)
-
-
-@callback(
-    Output("pag-criar-regra-input-wpp-4", "error"),
-    Input("pag-criar-regra-input-wpp-4", "value"),
-)
-def verifica_erro_wpp_4(wpp_telefone):
-    return verifica_erro_wpp(wpp_telefone)
-
-
-@callback(
-    Output("pag-criar-regra-input-wpp-5", "error"),
-    Input("pag-criar-regra-input-wpp-5", "value"),
-)
-def verifica_erro_wpp_5(wpp_telefone):
-    return verifica_erro_wpp(wpp_telefone)
-
-
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
 layout = dbc.Container(
     [
+        dmc.Modal(
+            # title="Erro ao carregar os dados",
+            id="modal-erro-salvar-regra",
+            centered=True,
+            radius="lg",
+            size="md",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="lg",
+                        size=128,
+                        color="red",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:error-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Erro!", order=1),
+                    dmc.Text("Ocorreu um erro ao salvar a regra. Verifique se a regra possui:"),
+                    dmc.List(
+                        [
+                            dmc.ListItem("Nome da regra;"),
+                            dmc.ListItem("Pelo menos um alerta alvo (nova OS, retrabalho, etc);"),
+                            dmc.ListItem("Pelo menos um destino de email ou WhatsApp ativo."),
+                        ],
+                    ),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="red",
+                                variant="outline",
+                                id="btn-close-modal-erro-salvar-regra",
+                            ),
+                        ],
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
+        dmc.Modal(
+            # title="Erro ao carregar os dados",
+            id="modal-sucesso-salvar-regra",
+            centered=True,
+            radius="lg",
+            size="lg",
+            children=dmc.Stack(
+                [
+                    dmc.ThemeIcon(
+                        radius="xl",
+                        size=128,
+                        color="green",
+                        variant="light",
+                        children=DashIconify(icon="material-symbols:check-circle-rounded", width=128, height=128),
+                    ),
+                    dmc.Title("Sucesso!", order=1),
+                    dmc.Text("A regra foi salva com sucesso."),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="green",
+                                variant="outline",
+                                id="btn-close-modal-sucesso-salvar-regra",
+                            ),
+                        ],
+                        # justify="flex-end",
+                    ),
+                ],
+                align="center",
+                gap="md",
+            ),
+        ),
         # Cabeçalho
         dbc.Row(
             [
@@ -592,7 +766,11 @@ layout = dbc.Container(
                                         ),
                                         dbc.Col(
                                             html.H1(
-                                                [html.Strong("Regras de Monitoramento da Frota")],
+                                                [
+                                                    "Criar \u00a0",
+                                                    html.Strong("regra"),
+                                                    "\u00a0 para monitoramento do retrabalho",
+                                                ],
                                                 className="align-self-center",
                                             ),
                                             width=True,
@@ -1058,69 +1236,30 @@ layout = dbc.Container(
                 ),
             ]
         ),
-        dmc.Space(h=10),
+        dmc.Space(h=20),
         # Botões de Preview e Criar Regra
         dbc.Row(
             [
-                # Botão Preview
                 dbc.Col(
-                    html.Div(
-                        [
-                            html.Button(
-                                "Preview da Regra",
-                                id="pag-criar-regra-btn-preview-regra-monitoramento",
-                                n_clicks=0,
-                                style={
-                                    "background-color": "#f9a704",
-                                    "color": "white",
-                                    "border": "none",
-                                    "padding": "16px 32px",
-                                    "border-radius": "8px",
-                                    "cursor": "pointer",
-                                    "font-size": "20px",
-                                    "font-weight": "bold",
-                                    "width": "250px",
-                                    "height": "60px",
-                                },
-                            ),
-                            html.Div(
-                                id="pag-criar-regra-mensagem-sucesso-preview",
-                                style={"marginTop": "10px", "fontWeight": "bold"},
-                            ),
-                        ],
-                        style={"textAlign": "center"},
+                    dbc.Button(
+                        "Preview da Regra",
+                        id="pag-criar-regra-btn-preview-regra-monitoramento",
+                        color="info",
+                        className="me-1",
+                        style={"padding": "1em", "width": "100%"},
                     ),
-                    width="auto",
+                    md=6,
+                    className="mb-3 mb-md-0",
                 ),
-                # Botão Criar
                 dbc.Col(
-                    html.Div(
-                        [
-                            html.Button(
-                                "Criar Regra",
-                                id="pag-criar-regra-btn-criar-regra-monitoramento",
-                                n_clicks=0,
-                                style={
-                                    "background-color": "#007bff",
-                                    "color": "white",
-                                    "border": "none",
-                                    "padding": "16px 32px",
-                                    "border-radius": "8px",
-                                    "cursor": "pointer",
-                                    "font-size": "20px",
-                                    "font-weight": "bold",
-                                    "width": "250px",
-                                    "height": "60px",
-                                },
-                            ),
-                        ],
-                        style={"textAlign": "center"},
+                    dbc.Button(
+                        "Criar Regra",
+                        id="pag-criar-regra-btn-criar-regra-monitoramento",
+                        color="success",
+                        className="me-1",
+                        style={"padding": "1em", "width": "100%"},
                     ),
-                    width="auto",
-                ),
-                html.Div(
-                    id="pag-criar-regra-btn-criar-regra-mensagem-sucesso-criar",
-                    style={"marginTop": "10px", "fontWeight": "bold"},
+                    md=6,
                 ),
             ],
             justify="center",  # Centraliza horizontalmente
@@ -1269,6 +1408,4 @@ layout = dbc.Container(
     style={"margin-top": "20px", "margin-bottom": "20px"},
 )
 
-dash.register_page(
-    __name__, name="Regras de monitoramento", path="/regras-monitoramento", icon="carbon:rule-draft", hide_page=True
-)
+dash.register_page(__name__, name="Criar Regra", path="/regras-criar", icon="carbon:rule-draft", hide_page=True)

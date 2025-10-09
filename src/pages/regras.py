@@ -181,9 +181,7 @@ def cb_botao_criar_regra(n_clicks):
     if n_clicks is None:
         return dash.no_update
     
-    print("Clicou no botão criar regra")
-
-    return "/regras-monitoramento"
+    return "/regras-criar"
 
 
 ##############################################################################
@@ -311,4 +309,4 @@ layout = dbc.Container(
 ##############################################################################
 # REGISTRO DA PÁGINA #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Regras", path="/regras-existentes")
+dash.register_page(__name__, name="Regras", path="/regras-gerenciar")

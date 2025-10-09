@@ -9,8 +9,15 @@ import pandas as pd
 
 # Lib para lidar com feriados
 from datetime import datetime
+
+# Imports BD
+import sqlalchemy
+from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import text
+
+# Imports auxiliares
 from modules.sql_utils import *
-from sqlalchemy import text
 
 # Constante indica o número mínimo de viagens que devem existir para poder classificar o consumo de uma viagem
 # Por exemplo, NUM_MIN_VIAGENS_PARA_CLASSIFICAR = 5 indica que somente as viagens cuja configuração possuam outras 5
@@ -193,6 +200,22 @@ class RegrasService:
         df["total_consumo_litros"] = df["total_consumo_litros"].round(2)
 
         return df
+
+    def criar_regra_monitoramento(self, payload):
+        """Função para criar uma regra de monitoramento"""
+        table = sqlalchemy.Table("regra_monitoramento_combustivel", sqlalchemy.MetaData(), autoload_with=self.dbEngine)
+
+        try:
+            with self.dbEngine.begin() as conn:
+                stmt = insert(table).values(payload)
+                conn.execute(stmt)
+
+            return True
+        except Exception as e:
+            print(f"Erro ao criar regra de monitoramento: {e}")
+            return False
+
+
 
 
     def get_subquery_dias(self, dias_marcados):
