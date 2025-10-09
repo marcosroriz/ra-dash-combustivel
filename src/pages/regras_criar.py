@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Dashboard principal, aqui é listado as últimas viagens dos veículos
+# Tela para criar uma regra para detecção de problemas de consumo de combustível
 
 ##############################################################################
 # IMPORTS ####################################################################
@@ -14,7 +14,6 @@ import re
 # Importar bibliotecas do dash básicas e plotly
 from dash import html, dcc, callback, Input, Output, State
 import dash
-
 
 # Importar bibliotecas do bootstrap e ag-grid
 import dash_bootstrap_components as dbc
@@ -72,14 +71,14 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
         Output("indicador-media-gasto-combustivel", "children"),
     ],
     [
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-quantidade-de-motoristas", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
+        Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-quantidade-de-motoristas", "value"),
+        Input("pag-criar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-select-dia-linha-combustivel-regra", "value"),
+        Input("pag-criar-regra-select-mediana", "value"),
+        Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
+        Input("pag-criar-regra-select-erro-telemetria", "value"),
     ],
 )
 def atualiza_tabela_regra_viagens_monitoramento(
@@ -114,17 +113,17 @@ def atualiza_tabela_regra_viagens_monitoramento(
     Output("mensagem-sucesso-criar", "children"),
     [
         Input("btn-criar-regra-monitoramento", "n_clicks"),
-        Input("input-nome-regra-monitoramento", "value"),
-        Input("input-periodo-dias-monitoramento-regra", "value"),
-        Input("input-modelos-monitoramento-regra", "value"),
-        Input("input-quantidade-de-motoristas", "value"),
-        Input("input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("input-select-dia-linha-combustivel-regra", "value"),
-        Input("select-mediana", "value"),
-        Input("select-baixa-performace-indicativo", "value"),
-        Input("select-erro-telemetria", "value"),
+        Input("pag-criar-regra-input-nome-regra-monitoramento", "value"),
+        Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-quantidade-de-motoristas", "value"),
+        Input("pag-criar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("pag-criar-regra-input-select-dia-linha-combustivel-regra", "value"),
+        Input("pag-criar-regra-select-mediana", "value"),
+        Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
+        Input("pag-criar-regra-select-erro-telemetria", "value"),
         Input("switch-os-automatica", "checked"),
-        Input("switch-enviar-email-regra-criar-combustivel", "checked"),
+        Input("pag-criar-regra-switch-enviar-email-regra-criar-combustivel", "checked"),
         Input("switch-enviar-wpp-regra-criar-combustivel", "checked"),
         # Emails
         Input("input-email-1-regra-criar-combustivel", "value"),
@@ -204,12 +203,12 @@ def toggle_tabela(n_clicks):
 
 @callback(
     [
-        Output("container-mediana", "style"),
-        Output("select-mediana", "value"),
+        Output("pag-criar-regra-container-mediana", "style"),
+        Output("pag-criar-regra-select-mediana", "value"),
     ],
     [
-        Input("switch-mediana", "checked"),
-        Input("select-mediana", "value"),
+        Input("pag-criar-regra-switch-mediana", "checked"),
+        Input("pag-criar-regra-select-mediana", "value"),
     ]
 )
 def input_mediana(ativado, value):
@@ -222,12 +221,12 @@ def input_mediana(ativado, value):
 
 @callback(
     [
-        Output("container-baixa-performace-indicativo", "style"),
-        Output("select-baixa-performace-indicativo", "value"),
+        Output("pag-criar-regra-container-baixa-performace-indicativo", "style"),
+        Output("pag-criar-regra-select-baixa-performace-indicativo", "value"),
     ],
     [
-        Input("switch-baixa-performace-indicativo", "checked"),
-        Input("select-baixa-performace-indicativo", "value"),
+        Input("pag-criar-regra-switch-baixa-performace-indicativo", "checked"),
+        Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
     ]
 )
 def input_baixa_performace_indicativo(ativado, value):
@@ -239,12 +238,12 @@ def input_baixa_performace_indicativo(ativado, value):
 
 @callback(
     [
-        Output("container-erro-telemetria", "style"),
-        Output("select-erro-telemetria", "value"),
+        Output("pag-criar-regra-container-erro-telemetria", "style"),
+        Output("pag-criar-regra-select-erro-telemetria", "value"),
     ],
     [
-        Input("switch-erro-telemetria", "checked"),
-        Input("select-erro-telemetria", "value"),
+        Input("pag-criar-regra-switch-erro-telemetria", "checked"),
+        Input("pag-criar-regra-select-erro-telemetria", "value"),
     ]
 )
 def input_erro_telemetria(ativado, value):
@@ -267,8 +266,8 @@ def mostra_input_wpp_destino(wpp_ativo):
     
 # Função para mostrar o input de WhatsApp de destino
 @callback(
-    Output("input-email-destino-container-regra-criar-combustivel", "style"),
-    Input("switch-enviar-email-regra-criar-combustivel", "checked"),
+    Output("pag-criar-regra-input-email-destino-container-regra-criar-combustivel", "style"),
+    Input("pag-criar-regra-switch-enviar-email-regra-criar-combustivel", "checked"),
 )
 def mostra_input_email_destino(wpp_ativo):
     if wpp_ativo:
@@ -282,14 +281,14 @@ def gera_labels_inputs(campo):
     @callback(
         Output(f"{campo}-labels", "children"),
         [
-            Input("input-periodo-dias-monitoramento-regra", "value"),  # datas
-            Input("input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("input-quantidade-de-motoristas", "value"), # Motoristas
-            Input("input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
-            Input("input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
-            Input("select-mediana", "value"),
-            Input("select-baixa-performace-indicativo", "value"),
-            Input("select-erro-telemetria", "value"),
+            Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),  # datas
+            Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),        # modelos
+            Input("pag-criar-regra-input-quantidade-de-motoristas", "value"), # Motoristas
+            Input("pag-criar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
+            Input("pag-criar-regra-input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
+            Input("pag-criar-regra-select-mediana", "value"),
+            Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
+            Input("pag-criar-regra-select-erro-telemetria", "value"),
         ]
     )
     def atualiza_labels_inputs(
@@ -346,8 +345,8 @@ def gera_labels_inputs(campo):
 
 
 @callback(
-    Output("input-modelos-monitoramento-regra", "value"),
-    Input("input-modelos-monitoramento-regra", "value"),
+    Output("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+    Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
 )
 def atualizar_modelos_selecao(valores_selecionados):
     if not valores_selecionados:
@@ -492,8 +491,6 @@ def verifica_erro_wpp_5(wpp_telefone):
 layout = dbc.Container(
     [
         # Cabeçalho
-        # dmc.Overlay(...)  # Overlay comentado
-
         dbc.Row(
             [
                 dbc.Col(
@@ -532,9 +529,9 @@ layout = dbc.Container(
                                             [
                                                 dbc.Label("Nome da Regra de Monitoramneto"),
                                                 dbc.Input(
-                                                    id="input-nome-regra-monitoramento",
+                                                    id="pag-criar-regra-input-nome-regra-monitoramento",
                                                     type="text",
-                                                    placeholder="Digite algo...",
+                                                    placeholder="Digite o nome da regra...",
                                                     value="",
                                                 ),
                                             ],
@@ -553,7 +550,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="input-periodo-dias-monitoramento-regra",
+                                                            id="pag-criar-regra-input-periodo-dias-monitoramento-regra",
                                                             type="number",
                                                             placeholder="Dias",
                                                             value=30,
@@ -576,7 +573,7 @@ layout = dbc.Container(
                                             [
                                                 dbc.Label("Modelos"),
                                                 dcc.Dropdown(
-                                                    id="input-modelos-monitoramento-regra",
+                                                    id="pag-criar-regra-input-modelos-monitoramento-regra",
                                                     multi=True,
                                                     options=[
                                                         {"label": modelo["LABEL"], "value": modelo["LABEL"]}
@@ -608,7 +605,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="input-quantidade-de-motoristas",
+                                                            id="pag-criar-regra-input-quantidade-de-motoristas",
                                                             type="number",
                                                             placeholder="digite um valor...",
                                                             value=3,
@@ -633,7 +630,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="input-quantidade-de-viagens-monitoramento-regra",
+                                                            id="pag-criar-regra-input-quantidade-de-viagens-monitoramento-regra",
                                                             type="number",
                                                             placeholder="digite um valor...",
                                                             value=5,
@@ -665,7 +662,7 @@ layout = dbc.Container(
                                             [
                                                 dbc.Label("Dias"),
                                                 dbc.RadioItems(
-                                                    id="input-select-dia-linha-combustivel-regra",
+                                                    id="pag-criar-regra-input-select-dia-linha-combustivel-regra",
                                                     options=[
                                                         {"label": "Seg-Sexta", "value": "SEG_SEX"},
                                                         {"label": "Sabado", "value": "SABADO"},
@@ -690,7 +687,7 @@ layout = dbc.Container(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="switch-mediana",
+                                                    id="pag-criar-regra-switch-mediana",
                                                     label="% Mínima de Viagens Abaixo da Mediana",
                                                     checked=False,
                                                 ),
@@ -699,7 +696,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="select-mediana",
+                                                                id="pag-criar-regra-select-mediana",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=10,
@@ -709,7 +706,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="container-mediana",
+                                                    id="pag-criar-regra-container-mediana",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -725,7 +722,7 @@ layout = dbc.Container(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="switch-baixa-performace-indicativo",
+                                                    id="pag-criar-regra-switch-baixa-performace-indicativo",
                                                     label="% Mínima de Viagens com Supeita ou Baixa Performance",
                                                     checked=False,
                                                 ),
@@ -734,7 +731,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="select-baixa-performace-indicativo",
+                                                                id="pag-criar-regra-select-baixa-performace-indicativo",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=0,
@@ -744,7 +741,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="container-baixa-performace-indicativo",
+                                                    id="pag-criar-regra-container-baixa-performace-indicativo",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -760,7 +757,7 @@ layout = dbc.Container(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="switch-erro-telemetria",
+                                                    id="pag-criar-regra-switch-erro-telemetria",
                                                     label="% Mínima de Viagens com Erro de Telemetria",
                                                     checked=False,
                                                 ),
@@ -769,7 +766,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="select-erro-telemetria",
+                                                                id="pag-criar-regra-select-erro-telemetria",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=10,
@@ -779,7 +776,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="container-erro-telemetria",
+                                                    id="pag-criar-regra-container-erro-telemetria",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -796,7 +793,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Col(
                                                         dmc.Switch(
-                                                            id="switch-enviar-email-regra-criar-combustivel",
+                                                            id="pag-criar-regra-switch-enviar-email-regra-criar-combustivel",
                                                             label="Enviar email",
                                                             checked=False,
                                                             size="md",
@@ -863,7 +860,7 @@ layout = dbc.Container(
                                                             ],
                                                             align="center",
                                                         ),
-                                                        id="input-email-destino-container-regra-criar-combustivel",
+                                                        id="pag-criar-regra-input-email-destino-container-regra-criar-combustivel",
                                                         md=12,
                                                     ),
                                                 ],
