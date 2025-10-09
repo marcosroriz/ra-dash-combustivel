@@ -39,6 +39,8 @@ import modules.regras.tabela as regras_tabela
 # Imports gerais
 from modules.entities_utils import get_modelos_veiculos_regras
 
+# Preço do diesel
+from modules.preco_combustivel_api import get_preco_diesel
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
@@ -56,6 +58,9 @@ df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
+# Pega o preço do diesel via API
+preco_diesel = get_preco_diesel()
+
 ##################################################################################
 # LOADER #####################################################################
 ###################################################################################
@@ -66,10 +71,11 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 ##############################################################################
 @callback(
     [
-        Output("tabela-regras-viagens-monitoramento", "rowData"),
+        Output("pag-criar-regra-tabela-preview-veiculos", "rowData"),
         Output("pag-criar-regra-indicador-quantidade-de-veiculos", "children"),
-        Output("pag-criar-regra-btn-criar-regra-indicador-quantidade-gasto-combustivel", "children"),
-        Output("pag-criar-regra-indicador-media-gasto-combustivel", "children"),
+        Output("pag-criar-regra-indicador-consumo-km-l", "children"),
+        Output("pag-criar-regra-indicador-litros-excedentes", "children"),
+        Output("pag-criar-regra-indicador-gasto-combustivel-excedente", "children"),
     ],
     [
         Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
@@ -82,39 +88,85 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
         Input("pag-criar-regra-select-erro-telemetria", "value"),
     ],
 )
-def atualiza_tabela_regra_viagens_monitoramento(
-    data,
-    modelos,
-    motoristas,
-    quantidade_de_viagens,
+def cb_preview_regra(
+    dias_monitoramento,
+    lista_modelos,
+    qtd_min_motoristas,
+    qtd_min_viagens,
     dias_marcados,
-    mediana_viagem,
-    indicativo_performace,
-    erro_telemetria,
+    limite_mediana,
+    limite_baixa_perfomance,
+    limite_erro_telemetria,
 ):
-    df = regra_service.get_estatistica_regras(
-        data,
-        modelos,
-        motoristas,
-        quantidade_de_viagens,
+    df = regra_service.get_preview_regra(
+        dias_monitoramento,
+        lista_modelos,
+        qtd_min_motoristas,
+        qtd_min_viagens,
         dias_marcados,
-        mediana_viagem,
-        indicativo_performace,
-        erro_telemetria,
+        limite_mediana,
+        limite_baixa_perfomance,
+        limite_erro_telemetria,
     )
 
     if df.empty:
-        return [], 0, 0, 0
+        return [], 0, 0, 0, 0
 
-    df["comb_excedente_l"] = df["comb_excedente_l"].astype(float)
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
 
     quantidade_veiculo = df["vec_num_id"].nunique()
+    media_km_por_litro = str(round(df["media_km_por_litro"].mean(), 2)).replace(".", ",") + " km/L"
+    total_combustivel = (f"{int(df['litros_excedentes'].sum()):,} L".replace(",", "."),)
+    media_combustivel = f"R$ {int(df['custo_excedente'].sum()):,} L".replace(",", ".")
 
-    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
+    return df.to_dict(orient="records"), quantidade_veiculo, media_km_por_litro, total_combustivel, media_combustivel
 
-    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
 
-    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
+# Callback para redirecionar o usuário para outra página ao clicar no botão detalhar
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("pag-criar-regra-tabela-preview-veiculos", "cellRendererData"),
+    Input("pag-criar-regra-tabela-preview-veiculos", "virtualRowData"),
+    Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
+    Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
+    prevent_initial_call=True,
+)
+def cb_pag_criar_regra_botao_detalhar_consumo_veiculo(
+    tabela_linha, tabela_linha_virtual, dias_monitoramento, lista_modelos
+):
+    ctx = callback_context  # Obtém o contexto do callback
+    if not ctx.triggered:
+        return dash.no_update  # Evita execução desnecessária
+
+    # Verifica se o callback foi acionado pelo botão de visualização
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[1]
+
+    if triggered_id != "cellRendererData":
+        return dash.no_update
+
+    tabela_linha_alvo = tabela_linha_virtual[tabela_linha["rowIndex"]]
+
+    data_fim = datetime.now()
+    data_inicio = datetime.now() - pd.DateOffset(days=dias_monitoramento)
+
+    data_fim_str = data_fim.strftime("%Y-%m-%d")
+    data_inicio_str = data_inicio.strftime("%Y-%m-%d")
+
+    url_params = [
+        f"vec_num_id={tabela_linha_alvo['vec_num_id']}",
+        f"data_inicio={data_inicio_str}",
+        f"data_fim={data_fim_str}",
+        f"lista_linhas={['TODAS']}",
+        f"km_l_min=1",
+        f"km_l_max=10",
+    ]
+    url_params_str = "&".join(url_params)
+
+    return f"/combustivel-por-veiculo?{url_params_str}"
 
 
 @callback(
@@ -211,7 +263,7 @@ def cb_salvar_regra_monitoramento_combustivel(
 
 
 @callback(
-    Output("tabela-regras-viagens-monitoramento", "style"),
+    Output("pag-criar-regra-tabela-preview-veiculos", "style"),
     Output("row-labels-adicionais", "style"),
     Input("pag-criar-regra-btn-preview-regra-monitoramento", "n_clicks"),
     prevent_initial_call=True,
@@ -1084,8 +1136,56 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
+                                        dmc.Title(id="pag-criar-regra-indicador-quantidade-de-veiculos", order=2),
+                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Total de veiculos"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=6,
+                    style={"margin-bottom": "20px"},
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="pag-criar-regra-indicador-consumo-km-l", order=2),
+                                        DashIconify(
+                                            icon="material-symbols:speed-outline-rounded", width=48, color="black"
+                                        ),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Consumo médio (km/L)"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=6,
+                    style={"margin-bottom": "20px"},
+                ),
+            ]
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
                                         dmc.Title(
-                                            id="pag-criar-regra-btn-criar-regra-indicador-quantidade-gasto-combustivel",
+                                            id="pag-criar-regra-indicador-litros-excedentes",
                                             order=2,
                                         ),
                                         DashIconify(icon="mdi:gas-station", width=48, color="black"),
@@ -1099,7 +1199,7 @@ layout = dbc.Container(
                         ],
                         class_name="card-box-shadow",
                     ),
-                    md=4,
+                    md=6,
                     style={"margin-bottom": "20px"},
                 ),
                 dbc.Col(
@@ -1108,40 +1208,23 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="pag-criar-regra-indicador-quantidade-de-veiculos", order=2),
-                                        DashIconify(icon="mdi:bomb", width=48, color="black"),
+                                        dmc.Title(id="pag-criar-regra-indicador-gasto-combustivel-excedente", order=2),
+                                        DashIconify(icon="emojione-monotone:money-with-wings", width=48, color="black"),
                                     ],
                                     justify="center",
                                     mt="md",
                                     mb="xs",
                                 ),
                             ),
-                            dbc.CardFooter("Total de veiculos"),
-                        ],
-                        class_name="card-box-shadow",
-                    ),
-                    md=4,
-                    style={"margin-bottom": "20px"},
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                dmc.Group(
-                                    [
-                                        dmc.Title(id="pag-criar-regra-indicador-media-gasto-combustivel", order=2),
-                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
-                                    ],
-                                    justify="center",
-                                    mt="md",
-                                    mb="xs",
-                                ),
+                            dbc.CardFooter(
+                                f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
+                                    ".", ","
+                                )
                             ),
-                            dbc.CardFooter("Média de combustível a mais utilizado"),
                         ],
                         class_name="card-box-shadow",
                     ),
-                    md=4,
+                    md=6,
                     style={"margin-bottom": "20px"},
                 ),
             ],
@@ -1162,8 +1245,8 @@ layout = dbc.Container(
             id="container-tabela-regras",
             children=[
                 dag.AgGrid(
-                    id="tabela-regras-viagens-monitoramento",
-                    columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
+                    id="pag-criar-regra-tabela-preview-veiculos",
+                    columnDefs=regras_tabela.tbl_consumo_veiculos,
                     rowData=[],
                     defaultColDef={"filter": True, "floatingFilter": True},
                     columnSize="autoSize",

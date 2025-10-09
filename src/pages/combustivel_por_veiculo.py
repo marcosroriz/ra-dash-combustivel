@@ -355,7 +355,7 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
     df_indicador = veiculo_service.get_indicador_consumo_medio_km_l(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
     if df_indicador.empty:
         return ""
-    
+
     # Obtem o valor do indicador
     valor = df_indicador.iloc[0]["media_km_por_l"]
 
@@ -370,7 +370,6 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
     [
         Output("pag-veiculo-indicador-total-litros-excedente-visao-veiculo", "children"),
         Output("pag-veiculo-indicador-total-gasto-combustivel-excedente-visao-veiculo", "children"),
-        Output("pag-veiculo-card-footer-preco-diesel", "children"),
     ],
     Input("pag-veiculo-store-input-dados-veiculo", "data"),
 )
@@ -391,20 +390,17 @@ def cb_pag_veiculo_indicador_total_consumo_excedente_visao_veiculo(data):
     )
 
     if df_indicador.empty:
-        return "", "", ""
-    
-    # Obtém o valor do indicador    
+        return "", ""
+
+    # Obtém o valor do indicador
     valor = df_indicador.iloc[0]["litros_excedentes"]
 
     if pd.isna(valor) or valor is None:
-        return "", "", ""
+        return "", ""
     else:
         return (
             f"{int(valor):,} L".replace(",", "."),
             f"R$ {int(preco_diesel * valor):,}".replace(",", "."),
-            f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
-                ".", ","
-            ),
         )
 
 
@@ -589,7 +585,7 @@ def cb_pag_veiculo_lista_eventos_viagem(data, ponto_selecionado):
         html.Li(f"📈 Consumo: {viagem_km_l:.2f} km/L"),
         html.Li(f"⏳ Duração da viagem: {viagem_tempo_minutos:.2f} minutos"),
         html.Li(f"🕓 Velocidade média: {viagem_velocidade:.2f} km/h"),
-        html.Li(f"⛽ Combustível gasto: {viagem_combustivel_gasto:.2f} L")
+        html.Li(f"⛽ Combustível gasto: {viagem_combustivel_gasto:.2f} L"),
     ]
 
     df_eventos_viagem = veiculo_service.get_agg_eventos_ocorreram_viagem(inicio_viagem, fim_viagem, vec_asset_id)
@@ -697,14 +693,20 @@ def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
     layer_lista_marcadores = gera_layer_posicao(df_posicoes_gps, cor_icone)
 
     # Gera a camada e salva lat e lon
-    lista_overlays.append(dl.Overlay(dl.LayerGroup(layer_lista_marcadores), name="<span class='mapa-icone mapa-icone-pos-gps'></span>Posição GPS", checked=True))
+    lista_overlays.append(
+        dl.Overlay(
+            dl.LayerGroup(layer_lista_marcadores),
+            name="<span class='mapa-icone mapa-icone-pos-gps'></span>Posição GPS",
+            checked=True,
+        )
+    )
 
     # Agora, processa cada tipo de evento que ocorreu na viagem
     for i, evt in df_eventos_viagem.iterrows():
         evt_label = evt["event_label"]
         evt_value = evt["event_value"]
         evt_type_id = evt["event_type_id"]
-        
+
         cor_idx = (i + 3) % len(tema.PALETA_CORES_DISCRETA)
         cor_icone = tema.PALETA_CORES_DISCRETA[cor_idx]
 
@@ -1110,8 +1112,11 @@ layout = dbc.Container(
                                                     ),
                                                 ),
                                                 dbc.CardFooter(
-                                                    ["Total gasto com combustível excedente (R$)"],
-                                                    id="pag-veiculo-card-footer-preco-diesel",
+                                                    [
+                                                        f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
+                                                            ".", ","
+                                                        ),
+                                                    ],
                                                 ),
                                             ],
                                             class_name="card-box-shadow",

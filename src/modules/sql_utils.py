@@ -124,4 +124,3 @@ def subquery_dia_semana(dia_numerico, prefix=""):
         query = "AND dia_numerico BETWEEN 2 AND 6"
 
     return query
-

@@ -26,20 +26,174 @@ class RegrasService:
 
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
-
-        query = f'''
+        query = f"""
         SELECT * FROM public.regras_monitoramento
-        '''
+        """
 
         if not lista_regras:
             lista_regras = []
 
-        if lista_regras and 'TODAS' not in lista_regras:
-            query += f' WHERE {subquery_regras}'
+        if lista_regras and "TODAS" not in lista_regras:
+            query += f" WHERE {subquery_regras}"
 
         df = pd.read_sql(query, self.dbEngine)
-        df = df.sort_values('nome_regra')
+        df = df.sort_values("nome_regra")
         return df
+    
+    def __get_subquery_dia_marcado(self, dias_marcado):
+        dias_subquery = ""
+        
+        if "SEG_SEX" in dias_marcado:
+            dias_subquery = "AND dia_numerico BETWEEN 2 AND 6"
+        elif "SABADO" in dias_marcado:
+            dias_subquery = "AND dia_numerico = 7"
+        elif "DOMINGO" in dias_marcado:
+            dias_subquery = "AND dia_numerico = 1"
+        elif "FERIADO" in dias_marcado:
+            dias_subquery = "AND dia_eh_feriado = TRUE"
+
+        return dias_subquery
+
+    def get_preview_regra(
+        self,
+        dias_monitoramento,
+        lista_modelos,
+        qtd_min_motoristas,
+        qtd_min_viagens,
+        dias_marcados,
+        limite_mediana,
+        limite_baixa_perfomance,
+        limite_erro_telemetria,
+    ):
+        subquery_dia_marcado_str = self.__get_subquery_dia_marcado(dias_marcados)
+        subquery_modelos_str = subquery_modelos_combustivel(lista_modelos, termo_all="TODOS")
+
+        # Ajusta os limites antes de executar a query
+        if limite_mediana is None:
+            limite_mediana = 0
+        
+        if limite_baixa_perfomance is None:
+            limite_baixa_perfomance = 0
+
+        if limite_erro_telemetria is None:
+            limite_erro_telemetria = 0
+
+        query = f"""
+        WITH viagens_agg_periodo AS (
+            SELECT
+                vec_num_id,
+                vec_model,
+                COUNT(*) AS total_viagens,
+                AVG(km_por_litro) AS media_km_por_litro,
+
+                -- Total abaixo da mediana
+                SUM(
+                    CASE
+                        WHEN analise_diff_mediana_90_dias < 0 THEN 1
+                        ELSE 0
+                    END
+                ) AS total_abaixo_mediana,
+
+                -- Percentual abaixo da mediana
+                100 * (
+                    SUM(
+                        CASE
+                            WHEN analise_diff_mediana_90_dias < 0 THEN 1
+                            ELSE 0
+                        END
+                    )::NUMERIC / COUNT(*)::NUMERIC
+                ) AS perc_total_abaixo_mediana,
+
+                -- Total baixa performance
+                SUM(
+                    CASE
+                        WHEN analise_status_90_dias = 'BAIXA PERFOMANCE (<= 2 STD)' THEN 1
+                        WHEN analise_status_90_dias = 'BAIXA PERFORMANCE (<= 1.5 STD)' THEN 1
+                        ELSE 0
+                    END
+                ) AS total_baixa_perfomance,
+
+                -- Percentual baixa performance
+                100 * (
+                    SUM(
+                        CASE
+                            WHEN analise_status_90_dias = 'BAIXA PERFOMANCE (<= 2 STD)' THEN 1
+                            WHEN analise_status_90_dias = 'BAIXA PERFORMANCE (<= 1.5 STD)' THEN 1
+                            ELSE 0
+                        END
+                    )::NUMERIC / COUNT(*)::NUMERIC
+                ) AS perc_baixa_perfomance,
+
+                -- Total de consumo
+                SUM(total_comb_l) AS total_consumo_litros,
+
+                -- Litros excedentes
+                SUM(
+                    ABS(
+                        total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)
+                    )
+                ) AS litros_excedentes,
+
+                -- Total erro de telemetria
+                SUM(
+                    CASE
+                        WHEN analise_status_90_dias = 'ERRO TELEMETRIA (>= 2.0 STD)' THEN 1
+                        ELSE 0
+                    END
+                ) AS total_erro_telemetria,
+
+                -- Percentual de erro de telemetria
+                100 * (
+                    SUM(
+                        CASE
+                            WHEN analise_status_90_dias = 'ERRO TELEMETRIA (>= 2.0 STD)' THEN 1
+                            ELSE 0
+                        END
+                    )::NUMERIC / COUNT(*)::NUMERIC
+                ) AS perc_erro_telemetria
+
+            FROM
+                rmtc_viagens_analise_mix
+            WHERE
+                encontrou_linha = true
+                AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
+                AND CAST("dia" AS date) BETWEEN CURRENT_DATE - INTERVAL '{350} days' AND CURRENT_DATE + INTERVAL '2 days'
+                AND km_por_litro >= 1
+                AND km_por_litro <= 10
+                {subquery_modelos_str}
+                {subquery_dia_marcado_str}
+            GROUP BY
+                vec_num_id,
+                vec_model
+            HAVING
+                COUNT(*) >= {qtd_min_viagens}
+                AND COUNT(DISTINCT "DriverId") >= {qtd_min_motoristas}
+        )
+        SELECT
+            *
+        FROM
+            viagens_agg_periodo
+        WHERE
+            perc_total_abaixo_mediana >= {limite_mediana}
+            AND perc_baixa_perfomance >= {limite_baixa_perfomance}
+            AND perc_erro_telemetria >= {limite_erro_telemetria}
+        ORDER BY
+            perc_baixa_perfomance DESC;
+        """
+
+        # Executa a query
+        df = pd.read_sql(query, self.dbEngine)
+
+        # Arrendonda as colunas necessárias
+        df["media_km_por_litro"] = df["media_km_por_litro"].round(2)
+        df["perc_total_abaixo_mediana"] = df["perc_total_abaixo_mediana"].round(2)
+        df["perc_baixa_perfomance"] = df["perc_baixa_perfomance"].round(2)
+        df["perc_erro_telemetria"] = df["perc_erro_telemetria"].round(2)
+        df["litros_excedentes"] = df["litros_excedentes"].round(2)
+        df["total_consumo_litros"] = df["total_consumo_litros"].round(2)
+
+        return df
+
 
     def get_subquery_dias(self, dias_marcados):
         dias_subquery = ""
@@ -69,7 +223,7 @@ class RegrasService:
             """
 
         return dias_subquery
-        
+
     def get_estatistica_regras(
         self,
         data,
@@ -79,30 +233,28 @@ class RegrasService:
         dias_marcados,
         mediana_viagem,
         indicativo_performace,
-        erro_telemetria         
+        erro_telemetria,
     ):
 
         # Converte para tipos esperados
         mediana_viagem = int(mediana_viagem or 0) / 100
-        erro_telemetria = float(erro_telemetria or 0)  / 100
-        indicativo_performace = float(indicativo_performace or 0)  / 100
+        erro_telemetria = float(erro_telemetria or 0) / 100
+        indicativo_performace = float(indicativo_performace or 0) / 100
         quantidade_de_viagens = int(quantidade_de_viagens or 0)
         numero_de_motoristas = int(numero_de_motoristas or 0)
-        
 
-        # Condições para filtros de dias 
-        if dias_marcados =='SEG_SEX':
-            table = 'mat_view_viagens_classificadas_dia_semana'
+        # Condições para filtros de dias
+        if dias_marcados == "SEG_SEX":
+            table = "mat_view_viagens_classificadas_dia_semana"
 
-        elif dias_marcados == 'SABADO':
-            table = 'mat_view_viagens_classificadas_sabado'
+        elif dias_marcados == "SABADO":
+            table = "mat_view_viagens_classificadas_sabado"
 
-        elif dias_marcados == 'DOMINGO':
-            table = 'mat_view_viagens_classificadas_domingo'
+        elif dias_marcados == "DOMINGO":
+            table = "mat_view_viagens_classificadas_domingo"
 
-        elif dias_marcados == 'FERIADO':
-            table = 'mat_view_viagens_classificadas_feriado'
-
+        elif dias_marcados == "FERIADO":
+            table = "mat_view_viagens_classificadas_feriado"
 
         subquery_modelo = subquery_modelos_regras(modelos)
 
@@ -238,7 +390,6 @@ class RegrasService:
         """
 
         df = pd.read_sql(query, self.dbEngine)
-        
 
         if df.empty:
             return pd.DataFrame(columns=["vec_num_id", "vec_model", "media_consumo_por_km", "total_viagens"])
@@ -247,24 +398,20 @@ class RegrasService:
         df["media_consumo_por_km"] = df["media_consumo_por_km"].round(2)
 
         # AGRUPA para obter comb_excedente_L total e proporcao_abaixo_mediana média por veículo
-        df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg({
-            "comb_excedente_l": "first",
-            "proporcao_abaixo_mediana": "mean"
-        })
+        df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg(
+            {"comb_excedente_l": "first", "proporcao_abaixo_mediana": "mean"}
+        )
 
         # Pivot da tabela: cria colunas para cada status de consumo
         df_pivot = df.pivot_table(
             index=["vec_num_id", "vec_model", "media_consumo_por_km"],
             columns="status_consumo",
             values=["total_status", "percentual_categoria_status"],
-            fill_value=0
+            fill_value=0,
         )
 
         # Ajusta nomes de colunas (ex: total_status_regular, percentual_baixa_performance)
-        df_pivot.columns = [
-            f"{col[0]}_{col[1].lower().replace(' ', '_')}" 
-            for col in df_pivot.columns
-        ]
+        df_pivot.columns = [f"{col[0]}_{col[1].lower().replace(' ', '_')}" for col in df_pivot.columns]
 
         # Converte de volta o índice em colunas
         df_pivot = df_pivot.reset_index()
@@ -286,11 +433,13 @@ class RegrasService:
 
         # Arredonda colunas de percentual
         colunas_para_arredondar = [
-            'percentual_categoria_status_regular',
-            'percentual_categoria_status_suspeita_baixa_perfomance',
-            'percentual_categoria_status_baixa_performance',
-            'comb_excedente_l', 'media_consumo_por_km', 'percentual_categoria_status_erro_telemetria',
-            'proporcao_abaixo_mediana'
+            "percentual_categoria_status_regular",
+            "percentual_categoria_status_suspeita_baixa_perfomance",
+            "percentual_categoria_status_baixa_performance",
+            "comb_excedente_l",
+            "media_consumo_por_km",
+            "percentual_categoria_status_erro_telemetria",
+            "proporcao_abaixo_mediana",
         ]
 
         for coluna in colunas_para_arredondar:
@@ -308,33 +457,33 @@ class RegrasService:
         dias_marcados,
         mediana_viagem,
         indicativo_performace,
-        erro_telemetria         
+        erro_telemetria,
     ):
 
         # Extrai a data inicial e final
-        data_inicio_str, data_fim_str = pd.to_datetime(data[0]).strftime("%Y-%m-%d"), pd.to_datetime(data[1]).strftime("%Y-%m-%d")
+        data_inicio_str, data_fim_str = pd.to_datetime(data[0]).strftime("%Y-%m-%d"), pd.to_datetime(data[1]).strftime(
+            "%Y-%m-%d"
+        )
 
         # Converte para tipos esperados
         mediana_viagem = int(mediana_viagem or 0) / 100
-        erro_telemetria = float(erro_telemetria or 0)  / 100
-        indicativo_performace = float(indicativo_performace or 0)  / 100
+        erro_telemetria = float(erro_telemetria or 0) / 100
+        indicativo_performace = float(indicativo_performace or 0) / 100
         quantidade_de_viagens = int(quantidade_de_viagens or 0)
         numero_de_motoristas = int(numero_de_motoristas or 0)
-        
 
-        # Condições para filtros de dias 
-        if dias_marcados =='SEG_SEX':
-            table = 'mat_view_viagens_classificadas_dia_semana'
+        # Condições para filtros de dias
+        if dias_marcados == "SEG_SEX":
+            table = "mat_view_viagens_classificadas_dia_semana"
 
-        elif dias_marcados == 'SABADO':
-            table = 'mat_view_viagens_classificadas_sabado'
+        elif dias_marcados == "SABADO":
+            table = "mat_view_viagens_classificadas_sabado"
 
-        elif dias_marcados == 'DOMINGO':
-            table = 'mat_view_viagens_classificadas_domingo'
+        elif dias_marcados == "DOMINGO":
+            table = "mat_view_viagens_classificadas_domingo"
 
-        elif dias_marcados == 'FERIADO':
-            table = 'mat_view_viagens_classificadas_feriado'
-
+        elif dias_marcados == "FERIADO":
+            table = "mat_view_viagens_classificadas_feriado"
 
         subquery_modelo = subquery_modelos_regras(modelos)
 
@@ -477,24 +626,20 @@ class RegrasService:
         df["media_consumo_por_km"] = df["media_consumo_por_km"].round(2)
 
         # AGRUPA para obter comb_excedente_L total e proporcao_abaixo_mediana média por veículo
-        df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg({
-            "comb_excedente_l": "first",
-            "proporcao_abaixo_mediana": "mean"
-        })
+        df_extra = df.groupby(["vec_num_id", "vec_model", "media_consumo_por_km"], as_index=False).agg(
+            {"comb_excedente_l": "first", "proporcao_abaixo_mediana": "mean"}
+        )
 
         # Pivot da tabela: cria colunas para cada status de consumo
         df_pivot = df.pivot_table(
             index=["vec_num_id", "vec_model", "media_consumo_por_km"],
             columns="status_consumo",
             values=["total_status", "percentual_categoria_status"],
-            fill_value=0
+            fill_value=0,
         )
 
         # Ajusta nomes de colunas (ex: total_status_regular, percentual_baixa_performance)
-        df_pivot.columns = [
-            f"{col[0]}_{col[1].lower().replace(' ', '_')}" 
-            for col in df_pivot.columns
-        ]
+        df_pivot.columns = [f"{col[0]}_{col[1].lower().replace(' ', '_')}" for col in df_pivot.columns]
 
         # Converte de volta o índice em colunas
         df_pivot = df_pivot.reset_index()
@@ -516,11 +661,13 @@ class RegrasService:
 
         # Arredonda colunas de percentual
         colunas_para_arredondar = [
-            'percentual_categoria_status_regular',
-            'percentual_categoria_status_suspeita_baixa_perfomance',
-            'percentual_categoria_status_baixa_performance',
-            'comb_excedente_l', 'media_consumo_por_km', 'percentual_categoria_status_erro_telemetria',
-            'proporcao_abaixo_mediana'
+            "percentual_categoria_status_regular",
+            "percentual_categoria_status_suspeita_baixa_perfomance",
+            "percentual_categoria_status_baixa_performance",
+            "comb_excedente_l",
+            "media_consumo_por_km",
+            "percentual_categoria_status_erro_telemetria",
+            "proporcao_abaixo_mediana",
         ]
 
         for coluna in colunas_para_arredondar:
@@ -540,26 +687,27 @@ class RegrasService:
         mediana_viagem,
         indicativo_performace,
         erro_telemetria,
-        criar_os_automatica=False, 
+        criar_os_automatica=False,
         enviar_email=False,
         enviar_whatsapp=False,
         wpp_regra_monitoramento=None,  # lista de até 5 números
-        email_regra_monitoramento=None  # lista de até 5 emails
+        email_regra_monitoramento=None,  # lista de até 5 emails
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
 
         # Garantir que as listas tenham 5 posições
-        email_list = (email_regra_monitoramento or []) + [None]*5
+        email_list = (email_regra_monitoramento or []) + [None] * 5
         email_list = email_list[:5]
 
-        wpp_list = (wpp_regra_monitoramento or []) + [None]*5
+        wpp_list = (wpp_regra_monitoramento or []) + [None] * 5
         wpp_list = wpp_list[:5]
 
         try:
             with self.dbEngine.connect() as conn:
-                insert_sql = text("""
+                insert_sql = text(
+                    """
                     INSERT INTO regras_monitoramento (
                         nome_regra,
                         periodo,
@@ -615,57 +763,61 @@ class RegrasService:
                         :wpp4,
                         :wpp5
                     )
-                """)
+                """
+                )
 
-                conn.execute(insert_sql, {
-                    "nome_regra": nome_regra,
-                    "periodo": data,
-                    "modelos": modelos,  # lista de strings
-                    "motoristas": numero_de_motoristas,
-                    "dias_analise": dias_marcados,
-                    "qtd_viagens": quantidade_de_viagens,
-                    "mediana_viagem": mediana_viagem,
-                    "usar_mediana_viagem": usar_mediana,
-                    "indicativo_performace": indicativo_performace,
-                    "usar_indicativo_performace": usar_indicativo,
-                    "erro_telemetria": erro_telemetria,
-                    "usar_erro_telemetria": usar_erro,
-                    "criado_em": datetime.now(),
-                    "criar_os_automatica": criar_os_automatica,
-                    "enviar_email": enviar_email,
-                    "email1": email_list[0],
-                    "email2": email_list[1],
-                    "email3": email_list[2],
-                    "email4": email_list[3],
-                    "email5": email_list[4],
-                    "enviar_whatsapp": enviar_whatsapp,
-                    "wpp1": wpp_list[0],
-                    "wpp2": wpp_list[1],
-                    "wpp3": wpp_list[2],
-                    "wpp4": wpp_list[3],
-                    "wpp5": wpp_list[4]
-                })
+                conn.execute(
+                    insert_sql,
+                    {
+                        "nome_regra": nome_regra,
+                        "periodo": data,
+                        "modelos": modelos,  # lista de strings
+                        "motoristas": numero_de_motoristas,
+                        "dias_analise": dias_marcados,
+                        "qtd_viagens": quantidade_de_viagens,
+                        "mediana_viagem": mediana_viagem,
+                        "usar_mediana_viagem": usar_mediana,
+                        "indicativo_performace": indicativo_performace,
+                        "usar_indicativo_performace": usar_indicativo,
+                        "erro_telemetria": erro_telemetria,
+                        "usar_erro_telemetria": usar_erro,
+                        "criado_em": datetime.now(),
+                        "criar_os_automatica": criar_os_automatica,
+                        "enviar_email": enviar_email,
+                        "email1": email_list[0],
+                        "email2": email_list[1],
+                        "email3": email_list[2],
+                        "email4": email_list[3],
+                        "email5": email_list[4],
+                        "enviar_whatsapp": enviar_whatsapp,
+                        "wpp1": wpp_list[0],
+                        "wpp2": wpp_list[1],
+                        "wpp3": wpp_list[2],
+                        "wpp4": wpp_list[3],
+                        "wpp5": wpp_list[4],
+                    },
+                )
 
                 conn.commit()
                 print("Regra salva com sucesso")
         except Exception as e:
             print(f"Erro ao salvar a regra: {e}")
 
-
     def deletar_regra_monitoramento(self, id_regra):
         try:
             with self.dbEngine.connect() as conn:
-                delete_sql = text("""
+                delete_sql = text(
+                    """
                     DELETE FROM regras_monitoramento
                     WHERE id = :id_regra
-                """)
+                """
+                )
 
                 conn.execute(delete_sql, {"id_regra": id_regra})
                 conn.commit()
 
         except Exception as e:
             print(f"Erro ao deletar a regra: {e}")
-
 
     def atualizar_regra_monitoramento(
         self,
@@ -684,22 +836,23 @@ class RegrasService:
         enviar_whatsapp=False,
         email_list=None,
         wpp_list=None,
-        regra_padronizada=None
+        regra_padronizada=None,
     ):
         usar_mediana = mediana_viagem is not None
         usar_indicativo = indicativo_performace is not None
         usar_erro = erro_telemetria is not None
 
         # Garantir listas de 5 elementos
-        email_list = (email_list or []) + [None]*5
+        email_list = (email_list or []) + [None] * 5
         email_list = email_list[:5]
 
-        wpp_list = (wpp_list or []) + [None]*5
+        wpp_list = (wpp_list or []) + [None] * 5
         wpp_list = wpp_list[:5]
 
         try:
             with self.dbEngine.connect() as conn:
-                update_sql = text("""
+                update_sql = text(
+                    """
                     UPDATE regras_monitoramento
                     SET nome_regra = :nome_regra,
                         periodo = :periodo,
@@ -729,37 +882,41 @@ class RegrasService:
                         regra_padronizada = :regra_padronizada,
                         atualizado_em = NOW()
                     WHERE id = :id_regra
-                """)
+                """
+                )
 
-                conn.execute(update_sql, {
-                    "id_regra": id_regra,
-                    "nome_regra": nome_regra,
-                    "periodo": data,
-                    "modelos": modelos,  # lista de strings (_text)
-                    "motoristas": numero_de_motoristas,
-                    "dias_analise": dias_marcados,
-                    "qtd_viagens": quantidade_de_viagens,
-                    "mediana_viagem": mediana_viagem,
-                    "usar_mediana_viagem": usar_mediana,
-                    "indicativo_performace": indicativo_performace,
-                    "usar_indicativo_performace": usar_indicativo,
-                    "erro_telemetria": erro_telemetria,
-                    "usar_erro_telemetria": usar_erro,
-                    "criar_os_automatica": criar_os_automatica,
-                    "enviar_email": enviar_email,
-                    "email1": email_list[0],
-                    "email2": email_list[1],
-                    "email3": email_list[2],
-                    "email4": email_list[3],
-                    "email5": email_list[4],
-                    "enviar_whatsapp": enviar_whatsapp,
-                    "wpp1": wpp_list[0],
-                    "wpp2": wpp_list[1],
-                    "wpp3": wpp_list[2],
-                    "wpp4": wpp_list[3],
-                    "wpp5": wpp_list[4],
-                    "regra_padronizada": regra_padronizada
-                })
+                conn.execute(
+                    update_sql,
+                    {
+                        "id_regra": id_regra,
+                        "nome_regra": nome_regra,
+                        "periodo": data,
+                        "modelos": modelos,  # lista de strings (_text)
+                        "motoristas": numero_de_motoristas,
+                        "dias_analise": dias_marcados,
+                        "qtd_viagens": quantidade_de_viagens,
+                        "mediana_viagem": mediana_viagem,
+                        "usar_mediana_viagem": usar_mediana,
+                        "indicativo_performace": indicativo_performace,
+                        "usar_indicativo_performace": usar_indicativo,
+                        "erro_telemetria": erro_telemetria,
+                        "usar_erro_telemetria": usar_erro,
+                        "criar_os_automatica": criar_os_automatica,
+                        "enviar_email": enviar_email,
+                        "email1": email_list[0],
+                        "email2": email_list[1],
+                        "email3": email_list[2],
+                        "email4": email_list[3],
+                        "email5": email_list[4],
+                        "enviar_whatsapp": enviar_whatsapp,
+                        "wpp1": wpp_list[0],
+                        "wpp2": wpp_list[1],
+                        "wpp3": wpp_list[2],
+                        "wpp4": wpp_list[3],
+                        "wpp5": wpp_list[4],
+                        "regra_padronizada": regra_padronizada,
+                    },
+                )
 
                 conn.commit()
         except Exception as e:
@@ -778,5 +935,3 @@ class RegrasService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
-
-
