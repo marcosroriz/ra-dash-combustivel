@@ -4,12 +4,16 @@
 # Classe que centraliza os serviços para mostrar na página principal
 
 # Imports básicos
+import os
 import pandas as pd
-import numpy as np
 
 # Imports auxiliares
 from modules.sql_utils import subquery_modelos_combustivel, subquery_linha_combustivel, subquery_sentido_combustivel
 
+# Constante indica o número mínimo de viagens que devem existir para poder classificar o consumo de uma viagem
+# Por exemplo, NUM_MIN_VIAGENS_PARA_CLASSIFICAR = 5 indica que somente as viagens cuja configuração possuam outras 5
+# viagens iguais (mesma linha, sentido, dia, etc) será incluída na análise
+NUM_MIN_VIAGENS_PARA_CLASSIFICAR = os.getenv("NUM_MIN_VIAGENS_PARA_CLASSIFICAR", 5)
 
 class HomeService:
     def __init__(self, dbEngine):
@@ -35,7 +39,7 @@ class HomeService:
         WHERE
 	        encontrou_linha = true
 	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-	        AND analise_num_amostras_90_dias >= 10
+	        AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
  	        AND km_por_litro >= {km_l_min}
 	        AND km_por_litro <= {km_l_max}
             {subquery_modelos_str}
@@ -98,7 +102,7 @@ class HomeService:
         WHERE 
             encontrou_linha = true
 	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-	        AND analise_num_amostras_90_dias >= 10
+	        AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
  	        AND km_por_litro >= {km_l_min}
 	        AND km_por_litro <= {km_l_max}
             {subquery_modelos_str}
@@ -136,7 +140,7 @@ class HomeService:
         WHERE
             encontrou_linha = true
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-            AND analise_num_amostras_90_dias >= 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
             {subquery_modelos_str}
@@ -165,7 +169,7 @@ class HomeService:
         WHERE
             encontrou_linha = true
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-            AND analise_num_amostras_90_dias >= 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
 		    AND analise_status_90_dias = 'BAIXA PERFOMANCE (<= 2 STD)'
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
@@ -265,7 +269,7 @@ class HomeService:
 
         WHERE
             encontrou_linha = true
-            AND analise_num_amostras_90_dias > 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
@@ -318,7 +322,7 @@ class HomeService:
             rmtc_viagens_analise_mix
         WHERE
             encontrou_linha = true
-            AND analise_num_amostras_90_dias > 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}

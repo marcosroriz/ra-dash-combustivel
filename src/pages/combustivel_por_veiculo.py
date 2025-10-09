@@ -353,7 +353,6 @@ def cb_pag_veiculo_indicador_consumo_km_l_visao_veiculo(data):
 
     # Obtem os dados
     df_indicador = veiculo_service.get_indicador_consumo_medio_km_l(datas, vec_num_id, lista_linha, km_l_min, km_l_max)
-
     if df_indicador.empty:
         return ""
     
@@ -502,7 +501,7 @@ def cb_plota_grafico_timeline_consumo_veiculo(
     Input("store-window-size", "data"),
     Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
 )
-def mostrar_ponto_selecionado(data, metadata_browser, ponto_selecionado):
+def cb_plota_histograma_viagem_selecionada(data, metadata_browser, ponto_selecionado):
     # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
     if not data or not data["valido"]:
         return go.Figure()
@@ -524,18 +523,17 @@ def mostrar_ponto_selecionado(data, metadata_browser, ponto_selecionado):
     viagem_linha = ponto_custom_data[3]
     viagem_sentido = ponto_custom_data[4]
     viagem_time_slot = ponto_custom_data[8]
-    vec_model = ponto_custom_data[9]
+    viagem_vec_model = ponto_custom_data[9]
     viagem_dia = ponto_custom_data[10]
     viagem_eh_feriado = ponto_custom_data[11]
+    viagem_data_inicio = ponto_custom_data[13]
 
     # Executa a consulta
     df = veiculo_service.get_histograma_viagens_veiculo(
-        datas,
-        vec_num_id,
-        lista_linha,
         km_l_min,
         km_l_max,
-        vec_model,
+        viagem_data_inicio,
+        viagem_vec_model,
         viagem_linha,
         viagem_sentido,
         viagem_time_slot,
@@ -799,7 +797,7 @@ def gera_layer_eventos_mix(df_eventos_mix, evt_name, cor_icone):
 ##############################################################################
 # Registro da página #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Veículo", path="/combustivel-por-veiculo")
+dash.register_page(__name__, name="Combustível por Veículo", path="/combustivel-por-veiculo")
 
 
 ##############################################################################

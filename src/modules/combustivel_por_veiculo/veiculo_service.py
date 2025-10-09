@@ -4,11 +4,16 @@
 # Classe que centraliza os serviços para mostrar na página de consumo por veículo
 
 # Imports básicos
+import os
 import pandas as pd
-import numpy as np
 
 # Imports auxiliares
 from modules.sql_utils import subquery_modelos_combustivel, subquery_linha_combustivel, subquery_sentido_combustivel
+
+# Constante indica o número mínimo de viagens que devem existir para poder classificar o consumo de uma viagem
+# Por exemplo, NUM_MIN_VIAGENS_PARA_CLASSIFICAR = 5 indica que somente as viagens cuja configuração possuam outras 5
+# viagens iguais (mesma linha, sentido, dia, etc) será incluída na análise
+NUM_MIN_VIAGENS_PARA_CLASSIFICAR = os.getenv("NUM_MIN_VIAGENS_PARA_CLASSIFICAR", 5)
 
 
 class VeiculoService:
@@ -34,7 +39,7 @@ class VeiculoService:
         WHERE
 	        encontrou_linha = true
 	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-	        AND analise_num_amostras_90_dias >= 10
+	        AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
  	        AND km_por_litro >= {km_l_min}
 	        AND km_por_litro <= {km_l_max}
             AND vec_num_id = '{vec_num_id}'
@@ -64,7 +69,7 @@ class VeiculoService:
         WHERE
             encontrou_linha = true
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-            AND analise_num_amostras_90_dias >= 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
             AND vec_num_id = '{vec_num_id}'
@@ -92,7 +97,7 @@ class VeiculoService:
         WHERE
             encontrou_linha = true
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-            AND analise_num_amostras_90_dias >= 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
             AND vec_num_id = '{vec_num_id}'
@@ -142,7 +147,7 @@ class VeiculoService:
         WHERE
             encontrou_linha = TRUE
 	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-	        AND analise_num_amostras_90_dias >= 1
+	        AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
  	        AND km_por_litro >= {km_l_min}
 	        AND km_por_litro <= {km_l_max}
             AND vec_num_id = '{vec_num_id}'
@@ -175,11 +180,9 @@ class VeiculoService:
 
     def get_histograma_viagens_veiculo(
         self,
-        datas,
-        vec_num_id,
-        lista_linhas,
         km_l_min,
         km_l_max,
+        viagem_data,
         viagem_vec_model,
         viagem_linha,
         viagem_sentido,
@@ -188,9 +191,9 @@ class VeiculoService:
         viagem_dia_eh_feriado,
     ):
         # Extraí a data inicial e final
-        data_fim_str = datas[1]
+        data_fim_str = (pd.to_datetime(viagem_data) + pd.DateOffset(days=1)).strftime("%Y-%m-%d") 
         # Pega 90 dias antes de viagens
-        data_inicio_str = (pd.to_datetime(datas[1]) - pd.DateOffset(days=90)).strftime("%Y-%m-%d")
+        data_inicio_str = (pd.to_datetime(viagem_data) - pd.DateOffset(days=90)).strftime("%Y-%m-%d")
 
         # Subqueries
         subquery_dia_semana_str = ""
@@ -218,7 +221,7 @@ class VeiculoService:
         WHERE
             encontrou_linha = TRUE
 	        AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
-	        AND analise_num_amostras_90_dias >= 1
+	        AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
  	        AND km_por_litro >= {km_l_min}
 	        AND km_por_litro <= {km_l_max}
             AND vec_model = '{viagem_vec_model}'
@@ -253,15 +256,7 @@ class VeiculoService:
 
         # Traduz dia da semana para label
         # 1 = Domingo, 2 = Segunda, 3 = Terça, 4 = Quarta, 5 = Quinta, 6 = Sexta, 7 = Sábado
-        dia_semana_map = {
-            1: "Domingo",
-            2: "Segunda",
-            3: "Terça",
-            4: "Quarta",
-            5: "Quinta",
-            6: "Sexta",
-            7: "Sábado"
-        }
+        dia_semana_map = {1: "Domingo", 2: "Segunda", 3: "Terça", 4: "Quarta", 5: "Quinta", 6: "Sexta", 7: "Sábado"}
         df["dia_semana_label"] = df["dia_numerico"].map(dia_semana_map)
 
         return df
@@ -288,7 +283,7 @@ class VeiculoService:
             ON r."DriverId" = m."DriverId"
         WHERE
             encontrou_linha = true
-            AND analise_num_amostras_90_dias > 10
+            AND analise_num_amostras_90_dias >= {NUM_MIN_VIAGENS_PARA_CLASSIFICAR}
             AND CAST("dia" AS date) BETWEEN DATE '{data_inicio_str}' AND DATE '{data_fim_str}'
             AND km_por_litro >= {km_l_min}
             AND km_por_litro <= {km_l_max}
@@ -376,7 +371,6 @@ class VeiculoService:
 
         return df
 
-
     def get_detalhamento_evento_mix_veiculo(self, data_inicio_str, data_fim_str, vec_asset_id, event_name):
         query = f"""
             SELECT
@@ -399,7 +393,6 @@ class VeiculoService:
         df["Name"] = df["Name"].fillna("Não informado")
         return df
 
-
     def get_posicao_gps_veiculo(self, data_inicio_str, data_fim_str, vec_asset_id):
         query = f"""
             SELECT
@@ -417,7 +410,7 @@ class VeiculoService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
-    
+
     def get_shape_linha(self, data_str, viagem_linha, viagem_sentido):
         query = f"""
         SELECT
@@ -439,6 +432,3 @@ class VeiculoService:
         df = pd.read_sql(query, self.dbEngine)
 
         return df
-
-
-
