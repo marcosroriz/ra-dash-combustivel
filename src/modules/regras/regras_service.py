@@ -1,20 +1,26 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# Classe que centraliza os serviços para mostrar na página de criação de regras
+
 # Imports básicos
+import os
 import pandas as pd
-import numpy as np
 
 # Lib para lidar com feriados
-from datetime import datetime, timedelta
+from datetime import datetime
 from modules.sql_utils import *
 from sqlalchemy import text
 
-# Imports auxiliares
+# Constante indica o número mínimo de viagens que devem existir para poder classificar o consumo de uma viagem
+# Por exemplo, NUM_MIN_VIAGENS_PARA_CLASSIFICAR = 5 indica que somente as viagens cuja configuração possuam outras 5
+# viagens iguais (mesma linha, sentido, dia, etc) será incluída na análise
+NUM_MIN_VIAGENS_PARA_CLASSIFICAR = os.getenv("NUM_MIN_VIAGENS_PARA_CLASSIFICAR", 5)
 
 
 class RegrasService:
-
-    def __init__(self, pgEngine):
-
-        self.pgEngine = pgEngine
+    def __init__(self, dbEngine):
+        self.dbEngine = dbEngine
 
     def get_regras(self, lista_regras):
 
@@ -31,7 +37,7 @@ class RegrasService:
         if lista_regras and 'TODAS' not in lista_regras:
             query += f' WHERE {subquery_regras}'
 
-        df = pd.read_sql(query, self.pgEngine)
+        df = pd.read_sql(query, self.dbEngine)
         df = df.sort_values('nome_regra')
         return df
 
@@ -231,7 +237,7 @@ class RegrasService:
 
         """
 
-        df = pd.read_sql(query, self.pgEngine)
+        df = pd.read_sql(query, self.dbEngine)
         
 
         if df.empty:
@@ -462,7 +468,7 @@ class RegrasService:
             ON e.vec_asset_id = p.vec_asset_id;
 
         """
-        df = pd.read_sql(query, self.pgEngine)
+        df = pd.read_sql(query, self.dbEngine)
 
         if df.empty:
             return pd.DataFrame(columns=["vec_num_id", "vec_model", "media_consumo_por_km", "total_viagens"])
@@ -552,7 +558,7 @@ class RegrasService:
         wpp_list = wpp_list[:5]
 
         try:
-            with self.pgEngine.connect() as conn:
+            with self.dbEngine.connect() as conn:
                 insert_sql = text("""
                     INSERT INTO regras_monitoramento (
                         nome_regra,
@@ -648,7 +654,7 @@ class RegrasService:
 
     def deletar_regra_monitoramento(self, id_regra):
         try:
-            with self.pgEngine.connect() as conn:
+            with self.dbEngine.connect() as conn:
                 delete_sql = text("""
                     DELETE FROM regras_monitoramento
                     WHERE id = :id_regra
@@ -692,7 +698,7 @@ class RegrasService:
         wpp_list = wpp_list[:5]
 
         try:
-            with self.pgEngine.connect() as conn:
+            with self.dbEngine.connect() as conn:
                 update_sql = text("""
                     UPDATE regras_monitoramento
                     SET nome_regra = :nome_regra,
@@ -769,7 +775,7 @@ class RegrasService:
         """
 
         # Executa a query
-        df = pd.read_sql(query, self.pgEngine)
+        df = pd.read_sql(query, self.dbEngine)
 
         return df
 
