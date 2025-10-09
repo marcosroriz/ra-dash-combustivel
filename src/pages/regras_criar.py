@@ -37,7 +37,7 @@ from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
 
 # Imports gerais
-from modules.entities_utils import  get_modelos_veiculos_regras
+from modules.entities_utils import get_modelos_veiculos_regras
 
 
 ##############################################################################
@@ -60,15 +60,16 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # LOADER #####################################################################
 ###################################################################################
 
+
 ##############################################################################
 # Callbacks para dados ######################################################
 ##############################################################################
 @callback(
     [
         Output("tabela-regras-viagens-monitoramento", "rowData"),
-        Output("indicador-quantidade-de-veiculos", "children"),
-        Output("indicador-quantidade-gasto-combustivel", "children"),
-        Output("indicador-media-gasto-combustivel", "children"),
+        Output("pag-criar-regra-indicador-quantidade-de-veiculos", "children"),
+        Output("pag-criar-regra-btn-criar-regra-indicador-quantidade-gasto-combustivel", "children"),
+        Output("pag-criar-regra-indicador-media-gasto-combustivel", "children"),
     ],
     [
         Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
@@ -82,24 +83,32 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
     ],
 )
 def atualiza_tabela_regra_viagens_monitoramento(
-    data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
+    data,
+    modelos,
+    motoristas,
+    quantidade_de_viagens,
+    dias_marcados,
     mediana_viagem,
-    indicativo_performace, erro_telemetria
+    indicativo_performace,
+    erro_telemetria,
 ):
     df = regra_service.get_estatistica_regras(
-        data, modelos, motoristas,
-        quantidade_de_viagens, dias_marcados, 
+        data,
+        modelos,
+        motoristas,
+        quantidade_de_viagens,
+        dias_marcados,
         mediana_viagem,
-        indicativo_performace, erro_telemetria
+        indicativo_performace,
+        erro_telemetria,
     )
 
     if df.empty:
         return [], 0, 0, 0
 
-    df['comb_excedente_l'] = df['comb_excedente_l'].astype(float)
+    df["comb_excedente_l"] = df["comb_excedente_l"].astype(float)
 
-    quantidade_veiculo = df['vec_num_id'].nunique()
+    quantidade_veiculo = df["vec_num_id"].nunique()
 
     total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
 
@@ -108,11 +117,10 @@ def atualiza_tabela_regra_viagens_monitoramento(
     return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
 
 
-
 @callback(
-    Output("mensagem-sucesso-criar", "children"),
+    Output("pag-criar-regra-btn-criar-regra-mensagem-sucesso-criar", "children"),
     [
-        Input("btn-criar-regra-monitoramento", "n_clicks"),
+        Input("pag-criar-regra-btn-criar-regra-monitoramento", "n_clicks"),
         Input("pag-criar-regra-input-nome-regra-monitoramento", "value"),
         Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),
         Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),
@@ -122,43 +130,58 @@ def atualiza_tabela_regra_viagens_monitoramento(
         Input("pag-criar-regra-select-mediana", "value"),
         Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
         Input("pag-criar-regra-select-erro-telemetria", "value"),
-        Input("switch-os-automatica", "checked"),
-        Input("pag-criar-regra-switch-enviar-email-regra-criar-combustivel", "checked"),
-        Input("switch-enviar-wpp-regra-criar-combustivel", "checked"),
+        Input("pag-criar-regra-switch-os-automatica", "checked"),
+        Input("pag-criar-regra-switch-enviar-email", "checked"),
+        Input("pag-criar-regra-switch-enviar-wpp", "checked"),
         # Emails
-        Input("input-email-1-regra-criar-combustivel", "value"),
-        Input("input-email-2-regra-criar-combustivel", "value"),
-        Input("input-email-3-regra-criar-combustivel", "value"),
-        Input("input-email-4-regra-criar-combustivel", "value"),
-        Input("input-email-5-regra-criar-combustivel", "value"),
+        Input("pag-criar-regra-input-email-1", "value"),
+        Input("pag-criar-regra-input-email-2", "value"),
+        Input("pag-criar-regra-input-email-3", "value"),
+        Input("pag-criar-regra-input-email-4", "value"),
+        Input("pag-criar-regra-input-email-5", "value"),
         # WhatsApps
-        Input("input-wpp-1-regra-criar-combustivel", "value"),
-        Input("input-wpp-2-regra-criar-combustivel", "value"),
-        Input("input-wpp-3-regra-criar-combustivel", "value"),
-        Input("input-wpp-4-regra-criar-combustivel", "value"),
-        Input("input-wpp-5-regra-criar-combustivel", "value"),
+        Input("pag-criar-regra-input-wpp-1", "value"),
+        Input("pag-criar-regra-input-wpp-2", "value"),
+        Input("pag-criar-regra-input-wpp-3", "value"),
+        Input("pag-criar-regra-input-wpp-4", "value"),
+        Input("pag-criar-regra-input-wpp-5", "value"),
     ],
-    prevent_initial_call=True
+    prevent_initial_call=True,
 )
-def salvar_regra_monitoramento(
-    n_clicks, nome_regra,
-    data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
-    mediana_viagem, 
-    indicativo_performace, erro_telemetria,
-    criar_os_automatica, enviar_email, enviar_whatsapp,
-    email1, email2, email3, email4, email5,
-    wpp1, wpp2, wpp3, wpp4, wpp5
-): 
+def cb_salvar_regra_monitoramento_combustivel(
+    n_clicks,
+    nome_regra,
+    data,
+    modelos,
+    motoristas,
+    quantidade_de_viagens,
+    dias_marcados,
+    mediana_viagem,
+    indicativo_performace,
+    erro_telemetria,
+    criar_os_automatica,
+    enviar_email,
+    enviar_whatsapp,
+    email1,
+    email2,
+    email3,
+    email4,
+    email5,
+    wpp1,
+    wpp2,
+    wpp3,
+    wpp4,
+    wpp5,
+):
     ctx = callback_context
     if not ctx.triggered:
         return dash.no_update
 
-    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if triggered_id != "btn-criar-regra-monitoramento":
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if triggered_id != "pag-criar-regra-btn-criar-regra-monitoramento":
         return dash.no_update
 
-    if not n_clicks or n_clicks <= 0: 
+    if not n_clicks or n_clicks <= 0:
         return dash.no_update
 
     # Monta listas de emails e WhatsApps
@@ -167,24 +190,31 @@ def salvar_regra_monitoramento(
 
     try:
         regra_service.salvar_regra_monitoramento(
-            nome_regra, data, modelos, motoristas,
-            quantidade_de_viagens, dias_marcados, 
+            nome_regra,
+            data,
+            modelos,
+            motoristas,
+            quantidade_de_viagens,
+            dias_marcados,
             mediana_viagem,
-            indicativo_performace, erro_telemetria,
-            criar_os_automatica, enviar_email, 
-            enviar_whatsapp, wpp_list, email_list
+            indicativo_performace,
+            erro_telemetria,
+            criar_os_automatica,
+            enviar_email,
+            enviar_whatsapp,
+            wpp_list,
+            email_list,
         )
         return "✅ Regra salva com sucesso!"
     except Exception as e:
         return f"❌ Erro ao salvar a regra: {e}"
 
 
-
 @callback(
     Output("tabela-regras-viagens-monitoramento", "style"),
     Output("row-labels-adicionais", "style"),
-    Input("btn-preview-regra-monitoramento", "n_clicks"),
-    prevent_initial_call=True
+    Input("pag-criar-regra-btn-preview-regra-monitoramento", "n_clicks"),
+    prevent_initial_call=True,
 )
 def toggle_tabela(n_clicks):
     base_style = {
@@ -201,6 +231,7 @@ def toggle_tabela(n_clicks):
 # Callbacks para switch ######################################################
 ##############################################################################
 
+
 @callback(
     [
         Output("pag-criar-regra-container-mediana", "style"),
@@ -209,7 +240,7 @@ def toggle_tabela(n_clicks):
     [
         Input("pag-criar-regra-switch-mediana", "checked"),
         Input("pag-criar-regra-select-mediana", "value"),
-    ]
+    ],
 )
 def input_mediana(ativado, value):
     # Se ativado (True): display block; se desativado: none
@@ -219,6 +250,7 @@ def input_mediana(ativado, value):
 
     return activate, value
 
+
 @callback(
     [
         Output("pag-criar-regra-container-baixa-performace-indicativo", "style"),
@@ -227,7 +259,7 @@ def input_mediana(ativado, value):
     [
         Input("pag-criar-regra-switch-baixa-performace-indicativo", "checked"),
         Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
-    ]
+    ],
 )
 def input_baixa_performace_indicativo(ativado, value):
     # Se ativado (True): display block; se desativado: none
@@ -235,6 +267,7 @@ def input_baixa_performace_indicativo(ativado, value):
     if not ativado:
         value = None
     return activate, value
+
 
 @callback(
     [
@@ -244,7 +277,7 @@ def input_baixa_performace_indicativo(ativado, value):
     [
         Input("pag-criar-regra-switch-erro-telemetria", "checked"),
         Input("pag-criar-regra-select-erro-telemetria", "value"),
-    ]
+    ],
 )
 def input_erro_telemetria(ativado, value):
     # Se ativado (True): display block; se desativado: none
@@ -253,62 +286,60 @@ def input_erro_telemetria(ativado, value):
         value = None
     return activate, value
 
+
 # Função para mostrar o input de WhatsApp de destino
 @callback(
-    Output("input-wpp-destino-container-regra-criar-combustivel", "style"),
-    Input("switch-enviar-wpp-regra-criar-combustivel", "checked"),
+    Output("pag-criar-regra-input-wpp-destino-container", "style"),
+    Input("pag-criar-regra-switch-enviar-wpp", "checked"),
 )
 def mostra_input_wpp_destino(wpp_ativo):
     if wpp_ativo:
         return {"display": "block"}
     else:
         return {"display": "none"}
-    
+
+
 # Função para mostrar o input de WhatsApp de destino
 @callback(
-    Output("pag-criar-regra-input-email-destino-container-regra-criar-combustivel", "style"),
-    Input("pag-criar-regra-switch-enviar-email-regra-criar-combustivel", "checked"),
+    Output("pag-criar-regra-pag-criar-regra-input-email-destino-container", "style"),
+    Input("pag-criar-regra-switch-enviar-email", "checked"),
 )
 def mostra_input_email_destino(wpp_ativo):
     if wpp_ativo:
         return {"display": "block"}
     else:
         return {"display": "none"}
+
+
 ##############################################################################
 # Labels #####################################################################
 ##############################################################################
-def gera_labels_inputs(campo):
+def gera_labels_inputs_pag_criar_regra(campo):
     @callback(
         Output(f"{campo}-labels", "children"),
         [
             Input("pag-criar-regra-input-periodo-dias-monitoramento-regra", "value"),  # datas
-            Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("pag-criar-regra-input-quantidade-de-motoristas", "value"), # Motoristas
+            Input("pag-criar-regra-input-modelos-monitoramento-regra", "value"),  # modelos
+            Input("pag-criar-regra-input-quantidade-de-motoristas", "value"),  # Motoristas
             Input("pag-criar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
-            Input("pag-criar-regra-input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
+            Input("pag-criar-regra-input-select-dia-linha-combustivel-regra", "value"),  # dias marcados
             Input("pag-criar-regra-select-mediana", "value"),
             Input("pag-criar-regra-select-baixa-performace-indicativo", "value"),
             Input("pag-criar-regra-select-erro-telemetria", "value"),
-        ]
+        ],
     )
-    def atualiza_labels_inputs(
-        datas, modelos, motoristas,
-        qtd_viagens, dias_marcados,
-        mediana, indicativo, erro
+    def atualiza_labels_inputs_pag_criar_regra(
+        datas, modelos, motoristas, qtd_viagens, dias_marcados, mediana, indicativo, erro
     ):
         badges = [
             dmc.Badge(
-            "Filtro",
-            color="gray",
-            variant="outline",
-            size="lg",
-            style={"fontSize": 16, "padding": "6px 12px"}
-        )
+                "Filtro", color="gray", variant="outline", size="lg", style={"fontSize": 16, "padding": "6px 12px"}
+            )
         ]
 
         # Datas
         if datas:
-            data_inicio = pd.to_datetime(datetime.now()- timedelta(days=datas)).strftime("%d/%m/%Y")
+            data_inicio = pd.to_datetime(datetime.now() - timedelta(days=datas)).strftime("%d/%m/%Y")
             data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
             badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
 
@@ -323,7 +354,7 @@ def gera_labels_inputs(campo):
         if motoristas:
             badges.append(dmc.Badge(f"Min. {motoristas} motoristas diferentes", variant="outline"))
 
-         # Outras métricas
+        # Outras métricas
         if qtd_viagens:
             badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
 
@@ -369,6 +400,7 @@ def atualizar_modelos_selecao(valores_selecionados):
     # Se nada for selecionado, mantém vazio (não retorna "TODOS")
     return valores_selecionados
 
+
 ######################## Corrigir input #############################
 # Função para validar o input de email de destino
 def verifica_erro_email(email_destino):
@@ -384,40 +416,40 @@ def verifica_erro_email(email_destino):
 
 
 @callback(
-    Output("input-email-1-regra-criar-combustivel", "error"),
-    Input("input-email-1-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-email-1", "error"),
+    Input("pag-criar-regra-input-email-1", "value"),
 )
 def verifica_erro_email_1(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("input-email-2-regra-criar-combustivel", "error"),
-    Input("input-email-2-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-email-2", "error"),
+    Input("pag-criar-regra-input-email-2", "value"),
 )
 def verifica_erro_email_2(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("input-email-3-regra-criar-combustivel", "error"),
-    Input("input-email-3-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-email-3", "error"),
+    Input("pag-criar-regra-input-email-3", "value"),
 )
 def verifica_erro_email_3(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("input-email-4-regra-criar-combustivel", "error"),
-    Input("input-email-4-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-email-4", "error"),
+    Input("pag-criar-regra-input-email-4", "value"),
 )
 def verifica_erro_email_4(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("input-email-5-regra-criar-combustivel", "error"),
-    Input("input-email-5-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-email-5", "error"),
+    Input("pag-criar-regra-input-email-5", "value"),
 )
 def verifica_erro_email_5(email_destino):
     return verifica_erro_email(email_destino)
@@ -447,43 +479,44 @@ def verifica_erro_wpp(wpp_telefone):
 
 
 @callback(
-    Output("input-wpp-1-regra-criar-combustivel", "error"),
-    Input("input-wpp-1-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-wpp-1", "error"),
+    Input("pag-criar-regra-input-wpp-1", "value"),
 )
 def verifica_erro_wpp_1(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("input-wpp-2-regra-criar-combustivel", "error"),
-    Input("input-wpp-2-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-wpp-2", "error"),
+    Input("pag-criar-regra-input-wpp-2", "value"),
 )
 def verifica_erro_wpp_2(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("input-wpp-3-regra-criar-combustivel", "error"),
-    Input("input-wpp-3-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-wpp-3", "error"),
+    Input("pag-criar-regra-input-wpp-3", "value"),
 )
 def verifica_erro_wpp_3(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("input-wpp-4-regra-criar-combustivel", "error"),
-    Input("input-wpp-4-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-wpp-4", "error"),
+    Input("pag-criar-regra-input-wpp-4", "value"),
 )
 def verifica_erro_wpp_4(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("input-wpp-5-regra-criar-combustivel", "error"),
-    Input("input-wpp-5-regra-criar-combustivel", "value"),
+    Output("pag-criar-regra-input-wpp-5", "error"),
+    Input("pag-criar-regra-input-wpp-5", "value"),
 )
 def verifica_erro_wpp_5(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
+
 
 ##############################################################################
 # Layout #####################################################################
@@ -519,7 +552,6 @@ layout = dbc.Container(
                                 html.Hr(),
                             ]
                         ),
-
                         # Nome da Regra e Período
                         dbc.Row(
                             [
@@ -591,9 +623,7 @@ layout = dbc.Container(
                                 ),
                             ]
                         ),
-
                         dmc.Space(h=10),
-
                         # Linha e Viagens
                         dbc.Row(
                             [
@@ -649,9 +679,7 @@ layout = dbc.Container(
                                 ),
                             ]
                         ),
-
                         dmc.Space(h=10),
-
                         # Filtros e Switches
                         dbc.Row(
                             [
@@ -680,7 +708,6 @@ layout = dbc.Container(
                                     ),
                                     md=6,
                                 ),
-                                
                                 # Mediana
                                 dbc.Col(
                                     dbc.Card(
@@ -750,7 +777,6 @@ layout = dbc.Container(
                                     ),
                                     md=6,
                                 ),
-
                                 # Erro telemetria
                                 dbc.Col(
                                     dbc.Card(
@@ -786,171 +812,170 @@ layout = dbc.Container(
                                     md=6,
                                 ),
                                 dmc.Space(h=10),
-
                                 dbc.Col(
-                                        dbc.Card(
-                                            dbc.Row(
-                                                [
-                                                    dbc.Col(
-                                                        dmc.Switch(
-                                                            id="pag-criar-regra-switch-enviar-email-regra-criar-combustivel",
-                                                            label="Enviar email",
-                                                            checked=False,
-                                                            size="md",
-                                                        ),
-                                                        width="auto",
+                                    dbc.Card(
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dmc.Switch(
+                                                        id="pag-criar-regra-switch-enviar-email",
+                                                        label="Enviar email",
+                                                        checked=False,
+                                                        size="md",
                                                     ),
-                                                    dbc.Col(
-                                                        dbc.Row(
-                                                            [
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dbc.Label("Emails de destino (Digite até 5 emails)"),
-                                                                    md=12,
+                                                    width="auto",
+                                                ),
+                                                dbc.Col(
+                                                    dbc.Row(
+                                                        [
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dbc.Label("Emails de destino (Digite até 5 emails)"),
+                                                                md=12,
+                                                            ),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-email-1",
+                                                                    placeholder="email1@odilonsantos.com",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="mdi:email"),
                                                                 ),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-email-1-regra-criar-combustivel",
-                                                                        placeholder="email1@odilonsantos.com",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="mdi:email"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-email-2",
+                                                                    placeholder="email2@odilonsantos.com",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="mdi:email"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-email-2-regra-criar-combustivel",
-                                                                        placeholder="email2@odilonsantos.com",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="mdi:email"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-email-3",
+                                                                    placeholder="email3@odilonsantos.com",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="mdi:email"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-email-3-regra-criar-combustivel",
-                                                                        placeholder="email3@odilonsantos.com",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="mdi:email"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-email-4",
+                                                                    placeholder="email4@odilonsantos.com",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="mdi:email"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-email-4-regra-criar-combustivel",
-                                                                        placeholder="email4@odilonsantos.com",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="mdi:email"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-email-5",
+                                                                    placeholder="email5@odilonsantos.com",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="mdi:email"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-email-5-regra-criar-combustivel",
-                                                                        placeholder="email5@odilonsantos.com",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="mdi:email"),
-                                                                    ),
-                                                                    md=12,
-                                                                ),
-                                                            ],
-                                                            align="center",
-                                                        ),
-                                                        id="pag-criar-regra-input-email-destino-container-regra-criar-combustivel",
-                                                        md=12,
+                                                                md=12,
+                                                            ),
+                                                        ],
+                                                        align="center",
                                                     ),
-                                                ],
-                                                align="center",
-                                            ),
-                                            body=True,
+                                                    id="pag-criar-regra-pag-criar-regra-input-email-destino-container",
+                                                    md=12,
+                                                ),
+                                            ],
+                                            align="center",
                                         ),
-                                        md=6,
+                                        body=True,
                                     ),
-                                    dbc.Col(
-                                        dbc.Card(
-                                            dbc.Row(
-                                                [
-                                                    dbc.Col(
-                                                        dmc.Switch(
-                                                            id="switch-enviar-wpp-regra-criar-combustivel",
-                                                            label="Enviar WhatsApp",
-                                                            checked=False,
-                                                            size="md",
-                                                        ),
-                                                        width="auto",
+                                    md=6,
+                                ),
+                                dbc.Col(
+                                    dbc.Card(
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    dmc.Switch(
+                                                        id="pag-criar-regra-switch-enviar-wpp",
+                                                        label="Enviar WhatsApp",
+                                                        checked=False,
+                                                        size="md",
                                                     ),
-                                                    dbc.Col(
-                                                        dbc.Row(
-                                                            [
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dbc.Label("WhatsApp de destino (Digite até 5 números)"),
-                                                                    md=12,
+                                                    width="auto",
+                                                ),
+                                                dbc.Col(
+                                                    dbc.Row(
+                                                        [
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dbc.Label("WhatsApp de destino (Digite até 5 números)"),
+                                                                md=12,
+                                                            ),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-wpp-1",
+                                                                    placeholder="(62) 99999-9999",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="logos:whatsapp-icon"),
                                                                 ),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-wpp-1-regra-criar-combustivel",
-                                                                        placeholder="(62) 99999-9999",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="logos:whatsapp-icon"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-wpp-2",
+                                                                    placeholder="(62) 99999-9999",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="logos:whatsapp-icon"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-wpp-2-regra-criar-combustivel",
-                                                                        placeholder="(62) 99999-9999",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="logos:whatsapp-icon"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-wpp-3",
+                                                                    placeholder="(62) 99999-9999",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="logos:whatsapp-icon"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-wpp-3-regra-criar-combustivel",
-                                                                        placeholder="(62) 99999-9999",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="logos:whatsapp-icon"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-wpp-4",
+                                                                    placeholder="(62) 99999-9999",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="logos:whatsapp-icon"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-wpp-4-regra-criar-combustivel",
-                                                                        placeholder="(62) 99999-9999",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="logos:whatsapp-icon"),
-                                                                    ),
-                                                                    md=12,
+                                                                md=12,
+                                                            ),
+                                                            dmc.Space(h=10),
+                                                            dbc.Col(
+                                                                dmc.TextInput(
+                                                                    id="pag-criar-regra-input-wpp-5",
+                                                                    placeholder="(62) 99999-9999",
+                                                                    value="",
+                                                                    leftSection=DashIconify(icon="logos:whatsapp-icon"),
                                                                 ),
-                                                                dmc.Space(h=10),
-                                                                dbc.Col(
-                                                                    dmc.TextInput(
-                                                                        id="input-wpp-5-regra-criar-combustivel",
-                                                                        placeholder="(62) 99999-9999",
-                                                                        value="",
-                                                                        leftSection=DashIconify(icon="logos:whatsapp-icon"),
-                                                                    ),
-                                                                    md=12,
-                                                                ),
-                                                            ],
-                                                            align="center",
-                                                        ),
-                                                        id="input-wpp-destino-container-regra-criar-combustivel",
-                                                        md=12,
+                                                                md=12,
+                                                            ),
+                                                        ],
+                                                        align="center",
                                                     ),
-                                                ],
-                                                align="center",
-                                            ),
-                                            body=True,
+                                                    id="pag-criar-regra-input-wpp-destino-container",
+                                                    md=12,
+                                                ),
+                                            ],
+                                            align="center",
                                         ),
+                                        body=True,
+                                    ),
                                 ),
                                 dmc.Space(h=10),
                                 # OS automática
@@ -959,7 +984,7 @@ layout = dbc.Container(
                                         dbc.Row(
                                             dbc.Col(
                                                 dmc.Switch(
-                                                    id="switch-os-automatica",
+                                                    id="pag-criar-regra-switch-os-automatica",
                                                     label="Criar OS automática",
                                                     checked=False,
                                                     size="md",
@@ -981,10 +1006,8 @@ layout = dbc.Container(
                 ),
             ]
         ),
-
         dmc.Space(h=10),
-
-       # Botões de Preview e Criar Regra
+        # Botões de Preview e Criar Regra
         dbc.Row(
             [
                 # Botão Preview
@@ -993,7 +1016,7 @@ layout = dbc.Container(
                         [
                             html.Button(
                                 "Preview da Regra",
-                                id="btn-preview-regra-monitoramento",
+                                id="pag-criar-regra-btn-preview-regra-monitoramento",
                                 n_clicks=0,
                                 style={
                                     "background-color": "#f9a704",
@@ -1009,22 +1032,21 @@ layout = dbc.Container(
                                 },
                             ),
                             html.Div(
-                                id="mensagem-sucesso-preview",
-                                style={"marginTop": "10px", "fontWeight": "bold"}
+                                id="pag-criar-regra-mensagem-sucesso-preview",
+                                style={"marginTop": "10px", "fontWeight": "bold"},
                             ),
                         ],
                         style={"textAlign": "center"},
                     ),
                     width="auto",
                 ),
-
                 # Botão Criar
                 dbc.Col(
                     html.Div(
                         [
                             html.Button(
                                 "Criar Regra",
-                                id="btn-criar-regra-monitoramento",
+                                id="pag-criar-regra-btn-criar-regra-monitoramento",
                                 n_clicks=0,
                                 style={
                                     "background-color": "#007bff",
@@ -1045,17 +1067,14 @@ layout = dbc.Container(
                     width="auto",
                 ),
                 html.Div(
-                    id="mensagem-sucesso-criar",
-                    style={"marginTop": "10px", "fontWeight": "bold"}
+                    id="pag-criar-regra-btn-criar-regra-mensagem-sucesso-criar",
+                    style={"marginTop": "10px", "fontWeight": "bold"},
                 ),
-
             ],
-            justify="center",      # Centraliza horizontalmente
-            align="center",        # Alinha verticalmente
+            justify="center",  # Centraliza horizontalmente
+            align="center",  # Alinha verticalmente
         ),
-
         dmc.Space(h=20),
-
         # Indicador de veículos
         dbc.Row(
             [
@@ -1065,7 +1084,10 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="indicador-quantidade-gasto-combustivel", order=2),
+                                        dmc.Title(
+                                            id="pag-criar-regra-btn-criar-regra-indicador-quantidade-gasto-combustivel",
+                                            order=2,
+                                        ),
                                         DashIconify(icon="mdi:gas-station", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -1086,7 +1108,7 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="indicador-quantidade-de-veiculos", order=2),
+                                        dmc.Title(id="pag-criar-regra-indicador-quantidade-de-veiculos", order=2),
                                         DashIconify(icon="mdi:bomb", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -1107,7 +1129,7 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="indicador-media-gasto-combustivel", order=2),
+                                        dmc.Title(id="pag-criar-regra-indicador-media-gasto-combustivel", order=2),
                                         DashIconify(icon="mdi:gas-station", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -1125,20 +1147,16 @@ layout = dbc.Container(
             ],
             justify="center",
         ),
-        
         dmc.Space(h=10),
-
         # Labels adicionais
         dbc.Row(
             [
-                dbc.Col(gera_labels_inputs("labels-regra-service"), width=True),
+                dbc.Col(gera_labels_inputs_pag_criar_regra("labels-regra-service"), width=True),
             ],
-                style={"display": "none"},  # começa escondido
-                id="row-labels-adicionais"
+            style={"display": "none"},  # começa escondido
+            id="row-labels-adicionais",
         ),
-
         dmc.Space(h=20),
-
         # Tabela de regras
         html.Div(
             id="container-tabela-regras",
@@ -1159,14 +1177,15 @@ layout = dbc.Container(
                         "height": 400,
                         "resize": "vertical",
                         "overflow": "hidden",
-                        "display": "none"  # começa escondida
+                        "display": "none",  # começa escondida
                     },
                 )
-            ]
+            ],
         ),
-
     ],
     style={"margin-top": "20px", "margin-bottom": "20px"},
 )
 
-dash.register_page(__name__, name="Regras de monitoramento", path="/regras-monitoramento",  icon="carbon:rule-draft", hide_page=True)
+dash.register_page(
+    __name__, name="Regras de monitoramento", path="/regras-monitoramento", icon="carbon:rule-draft", hide_page=True
+)
