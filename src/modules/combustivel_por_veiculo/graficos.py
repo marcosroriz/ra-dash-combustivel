@@ -5,8 +5,6 @@
 
 # Imports básicos
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 
 # Imports gráficos
 import matplotlib.colors as mcolors
@@ -15,9 +13,6 @@ import plotly.graph_objects as go
 
 # Imports do tema
 import tema
-
-# Funções para formatação
-from modules.str_utils import truncate_label
 
 
 # Rotinas para gerar os Gráficos
@@ -82,13 +77,16 @@ def gerar_grafico_pizza_sinteze_veiculo(df, labels, values, metadata_browser):
     # Retorna o gráfico
     return fig
 
-def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_selecionado=None, range_selecionado=None, anotacao_no_grafico=None):
+
+def gerar_grafico_timeline_consumo_veiculo(
+    df, metadata_browser, df_ponto_selecionado=None, range_selecionado=None, anotacao_no_grafico=None
+):
     status_colors = {
         "NORMAL": tema.COR_NORMAL,
         "SUSPEITA BAIXA PERFORMANCE (<= 1.0 STD)": tema.COR_COMB_10_STD,
         "BAIXA PERFORMANCE (<= 1.5 STD)": tema.COR_COMB_15_STD,
         "BAIXA PERFOMANCE (<= 2 STD)": tema.COR_COMB_20_STD,
-        'ERRO TELEMETRIA (>= 2.0 STD)': tema.COR_COMB_ERRO,
+        "ERRO TELEMETRIA (>= 2.0 STD)": tema.COR_COMB_ERRO,
     }
 
     # Inicia o gráfico
@@ -101,7 +99,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
             y=df["analise_valor_mediana_90_dias"],
             mode="lines",
             name="Valor Esperado (Mediana)",
-            line=dict(color="gray", width=2, dash="dash")
+            line=dict(color="gray", width=2, dash="dash"),
         )
     )
 
@@ -131,7 +129,10 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
                         "vec_model",
                         "dia_numerico",
                         "dia_eh_feriado",
-                        "tamanho_linha_km_sobreposicao"
+                        "tamanho_linha_km_sobreposicao",
+                        "timestamp_br_inicio",
+                        "timestamp_br_fim",
+                        "total_comb_l",
                     ]
                 ],
                 hovertemplate=(
@@ -143,16 +144,16 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
                     + "<b>Sentido:</b> %{customdata[4]}<br>"
                     + "<b>Duração da viagem:</b> %{customdata[5]:.0f} minutos<br>"
                     + "<b>Distância percorrida:</b> %{customdata[12]:.3f} km<br>"
+                    + "<b>Combustível gasto:</b> %{customdata[15]:.2f} L<br>"
                     + "<b>Motorista:</b> %{customdata[6]}<br>"
                     + "<b>Velocidade Média:</b> %{customdata[7]:.2f} km/h<br><extra></extra>"
                 ),
-
             ),
         )
-    
+
     # Ponto selecionado
     if df_ponto_selecionado is not None:
-         # Adiciona um destaque ao ponto selecionado
+        # Adiciona um destaque ao ponto selecionado
         fig.add_trace(
             go.Scatter(
                 x=df_ponto_selecionado["timestamp_br_inicio"],
@@ -160,7 +161,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
                 mode="markers",
                 name="Viagem selecionada",
                 marker=dict(
-                    size=20, # outer size (larger for “border”)
+                    size=20,  # outer size (larger for “border”)
                     color="rgba(255,255,255,0)",  # transparent fill
                     line=dict(color="black", width=3),
                 ),
@@ -172,15 +173,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
     fig.update_layout(
         xaxis_title="Dia",
         yaxis_title="km/L",
-        legend=dict(
-            title="Status",
-            orientation="v",
-            yanchor="top",
-            y=1,
-            xanchor="left",
-            x=1.02
-        ),
-
+        legend=dict(title="Status", orientation="v", yanchor="top", y=1, xanchor="left", x=1.02),
     )
 
     # Configura a Timeline
@@ -188,13 +181,15 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
         rangeslider_visible=True,
         rangeslider=dict(borderwidth=2, thickness=0.12),
         rangeselector=dict(
-            buttons=list([
-                dict(count=1, label="1 dia", step="day", stepmode="backward"),
-                dict(count=7, label="1 semana", step="day", stepmode="backward"),
-                dict(count=1, label="1 mês", step="month", stepmode="backward"),
-                dict(step="all", label="tudo")
-            ])
-        )
+            buttons=list(
+                [
+                    dict(count=1, label="1 dia", step="day", stepmode="backward"),
+                    dict(count=7, label="1 semana", step="day", stepmode="backward"),
+                    dict(count=1, label="1 mês", step="month", stepmode="backward"),
+                    dict(step="all", label="tudo"),
+                ]
+            )
+        ),
     )
 
     # Lida com anotações
@@ -214,7 +209,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
             i_cor_hex = tema.PALETA_CORES_DISCRETA[i % len(tema.PALETA_CORES_DISCRETA)]
             i_cor_rgb = "rgb" + str(mcolors.to_rgb(i_cor_hex))
             i_cor_rgba = "rgba" + str(mcolors.to_rgba(i_cor_hex, alpha=0.2))
-            
+
             x0 = df_motorista["timestamp_br_inicio"].min() - pd.Timedelta(minutes=10)
             x1 = df_motorista["timestamp_br_inicio"].max() + pd.Timedelta(minutes=10)
             y0 = menor_km_por_litro - 0.25
@@ -223,12 +218,15 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
             # Adiciona o retângulo do motorista/linha
             fig.add_shape(
                 type="rect",
-                xref="x", yref="y",
-                x0=x0, x1=x1 + pd.Timedelta(minutes=10),
-                y0=y0, y1=y1,
+                xref="x",
+                yref="y",
+                x0=x0,
+                x1=x1 + pd.Timedelta(minutes=10),
+                y0=y0,
+                y1=y1,
                 line=dict(color=i_cor_rgb, width=1.5, dash="dot"),
                 fillcolor=i_cor_rgba,
-                layer="below"
+                layer="below",
             )
 
             # Adiciona o nome
@@ -240,9 +238,8 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
                 font=dict(size=10, color=i_cor_rgb),
                 xanchor="left",
                 yanchor="top",
-                bgcolor="rgba(255,255,255,0.7)"
+                bgcolor="rgba(255,255,255,0.7)",
             )
-       
 
     # Seta os limites da timeline
     x_max = df["timestamp_br_inicio"].max() + pd.Timedelta(hours=2)
@@ -258,7 +255,7 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
         elif "xaxis.range[0]" in range_selecionado:
             x_start = pd.to_datetime(range_selecionado["xaxis.range[0]"])
             x_max = pd.to_datetime(range_selecionado["xaxis.range[1]"])
-        
+
         fig.update_xaxes(range=[x_start, x_max])
 
     # Aumenta a altura para melhorar a visualização, tira algumas margens
@@ -280,15 +277,13 @@ def gerar_grafico_timeline_consumo_veiculo(df, metadata_browser, df_ponto_seleci
                 font=dict(size=11),  # reduz a fonte
             ),
         )
-        
 
     return fig
 
 
-
 def __get_lista_motoristas_timeline(df):
     df_sorted = df.sort_values(by="timestamp_br_inicio")
-    start_idx = 0   
+    start_idx = 0
     end_idx = 0
     motorista_inicial = df_sorted.iloc[0]["nome_motorista"]
 
@@ -315,7 +310,7 @@ def __get_lista_motoristas_timeline(df):
 
 def __get_lista_linhas_timeline(df):
     df_sorted = df.sort_values(by="timestamp_br_inicio")
-    start_idx = 0   
+    start_idx = 0
     end_idx = 0
     linha_inicial = df_sorted.iloc[0]["encontrou_numero_linha"]
 
@@ -340,7 +335,6 @@ def __get_lista_linhas_timeline(df):
     return lista_linhas
 
 
-
 def gerar_grafico_histograma_viagens(df, viagem_atual_consumo, metadata_browser):
     # Gera o box plot
     fig = px.box(
@@ -348,8 +342,17 @@ def gerar_grafico_histograma_viagens(df, viagem_atual_consumo, metadata_browser)
         x="vec_model",
         y="km_por_litro",
         points="all",
-        hover_data=["vec_num_id", "encontrou_numero_linha", "encontrou_numero_sublinha", "encontrou_sentido_linha", "nome_motorista", "velocidade_media_kmh",
-                    "time_slot", "dia_semana_label", "dia_eh_feriado"],
+        hover_data=[
+            "vec_num_id",
+            "encontrou_numero_linha",
+            "encontrou_numero_sublinha",
+            "encontrou_sentido_linha",
+            "nome_motorista",
+            "velocidade_media_kmh",
+            "time_slot",
+            "dia_semana_label",
+            "dia_eh_feriado",
+        ],
         labels={
             "encontrou_numero_sublinha": "Sublinha",
             "encontrou_numero_linha": "Numero da Linha",
@@ -369,7 +372,7 @@ def gerar_grafico_histograma_viagens(df, viagem_atual_consumo, metadata_browser)
         y=viagem_atual_consumo,
         line=dict(color="red", width=3, dash="dot"),
         annotation_text=f"Viagem selecionada ({viagem_atual_consumo:.2f} km/L)",
-        annotation_position="top right"
+        annotation_position="top right",
     )
 
     return fig

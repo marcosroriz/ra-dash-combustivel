@@ -9,6 +9,7 @@
 # Bibliotecas básicas
 from datetime import date, datetime
 import pandas as pd
+import json
 
 # Importar bibliotecas para manipulação de URL
 import ast
@@ -16,7 +17,7 @@ from urllib.parse import urlparse, parse_qs
 
 # Importar bibliotecas do dash básicas e plotly
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State, callback_context
+from dash import Dash, html, dcc, callback, Input, Output
 import plotly.graph_objects as go
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -26,6 +27,9 @@ import dash_ag_grid as dag
 # Dash componentes Mantine e icones
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
+
+# Imports de mapa
+import dash_leaflet as dl
 
 # Importar nossas constantes e funções utilitárias
 import locale_utils
@@ -38,7 +42,8 @@ from modules.entities_utils import (
     get_linhas_possui_info_combustivel,
     get_modelos_veiculos_com_combustivel,
     get_veiculos_com_combustivel,
-    gerar_excel,
+    get_tipos_eventos_telemetria_mix_com_data,
+    get_tipos_eventos_telemetria_mix_com_gps,
 )
 
 # Imports específicos
@@ -46,12 +51,10 @@ from modules.combustivel_por_veiculo.veiculo_service import VeiculoService
 import modules.combustivel_por_veiculo.graficos as veiculo_graficos
 import modules.combustivel_por_veiculo.tabela as veiculo_tabela
 
-from modules.home.home_service import HomeService
-import modules.home.graficos as home_graficos
-import modules.home.tabela as home_tabela
-
 # Preço do diesel
 from modules.preco_combustivel_api import get_preco_diesel
+
+import tema
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
@@ -78,6 +81,13 @@ df_modelos = get_modelos_veiculos_com_combustivel(pgEngine)
 # Pega o preço do diesel via API
 preco_diesel = get_preco_diesel()
 
+# Lista de eventos com data
+df_eventos_com_data = get_tipos_eventos_telemetria_mix_com_data(pgEngine)
+df_eventos_com_data = df_eventos_com_data.sort_values(by="label")
+
+df_eventos_com_gps = get_tipos_eventos_telemetria_mix_com_gps(pgEngine)
+df_eventos_com_gps = df_eventos_com_gps.sort_values(by="label")
+lista_eventos_com_gps = df_eventos_com_gps["EventTypeId"].unique()
 
 ##############################################################################
 # CALLBACKS ##################################################################
@@ -160,7 +170,7 @@ def input_valido(datas, vec_num_id, lista_linha, km_l_min, km_l_max):
     return True
 
 
-def gera_labels_inputs_pag_veicuo(campo):
+def gera_labels_inputs_pag_veiculo(campo):
     # Cria o callback
     @callback(
         Output(component_id=f"{campo}-labels", component_property="children"),
@@ -236,6 +246,7 @@ def cb_sincroniza_input_veiculo_store(
         "valido": False,
         "id_veiculo": id_veiculo,
         "vec_model": "",
+        "vec_asset_id": "",
         "datas": datas,
         "lista_linhas": lista_linhas,
         "km_l_min": km_l_min,
@@ -251,6 +262,8 @@ def cb_sincroniza_input_veiculo_store(
     # Modelos
     if not df_modelos[df_modelos["vec_num_id"] == id_veiculo].empty:
         input_dict["vec_model"] = df_modelos[df_modelos["vec_num_id"] == id_veiculo]["LABEL"].values[0]
+        input_dict["vec_asset_id"] = str(df_modelos[df_modelos["vec_num_id"] == id_veiculo]["vec_asset_id"].values[0])
+
     return input_dict
 
 
@@ -434,9 +447,11 @@ def cb_plota_grafico_pizza_sintese_veiculo(data, metadata_browser):
     Input("store-window-size", "data"),
     Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
     Input("pag-veiculo-graph-timeline-consumo-veiculo", "relayoutData"),
-    Input("pag-veiculo-anotacoes-timeline", "value")
+    Input("pag-veiculo-anotacoes-timeline", "value"),
 )
-def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_selecionado, range_selecionado, anotacao_no_grafico):
+def cb_plota_grafico_timeline_consumo_veiculo(
+    data, metadata_browser, ponto_selecionado, range_selecionado, anotacao_no_grafico
+):
     # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
     if not data or not data["valido"]:
         return go.Figure()
@@ -450,7 +465,7 @@ def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_sele
     df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
     df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
     df["timestamp_br_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
-    df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+    df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"]) - pd.Timedelta(hours=3)
     df["encontrou_tempo_viagem_segundos"] = df["encontrou_tempo_viagem_segundos"].astype(int)
     df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_segundos"] / 60
     df["dia_dt"] = pd.to_datetime(df["dia"]).dt.date
@@ -459,8 +474,6 @@ def cb_plota_grafico_timeline_consumo_veiculo(data, metadata_browser, ponto_sele
     df_ponto_selecionado = None
     if ponto_selecionado is not None:
         df_ponto_selecionado = df[df["timestamp_br_inicio"] == ponto_selecionado["points"][0]["x"]]
-        print(ponto_selecionado)
-        print(df_ponto_selecionado)
 
     # Gera o gráfico
     fig = veiculo_graficos.gerar_grafico_timeline_consumo_veiculo(
@@ -524,23 +537,249 @@ def mostrar_ponto_selecionado(data, metadata_browser, ponto_selecionado):
     return fig
 
 
-@callback(Output("range-output", "children"), Input("pag-veiculo-graph-timeline-consumo-veiculo", "relayoutData"))
-def detectar_mudanca_range(relayoutData):
-    # print("ENTROU NO CB DO RANGE")
-    # print(relayoutData)
-    # if not relayoutData:
-    #     return "Nenhuma alteração de faixa ainda."
+##############################################################################
+# Callback para os eventos ###################################################
+##############################################################################
+@callback(
+    Output("card-detalhamento-eventos-viagem-veiculo", "children"),
+    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+    Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
+)
+def cb_pag_veiculo_lista_eventos_viagem(data, ponto_selecionado):
+    # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
+    if not data or not data["valido"] or ponto_selecionado is None:
+        return "Nenhuma viagem selecionada"
 
-    # # The range is usually under 'xaxis.range[0]' and 'xaxis.range[1]'
-    # if "xaxis.range[0]" in relayoutData:
-    #     start = relayoutData["xaxis.range[0]"]
-    #     end = relayoutData["xaxis.range[1]"]
-    #     print(f"Novo range: {start} até {end}")
-    #     return f"Novo range: {start} até {end}"
-    # elif "xaxis.autorange" in relayoutData:
-    #     return "Range redefinido para automático."
-    # return str(relayoutData)
-    return ""
+    # Obtem os dados do store
+    vec_asset_id = data["vec_asset_id"]
+    vec_num_id = data["id_veiculo"]
+    vec_model = data["vec_model"]
+
+    # Extraí os dados do ponto
+    ponto_custom_data = ponto_selecionado["points"][0]["customdata"]
+    inicio_viagem = (pd.to_datetime(ponto_custom_data[13])).strftime("%Y-%m-%d %H:%M:%S")
+    fim_viagem = (pd.to_datetime(ponto_custom_data[14])).strftime("%Y-%m-%d %H:%M:%S")
+    viagem_km_l = ponto_custom_data[0]
+    viagem_linha = ponto_custom_data[3]
+    viagem_sentido = ponto_custom_data[4]
+    viagem_tempo_minutos = ponto_custom_data[5]
+    viagem_nome_motorista = ponto_custom_data[6]
+    viagem_velocidade = ponto_custom_data[7]
+    viagem_combustivel_gasto = ponto_custom_data[15]
+
+    dados_veiculo_list = [
+        html.Li(f"🚍 Veículo: {vec_num_id}"),
+        html.Li(f"⚙️ Modelo: {vec_model}"),
+        html.Li(f"👨🏻‍✈️ Motorista: {viagem_nome_motorista}"),
+        html.Li(f"🟢 Início da Viagem: {inicio_viagem}"),
+        html.Li(f"🔴 Fim da Viagem: {fim_viagem}"),
+        html.Li(f"🚏 Linha: {viagem_linha} - {viagem_sentido}"),
+        html.Li(f"📈 Consumo: {viagem_km_l:.2f} km/L"),
+        html.Li(f"⏳ Duração da viagem: {viagem_tempo_minutos:.2f} minutos"),
+        html.Li(f"🕓 Velocidade média: {viagem_velocidade:.2f} km/h"),
+        html.Li(f"⛽ Combustível gasto: {viagem_combustivel_gasto:.2f} L")
+    ]
+
+    df_eventos_viagem = veiculo_service.get_agg_eventos_ocorreram_viagem(inicio_viagem, fim_viagem, vec_asset_id)
+    eventos_list = []
+    for _, evt in df_eventos_viagem.iterrows():
+        evt_label = evt["event_label"]
+        total_eventos = evt["total_eventos"]
+        eventos_list.append(html.Li(f"💣 {evt_label}: {total_eventos} eventos"))
+
+    if len(eventos_list) > 0:
+        return html.Ul(dados_veiculo_list + eventos_list)
+    else:
+        return html.Ul(dados_veiculo_list + [html.Li("💣 Viagem não gerou nenhum evento da Mix")])
+
+
+##############################################################################
+# Callback para o mapa #######################################################
+##############################################################################
+
+
+@callback(
+    Output("pag-veiculo-layer-control-eventos-detalhe-viagem", "children"),
+    Input("pag-veiculo-store-input-dados-veiculo", "data"),
+    Input("pag-veiculo-graph-timeline-consumo-veiculo", "clickData"),
+)
+def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
+    # Valida se os dados do estado estão OK, caso contrário retorna os dados padrão
+    if not data or not data["valido"] or ponto_selecionado is None:
+        return dash.no_update
+
+    # Obtem os dados do store
+    vec_asset_id = data["vec_asset_id"]
+
+    # Extraí os dados do ponto
+    ponto_custom_data = ponto_selecionado["points"][0]["customdata"]
+    inicio_viagem = (pd.to_datetime(ponto_custom_data[13])).strftime("%Y-%m-%d %H:%M:%S")
+    fim_viagem = (pd.to_datetime(ponto_custom_data[14])).strftime("%Y-%m-%d %H:%M:%S")
+    viagem_linha = ponto_custom_data[3]
+    viagem_sentido = ponto_custom_data[4]
+
+    # Lista com as overlays que colocaremos no mapa
+    lista_overlays = []
+
+    # Obtem o shape da linha
+    df_shape_linha = veiculo_service.get_shape_linha(inicio_viagem, viagem_linha, viagem_sentido)
+    linha_geojson_str = df_shape_linha["geojsondata"].values[0]
+    linha_geojson = json.loads(linha_geojson_str)
+
+    # Gera a camada
+    lista_overlays.append(
+        dl.Pane(
+            dl.Overlay(
+                dl.LayerGroup(
+                    dl.GeoJSON(
+                        data=linha_geojson,
+                        options=dict(
+                            style=dict(
+                                color=tema.PALETA_CORES_DISCRETA[1],
+                                weight=20,  # border thickness
+                                opacity=0.8,  # border opacity
+                                zIndex=220,
+                            )
+                        ),
+                    ),
+                ),
+                checked=True,
+                id=f"overlay-{viagem_linha}{viagem_sentido}",
+                name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido}",
+            ),
+            name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} Panel",
+            style=dict(zIndex=220),
+        )
+    )
+    lista_overlays.append(
+        dl.Pane(
+            dl.Overlay(
+                dl.LayerGroup(
+                    dl.GeoJSON(
+                        data=linha_geojson,
+                        options=dict(
+                            style=dict(
+                                color="#FFFFFF",
+                                weight=4,  # border thickness
+                                opacity=0.8,  # border opacity
+                                zIndex=250,
+                            )
+                        ),
+                    ),
+                ),
+                checked=True,
+                id=f"overlay-{viagem_linha}{viagem_sentido}-borda",
+                name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} (BORDA)",
+            ),
+            name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} (BORDA) Panel",
+            style=dict(zIndex=250),
+        )
+    )
+
+    # Obtem os eventos que ocorreram na viagem
+    df_eventos_viagem = veiculo_service.get_agg_eventos_ocorreram_viagem(inicio_viagem, fim_viagem, vec_asset_id)
+
+    # Adiciona as posições GPS
+    df_posicoes_gps = veiculo_service.get_posicao_gps_veiculo(inicio_viagem, fim_viagem, vec_asset_id)
+    cor_icone = tema.PALETA_CORES_DISCRETA[2]
+    layer_lista_marcadores = gera_layer_posicao(df_posicoes_gps, cor_icone)
+
+    # Gera a camada e salva lat e lon
+    lista_overlays.append(dl.Overlay(dl.LayerGroup(layer_lista_marcadores), name="<span class='mapa-icone mapa-icone-pos-gps'></span>Posição GPS", checked=True))
+
+    # Agora, processa cada tipo de evento que ocorreu na viagem
+    for i, evt in df_eventos_viagem.iterrows():
+        evt_label = evt["event_label"]
+        evt_value = evt["event_value"]
+        evt_type_id = evt["event_type_id"]
+        
+        cor_idx = (i + 3) % len(tema.PALETA_CORES_DISCRETA)
+        cor_icone = tema.PALETA_CORES_DISCRETA[cor_idx]
+
+        if evt_type_id in lista_eventos_com_gps:
+            df_eventos_viagem_com_gps = veiculo_service.get_detalhamento_evento_mix_veiculo(
+                inicio_viagem, fim_viagem, vec_asset_id, evt_value
+            )
+
+            layer_lista_marcadores = gera_layer_eventos_mix(df_eventos_viagem_com_gps, evt_label, cor_icone)
+
+            # Gera a camada
+            lista_overlays.append(
+                dl.Overlay(
+                    dl.LayerGroup(layer_lista_marcadores),
+                    name=f"<span class='mapa-icone mapa-icone-evt-{cor_idx}'></span>{evt_label}",
+                    checked=True,
+                )
+            )
+
+    return getMapaFundo() + lista_overlays
+
+
+def gera_layer_posicao(df_pos, cor_icone):
+    lista_marcadores = []
+
+    # Itera em cada evento
+    for _, row in df_pos.iterrows():
+        evt_lon = row["Longitude"]
+        evt_lat = row["Latitude"]
+        evt_timestamp = (pd.to_datetime(row["Timestamp"]) - pd.Timedelta(hours=3)).strftime("%H:%M:%S - %Y-%m-%d")
+
+        marcador = dl.CircleMarker(
+            center=[evt_lat, evt_lon],
+            radius=10,
+            color="black",
+            fillColor=cor_icone,
+            fillOpacity=0.75,
+            children=dl.Popup(
+                html.Div(
+                    [
+                        html.H6("Posição GPS"),
+                        html.Ul([html.Li(f"Hora: {evt_timestamp}")]),
+                    ]
+                )
+            ),
+        )
+
+        # Adiciona o marcador
+        lista_marcadores.append(marcador)
+
+    return lista_marcadores
+
+
+def gera_layer_eventos_mix(df_eventos_mix, evt_name, cor_icone):
+    lista_marcadores = []
+
+    # Seta nome não conhecido para os motoristas que não tiverem dado
+    df_eventos_mix["Name"] = df_eventos_mix["Name"].fillna("Não informado")
+
+    # Itera em cada evento
+    for _, row in df_eventos_mix.iterrows():
+        evt_lon = row["StartPosition_Longitude"]
+        evt_lat = row["StartPosition_Latitude"]
+        evt_driver_name = row["Name"]
+        evt_timestamp = (pd.to_datetime(row["StartDateTime"]) - pd.Timedelta(hours=3)).strftime("%H:%M:%S - %Y-%m-%d")
+
+        if pd.notna(evt_lat) and pd.notna(evt_lon):
+            marcador = dl.CircleMarker(
+                center=[evt_lat, evt_lon],
+                radius=10,
+                color="black",
+                fillColor=cor_icone,
+                fillOpacity=0.75,
+                children=dl.Popup(
+                    html.Div(
+                        [
+                            html.H6(evt_name),
+                            html.Ul([html.Li(f"Motorista: {evt_driver_name}"), html.Li(f"Hora: {evt_timestamp}")]),
+                        ]
+                    )
+                ),
+            )
+
+            # Adiciona o marcador
+            lista_marcadores.append(marcador)
+
+    return lista_marcadores
 
 
 ##############################################################################
@@ -548,13 +787,32 @@ def detectar_mudanca_range(relayoutData):
 ##############################################################################
 dash.register_page(__name__, name="Veículo", path="/combustivel-por-veiculo")
 
+
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
+def getMapaFundo():
+    return [
+        # OpenStreetMap (ruas padrão)
+        dl.BaseLayer(
+            dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+            name="OpenStreetMap",
+            checked=False,
+        ),
+        # ESRI Satellite (sem nomes de rua)
+        dl.BaseLayer(
+            dl.TileLayer(
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                attribution="Tiles © Esri",
+            ),
+            name="ESRI Satellite",
+            checked=True,
+        ),
+    ]
+
+
 layout = dbc.Container(
     [
-        html.Div(id="click-output"),
-        html.Div(id="range-output"),
         # Estado
         dcc.Store(id="pag-veiculo-store-input-dados-veiculo"),
         dcc.Store(id="pag-veiculo-store-historico-viagens-veiculo"),
@@ -875,7 +1133,7 @@ layout = dbc.Container(
                             ),
                             dmc.Space(h=5),
                             dbc.Col(
-                                # gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-historico-veiculo"),
+                                # gera_labels_inputs_pag_veiculo("pag-veiculo-labels-grafico-historico-veiculo"),
                                 dbc.Row(
                                     [
                                         dmc.RadioGroup(
@@ -918,33 +1176,8 @@ layout = dbc.Container(
                             ),
                             dmc.Space(h=5),
                             dbc.Col(
-                                gera_labels_inputs_pag_veicuo("pag-veiculo-labels-grafico-detalhamento-veiculo"),
+                                gera_labels_inputs_pag_veiculo("pag-veiculo-labels-grafico-detalhamento-veiculo"),
                                 width=True,
-                            ),
-                            dbc.Col(
-                                html.Div(
-                                    [
-                                        html.Button(
-                                            "Exportar para Excel",
-                                            id="pag-veiculo-btn-exportar-excel-tabela-linhas-visao-veiculo",
-                                            n_clicks=0,
-                                            style={
-                                                "background-color": "#007bff",  # Azul
-                                                "color": "white",
-                                                "border": "none",
-                                                "padding": "10px 20px",
-                                                "border-radius": "8px",
-                                                "cursor": "pointer",
-                                                "font-size": "16px",
-                                                "font-weight": "bold",
-                                            },
-                                            className="btnExcel",
-                                        ),
-                                        dcc.Download(id="pag-veiculo-download-excel-tabela-linhas-visao-veiculo"),
-                                    ],
-                                    style={"text-align": "right"},
-                                ),
-                                width="auto",
                             ),
                         ]
                     ),
@@ -957,38 +1190,45 @@ layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(
-                    html.Div(
+                    dbc.Row(
                         [
-                            html.I(
-                                "Dica: use os filtros na tabela para facilitar a análise dos dados.",
-                                style={"color": "gray", "font-size": "14px"},
-                            )
-                        ],
-                        style={"text-align": "right"},
+                            html.H5("Dados da viagem"),
+                            dbc.ListGroup(
+                                [
+                                    dbc.ListGroupItem("", id="card-detalhamento-eventos-viagem-veiculo"),
+                                ],
+                                className="m-0",
+                            ),
+                        ]
                     ),
                     md=6,
                 ),
                 dbc.Col(
-                    dcc.Graph(
-                        id="pag-veiculo-graph-histograma-viagens-veiculo", config=locale_utils.plotly_locale_config
+                    dbc.Row(
+                        [
+                            html.H5("Boxplot de viagens na mesma configuração"),
+                            dcc.Graph(
+                                id="pag-veiculo-graph-histograma-viagens-veiculo",
+                                config=locale_utils.plotly_locale_config,
+                            ),
+                        ]
                     ),
                     md=6,
                 ),
             ]
         ),
-        dmc.Space(h=20),
-        dag.AgGrid(
-            # enableEnterpriseModules=True,
-            id="pag-veiculo-tabela-consumo-linhas-visao-veiculo",
-            columnDefs=veiculo_tabela.tbl_consumo_veiculo_visao_veiculo,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
+        dl.Map(
+            children=dl.LayersControl(
+                getMapaFundo(), id="pag-veiculo-layer-control-eventos-detalhe-viagem", collapsed=False
+            ),
+            id="pag-veiculo-mapa-eventos-detalhe-viagem",
+            center=(-16.665136, -49.286041),
+            zoom=11,
+            style={
+                "height": "60vh",
+                "border": "2px solid gray",
+                "borderRadius": "6px",
             },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
         ),
         dmc.Space(h=40),
     ]
