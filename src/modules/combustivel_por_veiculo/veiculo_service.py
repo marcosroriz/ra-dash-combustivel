@@ -8,7 +8,7 @@ import os
 import pandas as pd
 
 # Imports auxiliares
-from modules.sql_utils import subquery_modelos_combustivel, subquery_linha_combustivel, subquery_sentido_combustivel
+from modules.sql_utils import subquery_linha_combustivel, subquery_dia_semana
 
 # Constante indica o número mínimo de viagens que devem existir para poder classificar o consumo de uma viagem
 # Por exemplo, NUM_MIN_VIAGENS_PARA_CLASSIFICAR = 5 indica que somente as viagens cuja configuração possuam outras 5
@@ -196,14 +196,8 @@ class VeiculoService:
         data_inicio_str = (pd.to_datetime(viagem_data) - pd.DateOffset(days=90)).strftime("%Y-%m-%d")
 
         # Subqueries
-        subquery_dia_semana_str = ""
-        if viagem_dia_semana == 1:
-            subquery_dia_semana_str = "AND dia_numerico = 1"
-        elif viagem_dia_semana == 7:
-            subquery_dia_semana_str = "AND dia_numerico = 7"
-        else:
-            subquery_dia_semana_str = "AND dia_numerico BETWEEN 2 AND 6"
-
+        subquery_dia_semana_str = subquery_dia_semana(viagem_dia_semana)
+        
         # Query
         query = f"""
         SELECT

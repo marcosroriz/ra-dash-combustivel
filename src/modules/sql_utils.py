@@ -109,3 +109,19 @@ def subquery_regras_monitoramento(lista_regras, prefix=""):
     if not lista_regras or "TODAS" in lista_regras:
         return ""
     return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
+
+
+def subquery_dia_semana(dia_numerico, prefix=""):
+    if not dia_numerico:
+        return ""
+
+    query = ""    
+    if dia_numerico == 1:
+        query = "AND dia_numerico = 1"
+    elif dia_numerico == 7:
+        query = "AND dia_numerico = 7"
+    else:
+        query = "AND dia_numerico BETWEEN 2 AND 6"
+
+    return query
+

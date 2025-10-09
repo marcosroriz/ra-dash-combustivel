@@ -421,7 +421,7 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, lista
     else:
         return (
             f"{int(valor):,} L".replace(",", "."),
-            f"R$ {int(valor):,}".replace(",", "."),
+            f"R$ {int(preco_diesel * valor):,}".replace(",", "."),
             f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
                 ".", ","
             ),
