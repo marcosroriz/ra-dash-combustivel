@@ -28,13 +28,59 @@ NUM_MIN_VIAGENS_PARA_CLASSIFICAR = os.getenv("NUM_MIN_VIAGENS_PARA_CLASSIFICAR",
 class RegrasService:
     def __init__(self, dbEngine):
         self.dbEngine = dbEngine
+        
+    def get_todas_regras(self):
+        """Função para obter todas as regras de monitoramento"""
+
+        # Query
+        query = """
+            SELECT 
+                *,
+                (
+                    SELECT MAX(dia)
+                    FROM relatorio_regra_monitoramento_combustivel
+                    WHERE id_regra = regra.id
+                    GROUP BY id_regra
+                ) AS "dia_ultimo_relatorio",
+                (
+                    SELECT MAX(executed_at)
+                    FROM relatorio_regra_monitoramento_combustivel
+                    WHERE id_regra = regra.id
+                    GROUP BY id_regra
+                ) AS "executed_at"
+            FROM regra_monitoramento_combustivel regra
+            ORDER BY nome_regra
+        """
+
+        # Executa a query
+        df = pd.read_sql(query, self.dbEngine)
+
+        return df
+
+    def apagar_regra(self, id_regra):
+        """Função para apagar uma regra de monitoramento"""
+
+        # Query
+        query = f"""
+            DELETE FROM regra_monitoramento_combustivel WHERE id = {id_regra}
+        """
+
+        try:
+            # Executa a query
+            with self.dbEngine.begin() as conn:
+                conn.execute(text(query))
+
+            return True
+        except Exception as e:
+            print(f"Erro ao apagar regra: {e}")
+            return False
 
     def get_regras(self, lista_regras):
 
         subquery_regras = subquery_regras_monitoramento(lista_regras)
 
         query = f"""
-        SELECT * FROM public.regras_monitoramento
+        SELECT * FROM public.regra_monitoramento_combustivel
         """
 
         if not lista_regras:

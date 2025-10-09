@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# Tela com as regras existentes
+
 ##############################################################################
 # IMPORTS ####################################################################
 ##############################################################################
-from dash import html, callback, Input, Output, dcc, ctx, State, callback_context
-import dash
+# Bibliotecas básicas
 import re
 
+# Importar bibliotecas do dash básicas e plotly
+import dash
+from dash import html, callback, Input, Output, callback_context
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
 import dash_mantine_components as dmc
@@ -18,7 +22,6 @@ import locale_utils
 from db import PostgresSingleton
 from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
-from modules.entities_utils import get_regras
 
 
 ##############################################################################
@@ -31,17 +34,13 @@ pgEngine = pgDB.get_engine()
 # Serviço de regras
 regra_service = RegrasService(pgEngine)
 
-# Carregar regras existentes
-df_regras = get_regras(pgEngine)
-lista_todas_regras = df_regras.to_dict(orient="records")
-lista_todas_regras.insert(0, {"LABEL": "TODAS"})
-
 
 ##############################################################################
 # FUNÇÕES AUXILIARES #########################################################
 ##############################################################################
 def prepara_dados_tabela(df_regras):
     """Adiciona colunas de ação para edição e exclusão na tabela"""
+    df_regras["acao_relatorio"] = "📋 Relatório"
     df_regras["acao_editar"] = "✏️ Editar"
     df_regras["acao_apagar"] = "❌ Apagar"
     return df_regras
@@ -61,37 +60,15 @@ def get_lista_regras(df=None):
 # CALLBACKS ##################################################################
 ##############################################################################
 
+
 # Atualizar tabela de regras existentes
 @callback(
     Output("tabela-de-regras-existentes", "rowData"),
-    Input("input-nome-regra-existentes", "value"),
+    Input("tabela-de-regras-existentes", "gridReady"),
 )
-def atualizar_tabela_regras(filtro):
-    df = regra_service.get_regras(filtro)
-    return get_lista_regras(df)
-
-
-# Ajustar seleção no dropdown
-@callback(
-    Output("input-nome-regra-existentes", "value"),
-    Input("input-nome-regra-existentes", "value"),
-)
-def atualizar_filtro_dropdown(valores):
-    if not valores:
-        return ["TODAS"]
-
-    ctx = callback_context
-    if not ctx.triggered:
-        return valores
-
-    ultimo_valor = ctx.triggered[0]["value"]
-
-    if "TODAS" in valores and len(valores) > 1:
-        if ultimo_valor == ["TODAS"]:
-            return ["TODAS"]
-        return [v for v in valores if v != "TODAS"]
-
-    return valores
+def cb_carregar_regras_existentes(ready):
+    df_regras = prepara_dados_tabela(regra_service.get_todas_regras())
+    return df_regras.to_dict(orient="records")
 
 
 # Cancelar exclusão
@@ -113,24 +90,27 @@ def cancelar_exclusao(n_clicks):
     ],
     Input("btn-confirma-apagar-regra", "n_clicks"),
     Input("nome-regra-apagar-gerenciar-regra", "children"),
-    Input("input-nome-regra-existentes", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
 )
-def confirmar_exclusao(n_clicks, nome_regra, filtro):
+def confirmar_exclusao(n_clicks, nome_regra):
     if not n_clicks:
         return dash.no_update, dash.no_update, dash.no_update
 
     match = re.search(r"ID:\s*(\d+)", nome_regra)
-    print(match)
     if not match:
         return dash.no_update, dash.no_update, dash.no_update
 
     id_regra = int(match.group(1))
-    regra_service.deletar_regra_monitoramento(id_regra)
+    regra_service.apagar_regra(id_regra)
 
-    df = regra_service.get_regras(filtro)
-    
-    return False, True, get_lista_regras(df)
+    # Atualiza a tabela
+    df_todas_regras = regra_service.get_todas_regras()
+    lista_todas_regras = []
+    if not df_todas_regras.empty:
+        df_todas_regras = prepara_dados_tabela(df_todas_regras)
+        lista_todas_regras = df_todas_regras.to_dict(orient="records")
+
+    return False, True, lista_todas_regras
 
 
 # Fechar modal de sucesso
@@ -171,6 +151,7 @@ def acoes_tabela(linha, linha_virtual):
 
     return dash.no_update, dash.no_update, dash.no_update
 
+
 # Callback botão criar regra
 @callback(
     Output("url", "href", allow_duplicate=True),
@@ -180,7 +161,7 @@ def acoes_tabela(linha, linha_virtual):
 def cb_botao_criar_regra(n_clicks):
     if n_clicks is None:
         return dash.no_update
-    
+
     return "/regras-criar"
 
 
@@ -240,13 +221,21 @@ layout = dbc.Container(
                     ),
                     dmc.Title("Sucesso!", order=1),
                     dmc.Text("A regra foi apagada com sucesso."),
-                    dmc.Group([dmc.Button("Fechar", color="green", variant="outline", id="btn-close-modal-sucesso-apagar-gerenciar-regra")]),
+                    dmc.Group(
+                        [
+                            dmc.Button(
+                                "Fechar",
+                                color="green",
+                                variant="outline",
+                                id="btn-close-modal-sucesso-apagar-gerenciar-regra",
+                            )
+                        ]
+                    ),
                 ],
                 align="center",
                 gap="md",
             ),
         ),
-
         # Cabeçalho
         html.Hr(),
         dbc.Row(
@@ -266,29 +255,6 @@ layout = dbc.Container(
             align="center",
         ),
         html.Hr(),
-
-        # Filtro
-        dbc.Card(
-            dbc.Row(
-                dbc.Col(
-                    html.Div(
-                        [
-                            dbc.Label("Nome da Regra de Monitoramento"),
-                            dcc.Dropdown(
-                                id="input-nome-regra-existentes",
-                                options=[{"label": regra['LABEL'], "value": regra['LABEL']} for regra in lista_todas_regras],
-                                placeholder="Digite o nome da regra...",
-                                value=["TODAS"],
-                                multi=True,
-                            ),
-                        ]
-                    )
-                )
-            ),
-            body=True,
-        ),
-        dmc.Space(h=15),
-
         # Tabela
         dag.AgGrid(
             id="tabela-de-regras-existentes",
