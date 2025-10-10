@@ -61,9 +61,6 @@ lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 # Pega o preço do diesel via API
 preco_diesel = get_preco_diesel()
 
-##################################################################################
-# LOADER #####################################################################
-###################################################################################
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
@@ -250,7 +247,7 @@ def atualizar_modelos_selecao(valores_selecionados):
         Input("pag-criar-regra-select-erro-telemetria", "value"),
     ],
 )
-def cb_preview_regra(
+def cb_criar_regra_preview_regra(
     dias_monitoramento,
     lista_modelos,
     qtd_min_motoristas,
@@ -260,6 +257,10 @@ def cb_preview_regra(
     limite_baixa_perfomance,
     limite_erro_telemetria,
 ):
+    # Valida input
+    if not input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+        return [], 0, 0, 0, 0
+    
     df = regra_service.get_preview_regra(
         dias_monitoramento,
         lista_modelos,

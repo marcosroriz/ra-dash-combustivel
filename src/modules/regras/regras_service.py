@@ -276,7 +276,19 @@ class RegrasService:
             print(f"Erro ao criar regra de monitoramento: {e}")
             return False
 
+    def atualizar_regra_monitoramento(self, id_regra, payload):
+        """Função para atualizar uma regra de monitoramento"""
+        table = sqlalchemy.Table("regra_monitoramento_combustivel", sqlalchemy.MetaData(), autoload_with=self.dbEngine)
 
+        try:
+            with self.dbEngine.begin() as conn:
+                stmt = update(table).where(table.c.id == id_regra).values(payload)
+                conn.execute(stmt)
+
+            return True
+        except Exception as e:
+            print(f"Erro ao atualizar regra de monitoramento: {e}")
+            return False
 
 
     def get_subquery_dias(self, dias_marcados):
@@ -902,106 +914,3 @@ class RegrasService:
 
         except Exception as e:
             print(f"Erro ao deletar a regra: {e}")
-
-    def atualizar_regra_monitoramento(
-        self,
-        id_regra,
-        nome_regra,
-        data,
-        modelos,
-        numero_de_motoristas,
-        quantidade_de_viagens,
-        dias_marcados,
-        mediana_viagem=None,
-        indicativo_performace=None,
-        erro_telemetria=None,
-        criar_os_automatica=False,
-        enviar_email=False,
-        enviar_whatsapp=False,
-        email_list=None,
-        wpp_list=None,
-        regra_padronizada=None,
-    ):
-        usar_mediana = mediana_viagem is not None
-        usar_indicativo = indicativo_performace is not None
-        usar_erro = erro_telemetria is not None
-
-        # Garantir listas de 5 elementos
-        email_list = (email_list or []) + [None] * 5
-        email_list = email_list[:5]
-
-        wpp_list = (wpp_list or []) + [None] * 5
-        wpp_list = wpp_list[:5]
-
-        try:
-            with self.dbEngine.connect() as conn:
-                update_sql = text(
-                    """
-                    UPDATE regras_monitoramento
-                    SET nome_regra = :nome_regra,
-                        periodo = :periodo,
-                        modelos = :modelos,
-                        motoristas = :motoristas,
-                        dias_analise = :dias_analise,
-                        qtd_viagens = :qtd_viagens,
-                        mediana_viagem = :mediana_viagem,
-                        usar_mediana_viagem = :usar_mediana_viagem,
-                        indicativo_performace = :indicativo_performace,
-                        usar_indicativo_performace = :usar_indicativo_performace,
-                        erro_telemetria = :erro_telemetria,
-                        usar_erro_telemetria = :usar_erro_telemetria,
-                        criar_os_automatica = :criar_os_automatica,
-                        enviar_email = :enviar_email,
-                        email_usuario1 = :email1,
-                        email_usuario2 = :email2,
-                        email_usuario3 = :email3,
-                        email_usuario4 = :email4,
-                        email_usuario5 = :email5,
-                        enviar_whatsapp = :enviar_whatsapp,
-                        whatsapp_usuario1 = :wpp1,
-                        whatsapp_usuario2 = :wpp2,
-                        whatsapp_usuario3 = :wpp3,
-                        whatsapp_usuario4 = :wpp4,
-                        whatsapp_usuario5 = :wpp5,
-                        regra_padronizada = :regra_padronizada,
-                        atualizado_em = NOW()
-                    WHERE id = :id_regra
-                """
-                )
-
-                conn.execute(
-                    update_sql,
-                    {
-                        "id_regra": id_regra,
-                        "nome_regra": nome_regra,
-                        "periodo": data,
-                        "modelos": modelos,  # lista de strings (_text)
-                        "motoristas": numero_de_motoristas,
-                        "dias_analise": dias_marcados,
-                        "qtd_viagens": quantidade_de_viagens,
-                        "mediana_viagem": mediana_viagem,
-                        "usar_mediana_viagem": usar_mediana,
-                        "indicativo_performace": indicativo_performace,
-                        "usar_indicativo_performace": usar_indicativo,
-                        "erro_telemetria": erro_telemetria,
-                        "usar_erro_telemetria": usar_erro,
-                        "criar_os_automatica": criar_os_automatica,
-                        "enviar_email": enviar_email,
-                        "email1": email_list[0],
-                        "email2": email_list[1],
-                        "email3": email_list[2],
-                        "email4": email_list[3],
-                        "email5": email_list[4],
-                        "enviar_whatsapp": enviar_whatsapp,
-                        "wpp1": wpp_list[0],
-                        "wpp2": wpp_list[1],
-                        "wpp3": wpp_list[2],
-                        "wpp4": wpp_list[3],
-                        "wpp5": wpp_list[4],
-                        "regra_padronizada": regra_padronizada,
-                    },
-                )
-
-                conn.commit()
-        except Exception as e:
-            print(f"Erro ao atualizar regra: {e}")

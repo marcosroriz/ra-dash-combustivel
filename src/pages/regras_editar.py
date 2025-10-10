@@ -13,7 +13,7 @@ import re
 from urllib.parse import urlparse, parse_qs
 
 # Importar bibliotecas do dash básicas e plotly
-from dash import html, dcc, callback, Input, Output, State, clientside_callback
+from dash import html, dcc, callback, Input, Output, State
 import dash
 
 # Importar bibliotecas do bootstrap e ag-grid
@@ -32,13 +32,14 @@ import locale_utils
 from db import PostgresSingleton
 
 # Imports gerais
+from modules.entities_utils import get_modelos_veiculos_regras
 
 # Imports específicos
 from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
 
-# Imports gerais
-from modules.entities_utils import get_modelos_veiculos_regras
+# Preço do diesel
+from modules.preco_combustivel_api import get_preco_diesel
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
@@ -55,47 +56,48 @@ df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
+# Pega o preço do diesel via API
+preco_diesel = get_preco_diesel()
+
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
+
 
 ##############################################################################
 # Callbacks para os inputs via URL ###########################################
 ##############################################################################
 @callback(
     [
-        Output("store-pag-editar-input-id-pag-editar-regra", "data"),
-        Output("loading-overlay-guia-pag-editar-regra", "visible"),
-        Output("pag-editar-input-nome-regra-monitoramento", "value"),
-        Output("pag-editar-input-periodo-dias-monitoramento-regra", "value"),
-        Output("pag-editar-input-modelos-monitoramento-regra", "value", allow_duplicate=True),
-        Output("pag-editar-input-quantidade-de-motoristas", "value"),
-        Output("pag-editar-input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Output("pag-editar-input-select-dia-linha-combustivel-regra", "value"),
-        Output("pag-editar-switch-mediana", "checked"),
-        Output("pag-editar-select-mediana", "value", allow_duplicate=True),
-        Output("pag-editar-switch-baixa-performace-indicativo", "checked"),
-        Output("pag-editar-select-baixa-performace-indicativo", "value", allow_duplicate=True),
-        Output("pag-editar-switch-erro-telemetria", "checked"),
-        Output("pag-editar-select-erro-telemetria", "value", allow_duplicate=True),
-        Output("pag-editar-switch-os-automatica", "checked"),
-        Output("pag-editar-switch-enviar-email-regra-edit-combustivel", "checked"),
-        Output("pag-editar-input-email-1-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-email-2-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-email-3-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-email-4-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-email-5-regra-edit-combustivel", "value"),
-        Output("pag-editar-switch-enviar-wpp-regra-edit-combustivel", "checked"),
-        Output("pag-editar-input-wpp-1-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-wpp-2-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-wpp-3-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-wpp-4-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-wpp-5-regra-edit-combustivel", "value"),
-        Output("pag-editar-input-id-regra-monitoramento", "value"),
+        Output("store-pag-editar-regra-input-id-pag-editar-regra", "data"),
+        Output("pag-editar-regra-input-nome-regra-monitoramento", "value"),
+        Output("pag-editar-regra-input-periodo-dias-monitoramento-regra", "value"),
+        Output("pag-editar-regra-input-modelos-monitoramento-regra", "value"),
+        Output("pag-editar-regra-input-quantidade-de-motoristas", "value"),
+        Output("pag-editar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Output("pag-editar-regra-input-select-dia-linha-combustivel-regra", "value"),
+        Output("pag-editar-regra-switch-mediana", "checked"),
+        Output("pag-editar-regra-select-mediana", "value"),
+        Output("pag-editar-regra-switch-baixa-performace-indicativo", "checked"),
+        Output("pag-editar-regra-select-baixa-performace-indicativo", "value"),
+        Output("pag-editar-regra-switch-erro-telemetria", "checked"),
+        Output("pag-editar-regra-select-erro-telemetria", "value"),
+        Output("pag-editar-regra-switch-os-automatica", "checked"),
+        Output("pag-editar-regra-switch-enviar-email-regra-edit-combustivel", "checked"),
+        Output("pag-editar-regra-input-email-1-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-email-2-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-email-3-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-email-4-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-email-5-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-switch-enviar-wpp-regra-edit-combustivel", "checked"),
+        Output("pag-editar-regra-input-wpp-1-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-wpp-2-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-wpp-3-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-wpp-4-regra-edit-combustivel", "value"),
+        Output("pag-editar-regra-input-wpp-5-regra-edit-combustivel", "value"),
     ],
     Input("url", "href"),
     running=[(Output("loading-overlay-guia-pag-editar-regra", "visible"), True, False)],
-    prevent_initial_call=True,
 )
 def callback_receber_campos_via_url_editar_regra(href):
     if not href:
@@ -110,7 +112,7 @@ def callback_receber_campos_via_url_editar_regra(href):
     # Store da regra padrão
     store_id_regra = {"id_regra": -1, "valido": False}
     # Resposta padrão
-    resposta_padrao = [store_id_regra, False] + [dash.no_update] * 26
+    resposta_padrao = [store_id_regra] + [dash.no_update] * 25
 
     id_regra = query_params.get("id_regra", [0])[0]
 
@@ -119,7 +121,7 @@ def callback_receber_campos_via_url_editar_regra(href):
 
     # Busca a regra no banco
     regra = regra_service.get_regra_by_id(id_regra)
-    
+
     if regra.empty:
         return resposta_padrao
 
@@ -128,283 +130,59 @@ def callback_receber_campos_via_url_editar_regra(href):
 
     # Monta o retorno com os valores reais
     store_id = {"id_regra": linha["id"], "valido": True}
-    print(store_id)
 
     return [
         store_id,
-        False,  # Loading overlay
         linha["nome_regra"],
         int(linha["periodo"]),
-        linha["modelos"] if linha["modelos"] else ["TODOS"],
-        linha["motoristas"],
-        linha["qtd_viagens"],
-        linha["dias_analise"] if linha["dias_analise"] else "SEG_SEX",
+        linha["modelos_veiculos"] if linha["modelos_veiculos"] else ["TODOS"],
+        linha["qtd_min_motoristas"],
+        linha["qtd_min_viagens"],
+        linha["dias_marcados"] if linha["dias_marcados"] else "SEG_SEX",
         linha["usar_mediana_viagem"],
-        linha["mediana_viagem"],
-        linha["usar_indicativo_performace"],
-        linha["indicativo_performace"],
+        linha["limite_mediana"],
+        linha["usar_indicativo_baixa_performace"],
+        linha["limite_baixa_perfomance"],
         linha["usar_erro_telemetria"],
-        linha["erro_telemetria"],
+        linha["limite_erro_telemetria"],
         linha["criar_os_automatica"],
-        linha["enviar_email"],
-        linha["email_usuario1"] or "",
-        linha["email_usuario2"] or "",
-        linha["email_usuario3"] or "",
-        linha["email_usuario4"] or "",
-        linha["email_usuario5"] or "",
-        linha["enviar_whatsapp"],
-        linha["whatsapp_usuario1"] or "",
-        linha["whatsapp_usuario2"] or "",
-        linha["whatsapp_usuario3"] or "",
-        linha["whatsapp_usuario4"] or "",
-        linha["whatsapp_usuario5"] or "",
-        linha["id"],
+        linha["target_email"],
+        linha["target_email_dest1"] or "",
+        linha["target_email_dest2"] or "",
+        linha["target_email_dest3"] or "",
+        linha["target_email_dest4"] or "",
+        linha["target_email_dest5"] or "",
+        linha["target_wpp"],
+        linha["target_wpp_dest1"] or "",
+        linha["target_wpp_dest2"] or "",
+        linha["target_wpp_dest3"] or "",
+        linha["target_wpp_dest4"] or "",
+        linha["target_wpp_dest5"] or "",
     ]
 
 
 ##############################################################################
-# Callbacks para dados ######################################################
-##############################################################################
-@callback(
-    [
-        Output("pag-editar-tabela-regras-viagens-monitoramento", "rowData"),
-        Output("pag-editar-indicador-quantidade-de-veiculos", "children"),
-        Output("pag-editar-indicador-quantidade-gasto-combustivel", "children"),
-        Output("pag-editar-indicador-media-gasto-combustivel", "children"),
-    ],
-    [
-        Input("pag-editar-input-periodo-dias-monitoramento-regra", "value"),
-        Input("pag-editar-input-modelos-monitoramento-regra", "value"),
-        Input("pag-editar-input-quantidade-de-motoristas", "value"),
-        Input("pag-editar-input-quantidade-de-viagens-monitoramento-regra", "value"),
-        Input("pag-editar-input-select-dia-linha-combustivel-regra", "value"),
-        Input("pag-editar-select-mediana", "value"),
-        Input("pag-editar-select-baixa-performace-indicativo", "value"),
-        Input("pag-editar-select-erro-telemetria", "value"),
-    ],
-)
-def editar_atualiza_tabela_regra_viagens_monitoramento(
-    data, modelos, motoristas,
-    quantidade_de_viagens, dias_marcados, 
-    mediana_viagem,
-    indicativo_performace, erro_telemetria
-):
-    df = regra_service.get_estatistica_regras(
-        data, modelos, motoristas,
-        quantidade_de_viagens, dias_marcados, 
-        mediana_viagem,
-        indicativo_performace, erro_telemetria
-    )
-
-    if df.empty:
-        return [], 0, 0, 0
-
-    df["comb_excedente_l"] = df["comb_excedente_l"].astype(float)
-
-    quantidade_veiculo = df["vec_num_id"].nunique()
-
-    total_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].sum():,.2f}L"
-
-    media_combustivel = f"{df[df['comb_excedente_l'] > 0]['comb_excedente_l'].mean():,.2f}L"
-
-    return df.to_dict(orient="records"), quantidade_veiculo, total_combustivel, media_combustivel
-
-
-@callback(
-    [
-        Output("pag-editar-tabela-regras-viagens-monitoramento", "style"),
-        Output("pag-editar-row-labels-adicionais", "style"),
-    ],
-    Input("pag-editar-btn-preview-regra-monitoramento", "n_clicks"),
-    prevent_initial_call=True
-)
-def editar_toggle_tabela(n_clicks):
-    base_style = {
-        "height": 400,
-        "resize": "vertical",
-        "overflow": "hidden",
-    }
-    if n_clicks % 2 == 1:
-        return {**base_style, "display": "block"}, {"display": "block"}
-    return {**base_style, "display": "none"}, {"display": "none"}
-
-
-##############################################################################
-# Callbacks para switch ######################################################
+# Callbacks para os inputs ###################################################
 ##############################################################################
 
-@callback(
-    [
-        Output("pag-editar-container-mediana", "style"),
-        Output("pag-editar-select-mediana", "value"),
-    ],
-    [
-        Input("pag-editar-switch-mediana", "checked"),
-        Input("pag-editar-select-mediana", "value"),
-    ]
-)
-def editar_input_mediana(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
 
-    return activate, value
+# Função para validar o input
+def input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+    if dias_monitoramento is None or dias_monitoramento <= 0:
+        return False
 
-@callback(
-    [
-        Output("pag-editar-container-baixa-performace-indicativo", "style"),
-        Output("pag-editar-select-baixa-performace-indicativo", "value"),
-    ],
-    [
-        Input("pag-editar-switch-baixa-performace-indicativo", "checked"),
-        Input("pag-editar-select-baixa-performace-indicativo", "value"),
-    ]
-)
-def editar_input_baixa_performace_indicativo(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
-    return activate, value
+    if qtd_min_motoristas is None or qtd_min_motoristas <= 0:
+        return False
 
-@callback(
-    [
-        Output("pag-editar-container-erro-telemetria", "style"),
-        Output("pag-editar-select-erro-telemetria", "value"),
-    ],
-    [
-        Input("pag-editar-switch-erro-telemetria", "checked"),
-        Input("pag-editar-select-erro-telemetria", "value"),
-    ]
-)
-def editar_input_erro_telemetria(ativado, value):
-    # Se ativado (True): display block; se desativado: none
-    activate = {"display": "block"} if ativado else {"display": "none"}
-    if not ativado:
-        value = None
-    return activate, value
+    if qtd_min_viagens is None or qtd_min_viagens <= 0:
+        return False
 
-# Função para mostrar o input de WhatsApp de destino
-@callback(
-    Output("pag-editar-input-wpp-destino-container-regra-pag-editar-combustivel", "style"),
-    Input("pag-editar-switch-enviar-wpp-regra-edit-combustivel", "checked"),
-)
-def editar_mostra_input_wpp_destino(wpp_ativo):
-    if wpp_ativo:
-        return {"display": "block"}
-    else:
-        return {"display": "none"}
-    
-# Função para mostrar o input de Email de destino
-@callback(
-    Output("pag-editar-input-email-destino-container-regra-pag-editar-combustivel", "style"),
-    Input("pag-editar-switch-enviar-email-regra-edit-combustivel", "checked"),
-)
-def editar_mostra_input_email_destino(email_ativo):
-    if email_ativo:
-        return {"display": "block"}
-    else:
-        return {"display": "none"}
+    if lista_modelos is None or not lista_modelos or None in lista_modelos:
+        return False
 
-##############################################################################
-# Labels #####################################################################
-##############################################################################
-def gera_labels_inputs_editar(campo):
-    @callback(
-        Output(f"pag-editar-{campo}-labels", "children"),
-        [
-            Input("pag-editar-input-periodo-dias-monitoramento-regra", "value"),  # datas
-            Input("pag-editar-input-modelos-monitoramento-regra", "value"),        # modelos
-            Input("pag-editar-input-quantidade-de-motoristas", "value"), # Motoristas
-            Input("pag-editar-input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
-            Input("pag-editar-input-select-dia-linha-combustivel-regra", "value"),         # dias marcados
-            Input("pag-editar-select-mediana", "value"),
-            Input("pag-editar-select-baixa-performace-indicativo", "value"),
-            Input("pag-editar-select-erro-telemetria", "value"),
-        ]
-    )
-    def editar_atualiza_labels_inputs(
-        datas, modelos, motoristas,
-        qtd_viagens, dias_marcados,
-        mediana, indicativo, erro
-    ):
-        badges = [
-            dmc.Badge(
-                "Filtro",
-                color="gray",
-                variant="outline",
-                size="lg",
-                style={"fontSize": 16, "padding": "6px 12px"}
-            )
-        ]
-
-        # Datas
-        if datas:
-            data_inicio = pd.to_datetime(datetime.now()- timedelta(days=datas)).strftime("%d/%m/%Y")
-            data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
-            badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
-
-        # Modelos
-        if modelos and "TODOS" not in modelos:
-            for m in modelos:
-                badges.append(dmc.Badge(f"Modelo: {m}", variant="dot"))
-        else:
-            badges.append(dmc.Badge("Todos os modelos", variant="outline"))
-
-        # Outras métricas
-        if motoristas:
-            badges.append(dmc.Badge(f"Min. {motoristas} motoristas diferentes", variant="outline"))
-
-         # Outras métricas
-        if qtd_viagens:
-            badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
-
-        if dias_marcados:
-            badges.append(dmc.Badge(f"{dias_marcados}", variant="outline"))
-
-        if mediana:
-            badges.append(dmc.Badge(f"Abaixo da Mediana: {mediana}%", color="yellow", variant="outline"))
-
-        if indicativo:
-            badges.append(dmc.Badge(f"Indicativo Baixa Performance: {indicativo}%", color="yellow", variant="outline"))
-        if erro:
-            badges.append(dmc.Badge(f"Supeita de Erro Telemetria: {erro}%", color="pink", variant="outline"))
-
-        return [dmc.Group(badges, gap="xs")]
-
-    # Componente de saída
-    return dmc.Group(id=f"pag-editar-{campo}-labels", children=[], gap="xs")
+    return True
 
 
-@callback(
-    Output("pag-editar-input-modelos-monitoramento-regra", "value", allow_duplicate=True),
-    Input("pag-editar-input-modelos-monitoramento-regra", "value"),
-    prevent_initial_call=True,
-)
-def editar_atualizar_modelos_selecao(valores_selecionados):
-    if not valores_selecionados:
-        # Nada selecionado -> assume "TODOS"
-        return ["TODOS"]
-
-    ctx = callback_context
-    if not ctx.triggered:
-        return valores_selecionados
-
-    ultimo_valor = ctx.triggered[0]["value"]
-
-    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
-    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
-        if ultimo_valor == ["TODOS"]:
-            return ["TODOS"]
-        else:
-            return [v for v in valores_selecionados if v != "TODOS"]
-
-    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
-    return valores_selecionados
-
-######################## Corrigir input #############################
-# Função para validar o input de email de destino
 def verifica_erro_email(email_destino):
     if not email_destino:
         return False
@@ -418,40 +196,40 @@ def verifica_erro_email(email_destino):
 
 
 @callback(
-    Output("pag-editar-input-email-1-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-email-1-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-email-1-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-email-1-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_email_1(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("pag-editar-input-email-2-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-email-2-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-email-2-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-email-2-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_email_2(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("pag-editar-input-email-3-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-email-3-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-email-3-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-email-3-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_email_3(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("pag-editar-input-email-4-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-email-4-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-email-4-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-email-4-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_email_4(email_destino):
     return verifica_erro_email(email_destino)
 
 
 @callback(
-    Output("pag-editar-input-email-5-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-email-5-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-email-5-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-email-5-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_email_5(email_destino):
     return verifica_erro_email(email_destino)
@@ -481,48 +259,285 @@ def verifica_erro_wpp(wpp_telefone):
 
 
 @callback(
-    Output("pag-editar-input-wpp-1-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-wpp-1-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-wpp-1-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-wpp-1-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_wpp_1(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("pag-editar-input-wpp-2-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-wpp-2-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-wpp-2-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-wpp-2-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_wpp_2(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("pag-editar-input-wpp-3-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-wpp-3-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-wpp-3-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-wpp-3-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_wpp_3(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("pag-editar-input-wpp-4-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-wpp-4-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-wpp-4-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-wpp-4-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_wpp_4(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
 @callback(
-    Output("pag-editar-input-wpp-5-regra-edit-combustivel", "error"),
-    Input("pag-editar-input-wpp-5-regra-edit-combustivel", "value"),
+    Output("pag-editar-regra-input-wpp-5-regra-edit-combustivel", "error"),
+    Input("pag-editar-regra-input-wpp-5-regra-edit-combustivel", "value"),
 )
 def editar_verifica_erro_wpp_5(wpp_telefone):
     return verifica_erro_wpp(wpp_telefone)
 
 
+@callback(
+    Output("pag-editar-regra-input-modelos-monitoramento-regra", "value", allow_duplicate=True),
+    Input("pag-editar-regra-input-modelos-monitoramento-regra", "value"),
+    prevent_initial_call=True,
+)
+def editar_atualizar_modelos_selecao(valores_selecionados):
+    if not valores_selecionados:
+        # Nada selecionado -> assume "TODOS"
+        return ["TODOS"]
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return valores_selecionados
+
+    ultimo_valor = ctx.triggered[0]["value"]
+
+    # Se "TODOS" foi selecionado junto com outros, deixa apenas "TODOS"
+    if "TODOS" in valores_selecionados and len(valores_selecionados) > 1:
+        if ultimo_valor == ["TODOS"]:
+            return ["TODOS"]
+        else:
+            return [v for v in valores_selecionados if v != "TODOS"]
+
+    # Se nada for selecionado, mantém vazio (não retorna "TODOS")
+    return valores_selecionados
+
+
 ##############################################################################
-# Callbacks para o modal de ATUALIZAR ########################################
+# Labels #####################################################################
 ##############################################################################
+def gera_labels_inputs_editar(campo):
+    @callback(
+        Output(f"pag-editar-regra-{campo}-labels", "children"),
+        [
+            Input("pag-editar-regra-input-periodo-dias-monitoramento-regra", "value"),  # datas
+            Input("pag-editar-regra-input-modelos-monitoramento-regra", "value"),  # modelos
+            Input("pag-editar-regra-input-quantidade-de-motoristas", "value"),  # Motoristas
+            Input("pag-editar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),  # qtd viagens
+            Input("pag-editar-regra-input-select-dia-linha-combustivel-regra", "value"),  # dias marcados
+            Input("pag-editar-regra-select-mediana", "value"),
+            Input("pag-editar-regra-select-baixa-performace-indicativo", "value"),
+            Input("pag-editar-regra-select-erro-telemetria", "value"),
+        ],
+    )
+    def editar_atualiza_labels_inputs(
+        datas, modelos, motoristas, qtd_viagens, dias_marcados, mediana, indicativo, erro
+    ):
+        badges = [
+            dmc.Badge(
+                "Filtro", color="gray", variant="outline", size="lg", style={"fontSize": 16, "padding": "6px 12px"}
+            )
+        ]
+
+        # Datas
+        if datas:
+            data_inicio = pd.to_datetime(datetime.now() - timedelta(days=datas)).strftime("%d/%m/%Y")
+            data_fim = pd.to_datetime(datetime.now()).strftime("%d/%m/%Y")
+            badges.append(dmc.Badge(f"{data_inicio} a {data_fim}", variant="outline"))
+
+        # Modelos
+        if modelos and "TODOS" not in modelos:
+            for m in modelos:
+                badges.append(dmc.Badge(f"Modelo: {m}", variant="dot"))
+        else:
+            badges.append(dmc.Badge("Todos os modelos", variant="outline"))
+
+        # Outras métricas
+        if motoristas:
+            badges.append(dmc.Badge(f"Min. {motoristas} motoristas diferentes", variant="outline"))
+
+        # Outras métricas
+        if qtd_viagens:
+            badges.append(dmc.Badge(f"Min. {qtd_viagens} viagens", variant="outline"))
+
+        if dias_marcados:
+            badges.append(dmc.Badge(f"{dias_marcados}", variant="outline"))
+
+        if mediana:
+            badges.append(dmc.Badge(f"Abaixo da Mediana: {mediana}%", color="yellow", variant="outline"))
+
+        if indicativo:
+            badges.append(dmc.Badge(f"Indicativo Baixa Performance: {indicativo}%", color="yellow", variant="outline"))
+        if erro:
+            badges.append(dmc.Badge(f"Supeita de Erro Telemetria: {erro}%", color="pink", variant="outline"))
+
+        return [dmc.Group(badges, gap="xs")]
+
+    # Componente de saída
+    return dmc.Group(id=f"pag-editar-regra-{campo}-labels", children=[], gap="xs")
+
+
+##############################################################################
+# Callbacks para dados ######################################################
+##############################################################################
+@callback(
+    [
+        Output("pag-editar-regra-tabela-preview-viagens-monitoramento", "rowData"),
+        Output("pag-editar-regra-indicador-quantidade-de-veiculos", "children"),
+        Output("pag-editar-regra-indicador-consumo-km-l", "children"),
+        Output("pag-editar-regra-indicador-litros-excedentes", "children"),
+        Output("pag-editar-regra-indicador-gasto-combustivel-excedente", "children"),
+    ],
+    [
+        Input("pag-editar-regra-input-periodo-dias-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-modelos-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-quantidade-de-motoristas", "value"),
+        Input("pag-editar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-select-dia-linha-combustivel-regra", "value"),
+        Input("pag-editar-regra-select-mediana", "value"),
+        Input("pag-editar-regra-select-baixa-performace-indicativo", "value"),
+        Input("pag-editar-regra-select-erro-telemetria", "value"),
+    ],
+)
+def cb_editar_regra_preview_regra(
+    dias_monitoramento,
+    lista_modelos,
+    qtd_min_motoristas,
+    qtd_min_viagens,
+    dias_marcados,
+    limite_mediana,
+    limite_baixa_perfomance,
+    limite_erro_telemetria,
+):
+    # Valida input
+    if not input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+        return [], 0, 0, 0, 0
+
+    df = regra_service.get_preview_regra(
+        dias_monitoramento,
+        lista_modelos,
+        qtd_min_motoristas,
+        qtd_min_viagens,
+        dias_marcados,
+        limite_mediana,
+        limite_baixa_perfomance,
+        limite_erro_telemetria,
+    )
+
+    if df.empty:
+        return [], 0, 0, 0, 0
+
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    quantidade_veiculo = df["vec_num_id"].nunique()
+    media_km_por_litro = str(round(df["media_km_por_litro"].mean(), 2)).replace(".", ",") + " km/L"
+    total_combustivel = (f"{int(df['litros_excedentes'].sum()):,} L".replace(",", "."),)
+    media_combustivel = f"R$ {int(df['custo_excedente'].sum()):,} L".replace(",", ".")
+
+    return df.to_dict(orient="records"), quantidade_veiculo, media_km_por_litro, total_combustivel, media_combustivel
+
+
+@callback(
+    [
+        Output("pag-editar-regra-tabela-preview-viagens-monitoramento", "style"),
+        Output("pag-editar-regra-row-labels-adicionais", "style"),
+    ],
+    Input("pag-editar-regra-btn-preview-regra-monitoramento", "n_clicks"),
+    prevent_initial_call=True,
+)
+def editar_toggle_tabela(n_clicks):
+    base_style = {
+        "height": 400,
+        "resize": "vertical",
+        "overflow": "hidden",
+    }
+    if n_clicks % 2 == 1:
+        return {**base_style, "display": "block"}, {"display": "block"}
+    return {**base_style, "display": "none"}, {"display": "none"}
+
+
+##############################################################################
+# Callbacks para switch ######################################################
+##############################################################################
+
+
+@callback(
+    Output("pag-editar-regra-container-mediana", "style"),
+    Input("pag-editar-regra-switch-mediana", "checked"),
+)
+def editar_input_mediana(ativado):
+    # Se ativado (True): display block; se desativado: none
+    activate = {"display": "block"} if ativado else {"display": "none"}
+
+    return activate
+
+
+@callback(
+    Output("pag-editar-regra-container-baixa-performace-indicativo", "style"),
+    Input("pag-editar-regra-switch-baixa-performace-indicativo", "checked"),
+)
+def editar_input_baixa_performace_indicativo(ativado):
+    # Se ativado (True): display block; se desativado: none
+    activate = {"display": "block"} if ativado else {"display": "none"}
+
+    return activate
+
+
+@callback(
+    Output("pag-editar-regra-container-erro-telemetria", "style"),
+    Input("pag-editar-regra-switch-erro-telemetria", "checked"),
+)
+def editar_input_erro_telemetria(ativado):
+    # Se ativado (True): display block; se desativado: none
+    activate = {"display": "block"} if ativado else {"display": "none"}
+
+    return activate
+
+
+# Função para mostrar o input de WhatsApp de destino
+@callback(
+    Output("pag-editar-regra-input-wpp-destino-container-regra-pag-editar-regra-combustivel", "style"),
+    Input("pag-editar-regra-switch-enviar-wpp-regra-edit-combustivel", "checked"),
+)
+def editar_mostra_input_wpp_destino(wpp_ativo):
+    if wpp_ativo:
+        return {"display": "block"}
+    else:
+        return {"display": "none"}
+
+
+# Função para mostrar o input de Email de destino
+@callback(
+    Output("pag-editar-regra-input-email-destino-container-regra-pag-editar-regra-combustivel", "style"),
+    Input("pag-editar-regra-switch-enviar-email-regra-edit-combustivel", "checked"),
+)
+def editar_mostra_input_email_destino(email_ativo):
+    if email_ativo:
+        return {"display": "block"}
+    else:
+        return {"display": "none"}
+
+
+##############################################################################
+# Callbacks para atualizar ###################################################
+##############################################################################
+
 
 # Callback para ABRIR o modal de confirmação de atualização
 @callback(
@@ -530,18 +545,19 @@ def editar_verifica_erro_wpp_5(wpp_telefone):
         Output("modal-confirma-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
         Output("nome-regra-atualizar-gerenciar-regra", "children"),
     ],
-    Input("pag-editar-btn-atualizar-regra-monitoramento", "n_clicks"),
-    State("pag-editar-input-nome-regra-monitoramento", "value"),
+    Input("pag-editar-regra-btn-atualizar-regra-monitoramento", "n_clicks"),
+    State("pag-editar-regra-input-nome-regra-monitoramento", "value"),
     prevent_initial_call=True,
 )
 def abrir_modal_confirmacao_atualizar(n_clicks, nome_regra):
     if n_clicks is None or n_clicks == 0:
         return False, dash.no_update
-    
+
     # Exibe o nome da regra no modal para confirmação
-    nome_formatado = f'Nome da Regra: "{nome_regra}"' if nome_regra else "A regra sem nome será atualizada."
-    
+    nome_formatado = f'Nome da Regra: "{nome_regra}"'
+
     return True, nome_formatado
+
 
 # Callback para FECHAR o modal de confirmação com o botão "Cancelar"
 @callback(
@@ -552,84 +568,162 @@ def abrir_modal_confirmacao_atualizar(n_clicks, nome_regra):
 def fechar_modal_confirmacao_atualizar(n_clicks):
     return False
 
+
 # Callback para EXECUTAR a atualização e mostrar o modal de sucesso/erro
 @callback(
     [
         Output("modal-confirma-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
         Output("modal-sucesso-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
-        Output("pag-editar-modalerro-atualizar-pag-editar-regra", "opened", allow_duplicate=True),
-        # Output("pag-editar-mensagem-sucesso", "children") # Limpa a mensagem antiga
+        Output("modal-pag-editar-regra-erro-atualizar-regra", "opened", allow_duplicate=True),
     ],
-    Input("btn-confirma-atualizar-regra", "n_clicks"),
     [
-        State("pag-editar-input-nome-regra-monitoramento", "value"),
-        State("pag-editar-input-periodo-dias-monitoramento-regra", "value"),
-        State("pag-editar-input-modelos-monitoramento-regra", "value"),
-        State("pag-editar-input-quantidade-de-motoristas", "value"),
-        State("pag-editar-input-quantidade-de-viagens-monitoramento-regra", "value"),
-        State("pag-editar-input-select-dia-linha-combustivel-regra", "value"),
-        State("pag-editar-select-mediana", "value"),
-        State("pag-editar-select-baixa-performace-indicativo", "value"),
-        State("pag-editar-select-erro-telemetria", "value"),
-        State("pag-editar-switch-os-automatica", "checked"),
-        State("pag-editar-switch-enviar-email-regra-edit-combustivel", "checked"),
-        State("pag-editar-switch-enviar-wpp-regra-edit-combustivel", "checked"),
-        State("pag-editar-input-email-1-regra-edit-combustivel", "value"),
-        State("pag-editar-input-email-2-regra-edit-combustivel", "value"),
-        State("pag-editar-input-email-3-regra-edit-combustivel", "value"),
-        State("pag-editar-input-email-4-regra-edit-combustivel", "value"),
-        State("pag-editar-input-email-5-regra-edit-combustivel", "value"),
-        State("pag-editar-input-wpp-1-regra-edit-combustivel", "value"),
-        State("pag-editar-input-wpp-2-regra-edit-combustivel", "value"),
-        State("pag-editar-input-wpp-3-regra-edit-combustivel", "value"),
-        State("pag-editar-input-wpp-4-regra-edit-combustivel", "value"),
-        State("pag-editar-input-wpp-5-regra-edit-combustivel", "value"),
-        State("store-pag-editar-input-id-pag-editar-regra", "data"),
+        Input("btn-confirma-atualizar-regra", "n_clicks"),
+        Input("pag-editar-regra-input-nome-regra-monitoramento", "value"),
+        Input("pag-editar-regra-input-periodo-dias-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-modelos-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-quantidade-de-motoristas", "value"),
+        Input("pag-editar-regra-input-quantidade-de-viagens-monitoramento-regra", "value"),
+        Input("pag-editar-regra-input-select-dia-linha-combustivel-regra", "value"),
+        Input("pag-editar-regra-select-mediana", "value"),
+        Input("pag-editar-regra-select-baixa-performace-indicativo", "value"),
+        Input("pag-editar-regra-select-erro-telemetria", "value"),
+        Input("pag-editar-regra-switch-os-automatica", "checked"),
+        Input("pag-editar-regra-switch-enviar-email-regra-edit-combustivel", "checked"),
+        Input("pag-editar-regra-switch-enviar-wpp-regra-edit-combustivel", "checked"),
+        Input("pag-editar-regra-input-email-1-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-email-2-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-email-3-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-email-4-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-email-5-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-wpp-1-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-wpp-2-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-wpp-3-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-wpp-4-regra-edit-combustivel", "value"),
+        Input("pag-editar-regra-input-wpp-5-regra-edit-combustivel", "value"),
+        Input("store-pag-editar-regra-input-id-pag-editar-regra", "data"),
     ],
-    prevent_initial_call=True
+    prevent_initial_call=True,
 )
-def confirmar_e_atualizar_regra(n_clicks, nome_regra, data, modelos, motoristas,
-                                quantidade_de_viagens, dias_marcados, mediana_viagem,
-                                indicativo_performace, erro_telemetria, criar_os_automatica,
-                                enviar_email, enviar_whatsapp, email1, email2, email3, email4, email5,
-                                wpp1, wpp2, wpp3, wpp4, wpp5, id_regra_data):
+def cb_atualiza_regra(
+    n_clicks,
+    nome_regra,
+    dias_monitoramento,
+    lista_modelos,
+    qtd_min_motoristas,
+    qtd_min_viagens,
+    dias_marcados,
+    limite_mediana,
+    limite_baixa_perfomance,
+    limite_erro_telemetria,
+    criar_os_automatica,
+    enviar_email,
+    enviar_whatsapp,
+    email_destino_1,
+    email_destino_2,
+    email_destino_3,
+    email_destino_4,
+    email_destino_5,
+    wpp_telefone_1,
+    wpp_telefone_2,
+    wpp_telefone_3,
+    wpp_telefone_4,
+    wpp_telefone_5,
+    id_regra_data,
+):
     if n_clicks is None or n_clicks == 0:
-        return False, False, False, ""
-    
-    print("Entrando aqui")
+        return False, False, False
 
-    email_list = [e for e in [email1, email2, email3, email4, email5] if e]
-    wpp_list = [w for w in [wpp1, wpp2, wpp3, wpp4, wpp5] if w]
-    
-    id_regra = id_regra_data.get("id_regra") if id_regra_data else None
+    # Valida Resto do input
+    if not input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
+        return False, False, True
+
+    # Valida nome da regra
+    if not nome_regra:
+        return False, False, True
+
+    # Verifica se pelo menos um email ou wpp está ativo
+    if not enviar_email and not enviar_whatsapp:
+        return False, False, True
+
+    # Verifica se há id de regra
+    if id_regra_data.get("id_regra") is None:
+        return False, False, True
+
+    # Obtém id_regra
+    id_regra = int(id_regra_data.get("id_regra"))
+
+    # Valida se há pelo menos um telefone de whatsapp válido caso esteja ativo
+    wpp_telefones = [wpp_telefone_1, wpp_telefone_2, wpp_telefone_3, wpp_telefone_4, wpp_telefone_5]
+    wpp_tel_validos = []
+    if enviar_whatsapp:
+        wpp_tel_validos = [wpp for wpp in wpp_telefones if wpp != "" and not verifica_erro_wpp(wpp)]
+        if len(wpp_tel_validos) == 0:
+            return [True, False]
+
+    # Valida se há pelo menos um email válido caso esteja ativo
+    email_destinos = [email_destino_1, email_destino_2, email_destino_3, email_destino_4, email_destino_5]
+    email_destinos_validos = []
+    if enviar_email:
+        email_destinos_validos = [email for email in email_destinos if email != "" and not verifica_erro_email(email)]
+        if len(email_destinos_validos) == 0:
+            return [True, False]
+
+    target_wpp_telefones = wpp_telefones
+    target_wpp_telefones_validos = [wpp if wpp and not verifica_erro_wpp(wpp) else None for wpp in target_wpp_telefones]
+
+    target_email_destinos = email_destinos
+    target_email_destinos_validos = [
+        email if email and not verifica_erro_email(email) else None for email in target_email_destinos
+    ]
 
     try:
-        # Validações básicas antes de tentar atualizar
-        if not nome_regra or not id_regra:
-            raise ValueError("O nome e o ID da regra são obrigatórios.")
+        payload = {
+            "nome_regra": nome_regra,
+            "periodo": dias_monitoramento,
+            "modelos_veiculos": lista_modelos,
+            "qtd_min_motoristas": qtd_min_motoristas,
+            "dias_marcados": dias_marcados,
+            "qtd_min_viagens": qtd_min_viagens,
+            "limite_mediana": limite_mediana,
+            "usar_mediana_viagem": limite_mediana is not None,
+            "limite_baixa_perfomance": limite_baixa_perfomance,
+            "usar_indicativo_baixa_performace": limite_baixa_perfomance is not None,
+            "limite_erro_telemetria": limite_erro_telemetria,
+            "usar_erro_telemetria": limite_erro_telemetria is not None,
+            "criar_os_automatica": criar_os_automatica,
+            "target_email": enviar_email,
+            "target_email_dest1": target_email_destinos_validos[0],
+            "target_email_dest2": target_email_destinos_validos[1],
+            "target_email_dest3": target_email_destinos_validos[2],
+            "target_email_dest4": target_email_destinos_validos[3],
+            "target_email_dest5": target_email_destinos_validos[4],
+            "target_wpp": enviar_whatsapp,
+            "target_wpp_dest1": target_wpp_telefones_validos[0],
+            "target_wpp_dest2": target_wpp_telefones_validos[1],
+            "target_wpp_dest3": target_wpp_telefones_validos[2],
+            "target_wpp_dest4": target_wpp_telefones_validos[3],
+            "target_wpp_dest5": target_wpp_telefones_validos[4],
+        }
 
-        regra_service.atualizar_regra_monitoramento(
-            id_regra, nome_regra, data, modelos, motoristas,
-            quantidade_de_viagens, dias_marcados, mediana_viagem,
-            indicativo_performace, erro_telemetria, criar_os_automatica,
-            enviar_email, enviar_whatsapp, email_list, wpp_list
-        )
+        regra_service.atualizar_regra_monitoramento(id_regra, payload)
+
         # Fecha o modal de confirmação e abre o de sucesso
         return False, True, False
     except Exception as e:
         print(f"Erro ao atualizar a regra: {e}")
         # Fecha o modal de confirmação e abre o de erro
         return False, False, True
-    
+
+
 # Callback para FECHAR os modais de sucesso e erro
 @callback(
     [
         Output("modal-sucesso-atualizar-gerenciar-regra", "opened", allow_duplicate=True),
-        Output("pag-editar-modalerro-atualizar-pag-editar-regra", "opened", allow_duplicate=True),
+        Output("modal-pag-editar-regra-erro-atualizar-regra", "opened", allow_duplicate=True),
     ],
     [
         Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
-        Input("btn-close-pag-editar-modalerro-atualizar-pag-editar-regra", "n_clicks"),
+        Input("btn-close-pag-editar-regra-modal-erro-atualizar-regra", "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -637,18 +731,17 @@ def fechar_modais_resultado(n_sucesso, n_erro):
     return False, False
 
 
+# Callback para REDIRECIONAR APÓS SUCESSO
+@callback(
+    Output("url", "href", allow_duplicate=True),
+    Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
+    prevent_initial_call=True,
+)
+def cb_botao_close_modal_erro_carregar_dados_editar_regra(n_clicks):
+    if n_clicks is None or n_clicks == 0:
+        return dash.no_update
 
-# # Callback para REDIRECIONAR APÓS SUCESSO
-# @callback(
-#     Output("url", "pathname", allow_duplicate=True),
-#     Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
-#     prevent_initial_call=True,
-# )
-# def redirecionar_apos_sucesso(n):
-#     if not n:
-#         return dash.no_update
-#     return "/regras-existentes"
-
+    return "/regras-gerenciar"
 
 
 ##############################################################################
@@ -656,11 +749,8 @@ def fechar_modais_resultado(n_sucesso, n_erro):
 ##############################################################################
 layout = dbc.Container(
     [
-        # URL e Store
-        dcc.Location(id="url", refresh=False),
-        
         # Estado
-        dcc.Store(id="store-pag-editar-input-id-pag-editar-regra"),
+        dcc.Store(id="store-pag-editar-regra-input-id-pag-editar-regra"),
         # Loading
         dmc.LoadingOverlay(
             visible=True,
@@ -706,7 +796,7 @@ layout = dbc.Container(
                     dmc.Text("Esta ação aplicará as novas configurações imediatamente."),
                     dmc.Group(
                         [
-                            dmc.Button("Cancelar", id="btn-cancelar-atualizar-regra", variant="default", color='red'),
+                            dmc.Button("Cancelar", id="btn-cancelar-atualizar-regra", variant="default", color="red"),
                             dmc.Button(
                                 "Atualizar",
                                 color="blue",
@@ -757,7 +847,7 @@ layout = dbc.Container(
             ),
         ),
         dmc.Modal(
-            id="pag-editar-modalerro-atualizar-pag-editar-regra",
+            id="modal-pag-editar-regra-erro-atualizar-regra",
             centered=True,
             radius="lg",
             size="lg",
@@ -779,7 +869,7 @@ layout = dbc.Container(
                                 "Fechar",
                                 color="red",
                                 variant="outline",
-                                id="btn-close-pag-editar-modalerro-atualizar-pag-editar-regra",
+                                id="btn-close-pag-editar-regra-modal-erro-atualizar-regra",
                             ),
                         ],
                         justify="center",
@@ -789,7 +879,6 @@ layout = dbc.Container(
                 gap="md",
             ),
         ),
-
         # Cabeçalho
         dbc.Row(
             [
@@ -819,7 +908,6 @@ layout = dbc.Container(
                                 html.Hr(),
                             ]
                         ),
-
                         # Nome da Regra e Período
                         dbc.Row(
                             [
@@ -827,29 +915,9 @@ layout = dbc.Container(
                                     dbc.Card(
                                         html.Div(
                                             [
-                                                dbc.Label("ID da Regra (somente leitura)"),
+                                                dbc.Label("Nome da Regra de Monitoramento"),
                                                 dbc.Input(
-                                                    id="pag-editar-input-id-regra-monitoramento",
-                                                    type="text",
-                                                    placeholder="ID da Regra",
-                                                    value="",
-                                                    disabled=True,
-                                                ),
-                                            ],
-                                            className="dash-bootstrap",
-                                        ),
-                                        body=True,
-                                    ),
-                                    md=12,
-                                ),
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card(
-                                        html.Div(
-                                            [
-                                                dbc.Label("Nome da Regra de Monitoramneto"),
-                                                dbc.Input(
-                                                    id="pag-editar-input-nome-regra-monitoramento",
+                                                    id="pag-editar-regra-input-nome-regra-monitoramento",
                                                     type="text",
                                                     placeholder="Digite algo...",
                                                     value="",
@@ -870,7 +938,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="pag-editar-input-periodo-dias-monitoramento-regra",
+                                                            id="pag-editar-regra-input-periodo-dias-monitoramento-regra",
                                                             type="number",
                                                             placeholder="Dias",
                                                             value=30,
@@ -886,6 +954,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -893,7 +962,7 @@ layout = dbc.Container(
                                             [
                                                 dbc.Label("Modelos"),
                                                 dcc.Dropdown(
-                                                    id="pag-editar-input-modelos-monitoramento-regra",
+                                                    id="pag-editar-regra-input-modelos-monitoramento-regra",
                                                     multi=True,
                                                     options=[
                                                         {"label": modelo["LABEL"], "value": modelo["LABEL"]}
@@ -911,9 +980,7 @@ layout = dbc.Container(
                                 ),
                             ]
                         ),
-
                         dmc.Space(h=10),
-
                         # Linha e Viagens
                         dbc.Row(
                             [
@@ -925,7 +992,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="pag-editar-input-quantidade-de-motoristas",
+                                                            id="pag-editar-regra-input-quantidade-de-motoristas",
                                                             type="number",
                                                             placeholder="digite um valor...",
                                                             value=3,
@@ -941,6 +1008,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dbc.Col(
                                     dbc.Card(
@@ -950,7 +1018,7 @@ layout = dbc.Container(
                                                 dbc.InputGroup(
                                                     [
                                                         dbc.Input(
-                                                            id="pag-editar-input-quantidade-de-viagens-monitoramento-regra",
+                                                            id="pag-editar-regra-input-quantidade-de-viagens-monitoramento-regra",
                                                             type="number",
                                                             placeholder="digite um valor...",
                                                             value=5,
@@ -969,9 +1037,7 @@ layout = dbc.Container(
                                 ),
                             ]
                         ),
-
                         dmc.Space(h=10),
-
                         # Filtros e Switches
                         dbc.Row(
                             [
@@ -982,7 +1048,7 @@ layout = dbc.Container(
                                             [
                                                 dbc.Label("Dias"),
                                                 dbc.RadioItems(
-                                                    id="pag-editar-input-select-dia-linha-combustivel-regra",
+                                                    id="pag-editar-regra-input-select-dia-linha-combustivel-regra",
                                                     options=[
                                                         {"label": "Seg-Sexta", "value": "SEG_SEX"},
                                                         {"label": "Sabado", "value": "SABADO"},
@@ -999,15 +1065,15 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
-                                
                                 # Mediana
                                 dbc.Col(
                                     dbc.Card(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="pag-editar-switch-mediana",
+                                                    id="pag-editar-regra-switch-mediana",
                                                     label="% Mínima de Viagens Abaixo da Mediana",
                                                     checked=False,
                                                 ),
@@ -1016,7 +1082,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="pag-editar-select-mediana",
+                                                                id="pag-editar-regra-select-mediana",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=10,
@@ -1026,7 +1092,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="pag-editar-container-mediana",
+                                                    id="pag-editar-regra-container-mediana",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -1034,6 +1100,7 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
                                 dmc.Space(h=10),
                                 # Baixa performance indicativo
@@ -1042,7 +1109,7 @@ layout = dbc.Container(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="pag-editar-switch-baixa-performace-indicativo",
+                                                    id="pag-editar-regra-switch-baixa-performace-indicativo",
                                                     label="% Mínima de Viagens com Supeita ou Baixa Performance",
                                                     checked=False,
                                                 ),
@@ -1051,7 +1118,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="pag-editar-select-baixa-performace-indicativo",
+                                                                id="pag-editar-regra-select-baixa-performace-indicativo",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=0,
@@ -1061,7 +1128,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="pag-editar-container-baixa-performace-indicativo",
+                                                    id="pag-editar-regra-container-baixa-performace-indicativo",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -1069,15 +1136,15 @@ layout = dbc.Container(
                                         body=True,
                                     ),
                                     md=6,
+                                    className="mb-3 mb-md-0",
                                 ),
-
                                 # Erro telemetria
                                 dbc.Col(
                                     dbc.Card(
                                         html.Div(
                                             [
                                                 dmc.Switch(
-                                                    id="pag-editar-switch-erro-telemetria",
+                                                    id="pag-editar-regra-switch-erro-telemetria",
                                                     label="% Mínima de Viagens com Erro de Telemetria",
                                                     checked=False,
                                                 ),
@@ -1086,7 +1153,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="pag-editar-select-erro-telemetria",
+                                                                id="pag-editar-regra-select-erro-telemetria",
                                                                 type="number",
                                                                 placeholder="Digite a porcentagem",
                                                                 min=10,
@@ -1096,7 +1163,7 @@ layout = dbc.Container(
                                                             dbc.InputGroupText("%"),
                                                         ]
                                                     ),
-                                                    id="pag-editar-container-erro-telemetria",
+                                                    id="pag-editar-regra-container-erro-telemetria",
                                                     style={"display": "none", "marginTop": "10px"},
                                                 ),
                                             ]
@@ -1106,14 +1173,13 @@ layout = dbc.Container(
                                     md=6,
                                 ),
                                 dmc.Space(h=10),
-
                                 dbc.Col(
                                     dbc.Card(
                                         dbc.Row(
                                             [
                                                 dbc.Col(
                                                     dmc.Switch(
-                                                        id="pag-editar-switch-enviar-email-regra-edit-combustivel",
+                                                        id="pag-editar-regra-switch-enviar-email-regra-edit-combustivel",
                                                         label="Enviar email",
                                                         checked=False,
                                                         size="md",
@@ -1130,7 +1196,7 @@ layout = dbc.Container(
                                                             ),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-email-1-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-email-1-regra-edit-combustivel",
                                                                     placeholder="email1@odilonsantos.com",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="mdi:email"),
@@ -1140,7 +1206,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-email-2-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-email-2-regra-edit-combustivel",
                                                                     placeholder="email2@odilonsantos.com",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="mdi:email"),
@@ -1150,7 +1216,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-email-3-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-email-3-regra-edit-combustivel",
                                                                     placeholder="email3@odilonsantos.com",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="mdi:email"),
@@ -1160,7 +1226,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-email-4-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-email-4-regra-edit-combustivel",
                                                                     placeholder="email4@odilonsantos.com",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="mdi:email"),
@@ -1170,7 +1236,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-email-5-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-email-5-regra-edit-combustivel",
                                                                     placeholder="email5@odilonsantos.com",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="mdi:email"),
@@ -1180,7 +1246,7 @@ layout = dbc.Container(
                                                         ],
                                                         align="center",
                                                     ),
-                                                    id="pag-editar-input-email-destino-container-regra-pag-editar-combustivel",
+                                                    id="pag-editar-regra-input-email-destino-container-regra-pag-editar-regra-combustivel",
                                                     md=12,
                                                 ),
                                             ],
@@ -1196,7 +1262,7 @@ layout = dbc.Container(
                                             [
                                                 dbc.Col(
                                                     dmc.Switch(
-                                                        id="pag-editar-switch-enviar-wpp-regra-edit-combustivel",
+                                                        id="pag-editar-regra-switch-enviar-wpp-regra-edit-combustivel",
                                                         label="Enviar WhatsApp",
                                                         checked=False,
                                                         size="md",
@@ -1213,7 +1279,7 @@ layout = dbc.Container(
                                                             ),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-wpp-1-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-wpp-1-regra-edit-combustivel",
                                                                     placeholder="(62) 99999-9999",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="logos:whatsapp-icon"),
@@ -1223,7 +1289,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-wpp-2-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-wpp-2-regra-edit-combustivel",
                                                                     placeholder="(62) 99999-9999",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="logos:whatsapp-icon"),
@@ -1233,7 +1299,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-wpp-3-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-wpp-3-regra-edit-combustivel",
                                                                     placeholder="(62) 99999-9999",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="logos:whatsapp-icon"),
@@ -1243,7 +1309,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-wpp-4-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-wpp-4-regra-edit-combustivel",
                                                                     placeholder="(62) 99999-9999",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="logos:whatsapp-icon"),
@@ -1253,7 +1319,7 @@ layout = dbc.Container(
                                                             dmc.Space(h=10),
                                                             dbc.Col(
                                                                 dmc.TextInput(
-                                                                    id="pag-editar-input-wpp-5-regra-edit-combustivel",
+                                                                    id="pag-editar-regra-input-wpp-5-regra-edit-combustivel",
                                                                     placeholder="(62) 99999-9999",
                                                                     value="",
                                                                     leftSection=DashIconify(icon="logos:whatsapp-icon"),
@@ -1263,7 +1329,7 @@ layout = dbc.Container(
                                                         ],
                                                         align="center",
                                                     ),
-                                                    id="pag-editar-input-wpp-destino-container-regra-pag-editar-combustivel",
+                                                    id="pag-editar-regra-input-wpp-destino-container-regra-pag-editar-regra-combustivel",
                                                     md=12,
                                                 ),
                                             ],
@@ -1280,7 +1346,7 @@ layout = dbc.Container(
                                         dbc.Row(
                                             dbc.Col(
                                                 dmc.Switch(
-                                                    id="pag-editar-switch-os-automatica",
+                                                    id="pag-editar-regra-switch-os-automatica",
                                                     label="Criar OS automática",
                                                     checked=False,
                                                     size="md",
@@ -1302,16 +1368,14 @@ layout = dbc.Container(
                 ),
             ]
         ),
-
         dmc.Space(h=10),
-
         # Botões de Preview e Atualizar Regra
         dbc.Row(
             [
                 dbc.Col(
                     dbc.Button(
                         "Preview da Regra",
-                        id="pag-editar-btn-preview-regra-monitoramento",
+                        id="pag-editar-regra-btn-preview-regra-monitoramento",
                         color="info",
                         className="me-1",
                         style={"padding": "1em", "width": "100%"},
@@ -1321,8 +1385,8 @@ layout = dbc.Container(
                 ),
                 dbc.Col(
                     dbc.Button(
-                        "Criar Regra",
-                        id="pag-editar-mensagem-sucesso-preview",
+                        "Atualizar Regra",
+                        id="pag-editar-regra-btn-atualizar-regra-monitoramento",
                         color="success",
                         className="me-1",
                         style={"padding": "1em", "width": "100%"},
@@ -1333,9 +1397,7 @@ layout = dbc.Container(
             justify="center",
             align="center",
         ),
-
         dmc.Space(h=20),
-
         # Indicador de veículos
         dbc.Row(
             [
@@ -1345,28 +1407,7 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="pag-editar-indicador-quantidade-gasto-combustivel", order=2),
-                                        DashIconify(icon="mdi:gas-station", width=48, color="black"),
-                                    ],
-                                    justify="center",
-                                    mt="md",
-                                    mb="xs",
-                                ),
-                            ),
-                            dbc.CardFooter("Total de combustível a mais utilizado"),
-                        ],
-                        class_name="card-box-shadow",
-                    ),
-                    md=4,
-                    style={"margin-bottom": "20px"},
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                dmc.Group(
-                                    [
-                                        dmc.Title(id="pag-editar-indicador-quantidade-de-veiculos", order=2),
+                                        dmc.Title(id="pag-editar-regra-indicador-quantidade-de-veiculos", order=2),
                                         DashIconify(icon="mdi:bomb", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -1378,7 +1419,7 @@ layout = dbc.Container(
                         ],
                         class_name="card-box-shadow",
                     ),
-                    md=4,
+                    md=6,
                     style={"margin-bottom": "20px"},
                 ),
                 dbc.Col(
@@ -1387,7 +1428,37 @@ layout = dbc.Container(
                             dbc.CardBody(
                                 dmc.Group(
                                     [
-                                        dmc.Title(id="pag-editar-indicador-media-gasto-combustivel", order=2),
+                                        dmc.Title(id="pag-editar-regra-indicador-consumo-km-l", order=2),
+                                        DashIconify(
+                                            icon="material-symbols:speed-outline-rounded", width=48, color="black"
+                                        ),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter("Consumo médio (km/L)"),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=6,
+                    style={"margin-bottom": "20px"},
+                ),
+            ]
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(
+                                            id="pag-editar-regra-indicador-litros-excedentes",
+                                            order=2,
+                                        ),
                                         DashIconify(icon="mdi:gas-station", width=48, color="black"),
                                     ],
                                     justify="center",
@@ -1395,37 +1466,58 @@ layout = dbc.Container(
                                     mb="xs",
                                 ),
                             ),
-                            dbc.CardFooter("Média de combustível a mais utilizado"),
+                            dbc.CardFooter("Total de combustível a mais utilizado"),
                         ],
                         class_name="card-box-shadow",
                     ),
-                    md=4,
+                    md=6,
+                    style={"margin-bottom": "20px"},
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                dmc.Group(
+                                    [
+                                        dmc.Title(id="pag-editar-regra-indicador-gasto-combustivel-excedente", order=2),
+                                        DashIconify(icon="emojione-monotone:money-with-wings", width=48, color="black"),
+                                    ],
+                                    justify="center",
+                                    mt="md",
+                                    mb="xs",
+                                ),
+                            ),
+                            dbc.CardFooter(
+                                f"Total gasto com combustível excedente (R$), considerando o litro do Diesel = R$ {preco_diesel:,.2f}".replace(
+                                    ".", ","
+                                )
+                            ),
+                        ],
+                        class_name="card-box-shadow",
+                    ),
+                    md=6,
                     style={"margin-bottom": "20px"},
                 ),
             ],
             justify="center",
         ),
-        
         dmc.Space(h=10),
-
         # Labels adicionais
         dbc.Row(
             [
                 dbc.Col(gera_labels_inputs_editar("labels-regra-service"), width=True),
             ],
             style={"display": "none"},
-            id="pag-editar-row-labels-adicionais"
+            id="pag-editar-regra-row-labels-adicionais",
         ),
-
         dmc.Space(h=20),
-
         # Tabela de regras
         html.Div(
-            id="pag-editar-container-tabela-regras",
+            id="pag-editar-regra-container-tabela-regras",
             children=[
                 dag.AgGrid(
-                    id="pag-editar-tabela-regras-viagens-monitoramento",
-                    columnDefs=regras_tabela.tbl_perc_viagens_monitoramento,
+                    id="pag-editar-regra-tabela-preview-viagens-monitoramento",
+                    columnDefs=regras_tabela.tbl_consumo_veiculos,
                     rowData=[],
                     defaultColDef={"filter": True, "floatingFilter": True},
                     columnSize="autoSize",
@@ -1435,14 +1527,9 @@ layout = dbc.Container(
                         "enableCellTextSelection": True,
                         "ensureDomOrder": True,
                     },
-                    style={
-                        "height": 400,
-                        "resize": "vertical",
-                        "overflow": "hidden",
-                        "display": "none"
-                    },
+                    style={"height": 400, "resize": "vertical", "overflow": "hidden", "display": "none"},
                 )
-            ]
+            ],
         ),
     ],
 )

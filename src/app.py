@@ -278,21 +278,6 @@ app.clientside_callback(
 )
 
 
-# Chamada da função clientside_callback
-app.clientside_callback(
-    """
-    function(n) {
-        if (n) {
-            window.location.href = "/regras-existentes";
-        }
-        return null;
-    }
-    """,
-    Output("dummy-redirect", "children"),
-    Input("btn-close-modal-sucesso-atualizar-gerenciar-regra", "n_clicks"),
-    prevent_initial_call=True
-)
-
 ##############################################################################
 # Auth #######################################################################
 ##############################################################################
