@@ -126,18 +126,20 @@ def subquery_dia_semana(dia_numerico):
     return query
 
 
-def subquery_dia_marcado_str(dias_marcado):
-    dias_subquery = ""
-    
-    if "SEG_SEX" in dias_marcado:
-        dias_subquery = "AND dia_numerico BETWEEN 2 AND 6"
-    elif "SABADO" in dias_marcado:
-        dias_subquery = "AND dia_numerico = 7"
-    elif "DOMINGO" in dias_marcado:
-        dias_subquery = "AND dia_numerico = 1"
-    elif "FERIADO" in dias_marcado:
-        dias_subquery = "AND dia_eh_feriado = TRUE"
+def subquery_lista_dia_marcado(lista_dia_semana):
+    query = ""
+    dias_subquery = []
+    for dias_marcado in lista_dia_semana:
+        if "SEG_SEX" in dias_marcado:
+            dias_subquery.append("dia_numerico BETWEEN 2 AND 6")
+        elif "SABADO" in dias_marcado:
+            dias_subquery.append("dia_numerico = 7")
+        elif "DOMINGO" in dias_marcado:
+            dias_subquery.append("dia_numerico = 1")
+        elif "FERIADO" in dias_marcado:
+            dias_subquery.append("dia_eh_feriado = TRUE")
 
+    if len(dias_subquery) > 0:
+        query = "AND (" + " OR ".join(dias_subquery) + ")"
 
-    return dias_subquery
-
+    return query

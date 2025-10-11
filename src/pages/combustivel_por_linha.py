@@ -45,13 +45,14 @@ from modules.entities_utils import (
     get_modelos_veiculos_com_combustivel,
     get_tipos_eventos_telemetria_mix_com_data,
     get_tipos_eventos_telemetria_mix_com_gps,
+    gerar_excel
 )
 
 # Imports específicos
-from modules.combustivel_por_linha.linha_service import LinhaService
 from modules.combustivel_por_veiculo.veiculo_service import VeiculoService
-import modules.combustivel_por_linha.graficos as combustivel_graficos
-import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
+from modules.combustivel_por_linha.linha_service import LinhaService
+import modules.combustivel_por_linha.graficos as linha_graficos
+import modules.combustivel_por_linha.tabela as linha_tabela
 
 # Preço do diesel
 from modules.preco_combustivel_api import get_preco_diesel
@@ -114,13 +115,13 @@ def parse_list_param_pag_linha(param):
 
 # Preenche os dados via URL
 @callback(
-    Output("input-select-linhas-combustivel", "value"),
-    Output("input-intervalo-datas-combustivel-linha", "value"),
-    Output("input-select-modelos-combustivel-linha", "value"),
-    Output("input-select-sentido-da-linha-combustivel", "value"),
-    Output("input-select-dia-linha-combustivel", "value"),
-    Output("input-linha-combustivel-remover-outliers-menor-que", "value"),
-    Output("input-linha-combustivel-remover-outliers-maior-que", "value"),
+    Output("pag-linha-input-select-linhas-combustivel", "value"),
+    Output("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+    Output("pag-linha-input-select-modelos-combustivel-linha", "value"),
+    Output("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+    Output("pag-linha-input-select-dia-linha-combustivel", "value"),
+    Output("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+    Output("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
     Input("url", "href"),
 )
 def cb_receber_campos_via_url_pag_linha(href):
@@ -145,20 +146,12 @@ def cb_receber_campos_via_url_pag_linha(href):
     sentido = ["IDA", "VOLTA"]
 
     # Dias marcados (por padrão SEG a SEX, pode modificar depois)
-    dia_marcado = "SEG_SEX"
+    dia_marcado = ["SEG_SEX"]
 
     # Velocidade
     km_l_min = int(query_params.get("km_l_min", [1])[0])
     km_l_max = int(query_params.get("km_l_max", [10])[0])
 
-    print("PARAMETROS RECEBIDOS")
-    print("LINHA", linha)
-    print("DATAS", datas)
-    print("MODELOS", lista_modelos)
-    print("SENTIDO", sentido)
-    print("DIA_MARCADO", dia_marcado)
-    print("KM_L_MIN", km_l_min)
-    print("KM_L_MAX", km_l_max)
     return linha, datas, lista_modelos, sentido, dia_marcado, km_l_min, km_l_max
 
 
@@ -168,7 +161,7 @@ def cb_receber_campos_via_url_pag_linha(href):
 
 
 # Função para validar o input
-def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
+def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
     if datas is None or not datas or None in datas:
         return False
 
@@ -183,8 +176,114 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 
     if lista_dias_semana is None or not lista_dias_semana:
         return False
+    
+    if limite_km_l_menor is None or limite_km_l_menor < 0:
+        return False
 
+    if limite_km_l_maior is None or limite_km_l_maior < 0:
+        return False
+    
     return True
+
+
+def pag_linha_gera_labels_inputs_visao_linha(campo):
+    # Cria o callback
+    @callback(
+        [
+            Output(component_id=f"{campo}-labels", component_property="children"),
+        ],
+        [
+            Input("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+            Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+            Input("pag-linha-input-select-linhas-combustivel", "value"),
+            Input("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+            Input("pag-linha-input-select-dia-linha-combustivel", "value"),
+            Input("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+            Input("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
+        ],
+    )
+    def atualiza_labels_inputs_visal_linha(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    ):
+        labels_antes = [
+            # DashIconify(icon="material-symbols:filter-arrow-right", width=20),
+            dmc.Badge("Filtro", color="gray", variant="outline"),
+        ]
+
+        datas_label = []
+        if not (datas is None or not datas) and datas[0] is not None and datas[1] is not None:
+            # Formata as datas
+            data_inicio_str = pd.to_datetime(datas[0]).strftime("%d/%m/%Y")
+            data_fim_str = pd.to_datetime(datas[1]).strftime("%d/%m/%Y")
+
+            datas_label = [dmc.Badge(f"{data_inicio_str} a {data_fim_str}", variant="outline")]
+
+        lista_modelos_labels = []
+        lista_linha_labels = []
+        lista_sentido_labels = []
+        lista_dias_semana_labels = []
+        km_l_labels = []
+
+        if lista_modelos is None or not lista_modelos or "TODOS" in lista_modelos:
+            lista_modelos_labels.append(dmc.Badge("Todos os modelos", variant="outline"))
+        else:
+            for modelo in lista_modelos:
+                lista_modelos_labels.append(dmc.Badge(modelo, variant="dot"))
+
+        if linha is not None:
+            lista_linha_labels.append(dmc.Badge(f"Linha {linha}", variant="dot"))
+
+        if lista_sentido is not None:
+            for opcao in lista_sentido:
+                lista_sentido_labels.append(dmc.Badge(f"Sentido {opcao}", variant="dot"))
+
+        if lista_dias_semana is not None:
+            for opcao in lista_dias_semana:
+                lista_dias_semana_labels.append(dmc.Badge(f"Dias {opcao}", variant="dot"))
+
+        km_l_labels.append(dmc.Badge(f"{limite_km_l_menor} ≤ km/L ≤ {limite_km_l_maior} ", variant="dot"))
+
+        return [
+            dmc.Group(
+                labels_antes
+                + datas_label
+                + lista_modelos_labels
+                + lista_linha_labels
+                + lista_sentido_labels
+                + lista_dias_semana_labels
+                + km_l_labels
+            )
+        ]
+
+    # Cria o componente
+    return dmc.Group(id=f"{campo}-labels", children=[], className="labels-filtro")
+
+
+# Corrige o input para garantir que o termo para todas ("TODAS") não seja selecionado junto com outras opções
+def corrige_input(lista, termo_all="TODAS"):
+    # Caso 1: Nenhuma opcao é selecionada, reseta para "TODAS"
+    if not lista:
+        return [termo_all]
+
+    # Caso 2: Se "TODAS" foi selecionado após outras opções, reseta para "TODAS"
+    if len(lista) > 1 and termo_all in lista[1:]:
+        return [termo_all]
+
+    # Caso 3: Se alguma opção foi selecionada após "TODAS", remove "TODAS"
+    if termo_all in lista and len(lista) > 1:
+        return [value for value in lista if value != termo_all]
+
+    # Por fim, se não caiu em nenhum caso, retorna o valor original
+    return lista
+
+
+@callback(
+    Output("pag-linha-input-select-modelos-combustivel-linha", "value", allow_duplicate=True),
+    Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+    prevent_initial_call=True,
+)
+def corrige_input_modelos(lista_modelos):
+    return corrige_input(lista_modelos, "TODOS")
 
 
 ##############################################################################
@@ -193,100 +292,93 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
 
 
 @callback(
-    Output("dash-combustivel-por-linha-store", "data"),
     [
-        Input("input-intervalo-datas-combustivel-linha", "value"),
-        Input("input-select-modelos-combustivel-linha", "value"),
-        Input("input-select-linhas-combustivel", "value"),
-        Input("input-select-sentido-da-linha-combustivel", "value"),
-        Input("input-select-dia-linha-combustivel", "value"),
-        Input("input-linha-combustivel-remover-outliers-menor-que", "value"),
-        Input("input-linha-combustivel-remover-outliers-maior-que", "value"),
+        Output("pag-linha-indicador-qtd-de-viagens-comb-linha", "children"),
+        Output("pag-linha-indicador-qtd-de-veiculos-diferentes-comb-linha", "children"),
+        Output("pag-linha-indicador-qtd-de-modelos-diferentes-comb-linha", "children"),
+        Output("pag-linha-indicador-consumo-medio-linha", "children"),
+        Output("pag-linha-indicador-total-litros-excedentes", "children"),
+        Output("pag-linha-indicador-total-gasto-comb-excedentes", "children"),
+    ],
+    [
+        Input("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+        Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+        Input("pag-linha-input-select-linhas-combustivel", "value"),
+        Input("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+        Input("pag-linha-input-select-dia-linha-combustivel", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
     ],
 )
-def cb_pag_linha_computa_dados_combustivel_por_linha(
+def cb_pag_linha_atualiza_indicadores_combustivel_por_linha(
     datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
 ):
-    # Valida input
-    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
-        return {
-            "valid": False,
-            "dados": [],
-        }
-
-    if limite_km_l_menor is None or limite_km_l_menor <= 0:
-        limite_km_l_menor = 1
-
-    if limite_km_l_maior is None or limite_km_l_maior >= 10:
-        limite_km_l_maior = 10
+    # Valida
+    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+        return ["", "", "", "", "", ""]
 
     # Obtém os dados
-    df = linha_service.get_combustivel_por_linha(
+    df = linha_service.get_indicadores_linha(
         datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
     )
 
-    # Retorna os dados
-    return {
-        "valid": True,
-        "dados": df.to_dict(orient="records"),
-    }
-
-
-@callback(
-    [
-        Output("indicador-quantidade-de-viagens-comb-linha", "children"),
-        Output("indicador-quantidade-de-veiculos-diferentes-comb-linha", "children"),
-        Output("indicador-quantidade-de-modelos-diferentes-comb-linha", "children"),
-    ],
-    Input("dash-combustivel-por-linha-store", "data"),
-)
-def cb_pag_linha_atualiza_indicadores_combustivel_por_linha(payload_linhas):
-    if not payload_linhas["valid"]:
-        return ["", "", ""]
-
-    # Obtém os dados
-    df = pd.DataFrame(payload_linhas["dados"])
-
     # Verifica se o dataframe está vazio
     if df.empty:
-        return ["0", "0", "0"]
+        return ["", "", "", "", "", ""]
 
     # Calcula os indicadores
-    num_viagens = df.shape[0]
-    num_veiculos = df["vec_num_id"].nunique()
-    num_modelos = df["vec_model"].nunique()
+    num_viagens = df["total_num_viagens"].values[0]
 
-    return [f"{num_viagens}", f"{num_veiculos}", f"{num_modelos}"]
+    # Antes verifica se houve viagens, caso não tenha, returno nulo
+    if num_viagens == 0:
+        return ["0", "0", "0", "0", "0", "0"]
+
+    num_veiculos = df["total_num_veiculos"].values[0]
+    num_modelos = df["total_num_modelos"].values[0]
+    consumo_medio = df["media_consumo_viagem"].values[0]
+    total_litros_excedentes = df["total_litros_excedentes"].values[0]
+    gasto_excedente = total_litros_excedentes * preco_diesel
+
+    return [
+        f"{int(num_viagens):,}".replace(",", "."),
+        f"{num_veiculos}",
+        f"{num_modelos}",
+        f"{str(round(consumo_medio, 2))} km/L".replace(".", ","),
+        f"{int(total_litros_excedentes):,} L".replace(",", "."),
+        f"R$ {int(gasto_excedente):,}".replace(",", "."),
+    ]
 
 
 @callback(
     Output("graph-combustivel-linha-por-hora", "figure"),
-    Input("dash-combustivel-por-linha-store", "data"),
+    [
+        Input("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+        Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+        Input("pag-linha-input-select-linhas-combustivel", "value"),
+        Input("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+        Input("pag-linha-input-select-dia-linha-combustivel", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
+    ],
 )
-def cb_pag_linha_plota_grafico_combustivel_linha_por_hora(payload_linha):
+def cb_pag_linha_plota_grafico_combustivel_linha_por_hora(
+    datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+):
     # Valida
-    if not payload_linha["valid"]:
+    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
         return go.Figure()
 
     # Obtém os dados
-    df = pd.DataFrame(payload_linha["dados"])
+    df = linha_service.get_consumo_por_time_slot_linha(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    )
 
     # Verifica se o dataframe está vazio
     if df.empty:
         return go.Figure()
 
-    # Agrupa por modelo e período
-    df_agg = df.groupby(["time_slot", "vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
-    df_agg["time_slot_dt"] = pd.to_datetime(df_agg["time_slot"].astype(str), format="%H:%M")
-
-    # Arredonda os valores
-    df_agg["mean"] = df_agg["mean"].round(2)
-    df_agg["std"] = df_agg["std"].round(2)
-    df_agg["min"] = df_agg["min"].round(2)
-    df_agg["max"] = df_agg["max"].round(2)
-
     # Gera o gráfico
-    fig = combustivel_graficos.gerar_grafico_consumo_combustivel_por_linha(df_agg)
+    fig = linha_graficos.gerar_grafico_consumo_combustivel_por_linha(df)
     return fig
 
 
@@ -297,19 +389,31 @@ def cb_pag_linha_plota_grafico_combustivel_linha_por_hora(payload_linha):
 
 @callback(
     Output("pag-linha-tabela-detalhamento-viagens-combustivel", "rowData"),
-    Input("dash-combustivel-por-linha-store", "data"),
+    [
+        Input("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+        Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+        Input("pag-linha-input-select-linhas-combustivel", "value"),
+        Input("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+        Input("pag-linha-input-select-dia-linha-combustivel", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
+    ],
 )
-def cb_pag_veiculo_tabela_lista_viagens(payload_linha):
+def cb_pag_veiculo_tabela_lista_viagens(
+    datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+):
     # Valida
-    if not payload_linha["valid"]:
-        return go.Figure()
+    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+        return []
 
     # Obtém os dados
-    df = pd.DataFrame(payload_linha["dados"])
+    df = linha_service.get_viagens_realizada_na_linha(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    )
 
     # Verifica se o dataframe está vazio
     if df.empty:
-        return go.Figure()
+        []
 
     # Preço
     df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
@@ -318,6 +422,56 @@ def cb_pag_veiculo_tabela_lista_viagens(payload_linha):
     df["acao"] = "🔍 Detalhar"
 
     return df.to_dict(orient="records")
+
+
+# Callback para fazer o download quando o botão exportar para excel for clicado
+@callback(
+    Output("pag-linha-download-excel-tabela-viagens", "data"),
+    [
+        Input("pag-linha-btn-exportar-tabela-viagens", "n_clicks"),
+        Input("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+        Input("pag-linha-input-select-modelos-combustivel-linha", "value"),
+        Input("pag-linha-input-select-linhas-combustivel", "value"),
+        Input("pag-linha-input-select-sentido-da-linha-combustivel", "value"),
+        Input("pag-linha-input-select-dia-linha-combustivel", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-menor-que", "value"),
+        Input("pag-linha-input-linha-combustivel-remover-outliers-maior-que", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def cb_download_excel_tabela_consumo_veiculos_visal_geral(
+    n_clicks, datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+):
+    if not n_clicks or n_clicks <= 0:  # Garantre que ao iniciar ou carregar a page, o arquivo não seja baixado
+        return dash.no_update
+
+    # Valida input
+    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+        return dash.no_update
+
+    # Obtém os dados
+    df = linha_service.get_viagens_realizada_na_linha(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    )
+
+    # Verifica se o dataframe está vazio
+    if df.empty:
+        return dash.no_update
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    # Remove dados de timezone
+    for col in df.select_dtypes(include=["datetimetz"]).columns:
+        df[col] = df[col].dt.tz_localize(None)
+
+    # Gera o excel
+    excel_data = gerar_excel(df)
+
+    # Dia de hoje formatado
+    dia_hoje_str = date.today().strftime("%d-%m-%Y")
+
+    return dcc.send_bytes(excel_data, f"tabela_viagens_linha_{dia_hoje_str}.xlsx")
 
 
 ##############################################################################
@@ -330,10 +484,9 @@ def cb_pag_veiculo_tabela_lista_viagens(payload_linha):
     Output("pag-linha-layer-control-eventos-detalhe-viagem", "children"),
     Input("pag-linha-tabela-detalhamento-viagens-combustivel", "cellRendererData"),
     Input("pag-linha-tabela-detalhamento-viagens-combustivel", "virtualRowData"),
-    Input("dash-combustivel-por-linha-store", "data"),
     prevent_initial_call=True,
 )
-def cb_pag_linha_botao_detalhar_viagem(tabela_linha, tabela_linha_virtual, payload_linha):
+def cb_pag_linha_botao_detalhar_viagem(tabela_linha, tabela_linha_virtual):
     ctx = callback_context  # Obtém o contexto do callback
     if not ctx.triggered:
         return dash.no_update  # Evita execução desnecessária
@@ -468,7 +621,6 @@ dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-p
 
 layout = dbc.Container(
     [
-        dcc.Store(id="dash-combustivel-por-linha-store"),
         dbc.Row(
             [
                 dbc.Col(
@@ -504,7 +656,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Data"),
                                                     dmc.DatePicker(
-                                                        id="input-intervalo-datas-combustivel-linha",
+                                                        id="pag-linha-input-intervalo-datas-combustivel-linha",
                                                         allowSingleDateInRange=True,
                                                         type="range",
                                                         minDate=date(2025, 1, 1),
@@ -529,7 +681,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Modelos"),
                                                     dcc.Dropdown(
-                                                        id="input-select-modelos-combustivel-linha",
+                                                        id="pag-linha-input-select-modelos-combustivel-linha",
                                                         multi=True,
                                                         options=[
                                                             {
@@ -561,7 +713,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Linha"),
                                                     dcc.Dropdown(
-                                                        id="input-select-linhas-combustivel",
+                                                        id="pag-linha-input-select-linhas-combustivel",
                                                         options=[
                                                             {
                                                                 "label": linha["LABEL"],
@@ -587,7 +739,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Sentido"),
                                                     dcc.Dropdown(
-                                                        id="input-select-sentido-da-linha-combustivel",
+                                                        id="pag-linha-input-select-sentido-da-linha-combustivel",
                                                         options=[
                                                             {
                                                                 "label": "IDA",
@@ -622,7 +774,7 @@ layout = dbc.Container(
                                                 [
                                                     dbc.Label("Dias"),
                                                     dbc.Checklist(
-                                                        id="input-select-dia-linha-combustivel",
+                                                        id="pag-linha-input-select-dia-linha-combustivel",
                                                         options=[
                                                             {
                                                                 "label": "Seg-Sexta",
@@ -641,7 +793,7 @@ layout = dbc.Container(
                                                                 "value": "FERIADO",
                                                             },
                                                         ],
-                                                        value=["SEG_SEX"],
+                                                        value=[["SEG_SEX"]],
                                                         inline=True,
                                                     ),
                                                 ],
@@ -662,7 +814,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="input-linha-combustivel-remover-outliers-menor-que",
+                                                                id="pag-linha-input-linha-combustivel-remover-outliers-menor-que",
                                                                 type="number",
                                                                 placeholder="km/L",
                                                                 value=1,
@@ -690,7 +842,7 @@ layout = dbc.Container(
                                                     dbc.InputGroup(
                                                         [
                                                             dbc.Input(
-                                                                id="input-linha-combustivel-remover-outliers-maior-que",
+                                                                id="pag-linha-input-linha-combustivel-remover-outliers-maior-que",
                                                                 type="number",
                                                                 placeholder="km/L",
                                                                 value=10,
@@ -736,7 +888,7 @@ layout = dbc.Container(
                                         dmc.Group(
                                             [
                                                 dmc.Title(
-                                                    id="indicador-quantidade-de-viagens-comb-linha",
+                                                    id="pag-linha-indicador-qtd-de-viagens-comb-linha",
                                                     order=2,
                                                 ),
                                                 DashIconify(
@@ -750,7 +902,7 @@ layout = dbc.Container(
                                             mb="xs",
                                         ),
                                     ),
-                                    dbc.CardFooter("Viagens"),
+                                    dbc.CardFooter("Total de Viagens"),
                                 ],
                                 class_name="card-box-shadow",
                             ),
@@ -763,11 +915,11 @@ layout = dbc.Container(
                                         dmc.Group(
                                             [
                                                 dmc.Title(
-                                                    id="indicador-quantidade-de-veiculos-diferentes-comb-linha",
+                                                    id="pag-linha-indicador-qtd-de-veiculos-diferentes-comb-linha",
                                                     order=2,
                                                 ),
                                                 DashIconify(
-                                                    icon="mdi:bus",
+                                                    icon="mdi:bus-multiple",
                                                     width=48,
                                                     color="black",
                                                 ),
@@ -790,11 +942,11 @@ layout = dbc.Container(
                                         dmc.Group(
                                             [
                                                 dmc.Title(
-                                                    id="indicador-quantidade-de-modelos-diferentes-comb-linha",
+                                                    id="pag-linha-indicador-qtd-de-modelos-diferentes-comb-linha",
                                                     order=2,
                                                 ),
                                                 DashIconify(
-                                                    icon="mdi:car-multiple",
+                                                    icon="material-symbols:car-gear-rounded",
                                                     width=48,
                                                     color="black",
                                                 ),
@@ -805,6 +957,92 @@ layout = dbc.Container(
                                         ),
                                     ),
                                     dbc.CardFooter("Quantidade de modelos diferentes"),
+                                ],
+                                class_name="card-box-shadow",
+                            ),
+                            md=4,
+                        ),
+                    ]
+                ),
+                dmc.Space(h=20),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Card(
+                                [
+                                    dbc.CardBody(
+                                        dmc.Group(
+                                            [
+                                                dmc.Title(
+                                                    id="pag-linha-indicador-consumo-medio-linha",
+                                                    order=2,
+                                                ),
+                                                DashIconify(
+                                                    icon="material-symbols:speed-outline-rounded",
+                                                    width=48,
+                                                    color="black",
+                                                ),
+                                            ],
+                                            justify="space-around",
+                                            mt="md",
+                                            mb="xs",
+                                        ),
+                                    ),
+                                    dbc.CardFooter("Consumo médio (km/L)"),
+                                ],
+                                class_name="card-box-shadow",
+                            ),
+                            md=4,
+                        ),
+                        dbc.Col(
+                            dbc.Card(
+                                [
+                                    dbc.CardBody(
+                                        dmc.Group(
+                                            [
+                                                dmc.Title(
+                                                    id="pag-linha-indicador-total-litros-excedentes",
+                                                    order=2,
+                                                ),
+                                                DashIconify(
+                                                    icon="bi:fuel-pump-fill",
+                                                    width=48,
+                                                    color="black",
+                                                ),
+                                            ],
+                                            justify="space-around",
+                                            mt="md",
+                                            mb="xs",
+                                        ),
+                                    ),
+                                    dbc.CardFooter("Total de litros excedentes (≤ 2 STD)"),
+                                ],
+                                class_name="card-box-shadow",
+                            ),
+                            md=4,
+                        ),
+                        dbc.Col(
+                            dbc.Card(
+                                [
+                                    dbc.CardBody(
+                                        dmc.Group(
+                                            [
+                                                dmc.Title(
+                                                    id="pag-linha-indicador-total-gasto-comb-excedentes",
+                                                    order=2,
+                                                ),
+                                                DashIconify(
+                                                    icon="emojione-monotone:money-with-wings",
+                                                    width=48,
+                                                    color="black",
+                                                ),
+                                            ],
+                                            justify="space-around",
+                                            mt="md",
+                                            mb="xs",
+                                        ),
+                                    ),
+                                    dbc.CardFooter("Total gasto com combustível excedente (R$)"),
                                 ],
                                 class_name="card-box-shadow",
                             ),
@@ -828,6 +1066,7 @@ layout = dbc.Container(
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
+                            dbc.Col(pag_linha_gera_labels_inputs_visao_linha("pag-linha-grafico-viagens"), width=True),
                         ]
                     ),
                     width=True,
@@ -837,6 +1076,28 @@ layout = dbc.Container(
         ),
         dcc.Graph(id="graph-combustivel-linha-por-hora"),
         dmc.Space(h=40),
+        dbc.Alert(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(DashIconify(icon="material-symbols:info-outline-rounded", width=45), width="auto"),
+                        dbc.Col(
+                            html.P(
+                                """
+                                A tabela a seguir ilustra cada viagem realizada nesta linha.
+                                Você pode clicar no botão detalhar para visualizar as posições GPS e eventos MIX gerados ao longo da viagem.
+                                """
+                            ),
+                            className="mt-2",
+                            width=True,
+                        ),
+                    ],
+                    align="center",
+                ),
+            ],
+            dismissable=True,
+            color="info",
+        ),
         dbc.Row(
             [
                 dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
@@ -844,17 +1105,17 @@ layout = dbc.Container(
                     dbc.Row(
                         [
                             html.H4(
-                                "Detalhamento de viagens nesta linha",
+                                "Detalhamento das viagens nesta linha",
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            # dbc.Col(gera_labels_inputs_veiculos("input-geral-combustivel-1"), width=True),
+                            dbc.Col(pag_linha_gera_labels_inputs_visao_linha("pag-linha-input-viagens"), width=True),
                             dbc.Col(
                                 html.Div(
                                     [
                                         html.Button(
                                             "Exportar para Excel",
-                                            id="btn-exportar-comb",
+                                            id="pag-linha-btn-exportar-tabela-viagens",
                                             n_clicks=0,
                                             style={
                                                 "background-color": "#007bff",  # Azul
@@ -867,7 +1128,7 @@ layout = dbc.Container(
                                                 "font-weight": "bold",
                                             },
                                         ),
-                                        dcc.Download(id="download-excel-tabela-combustivel-1"),
+                                        dcc.Download(id="pag-linha-download-excel-tabela-viagens"),
                                     ],
                                     style={"text-align": "right"},
                                 ),
@@ -884,7 +1145,7 @@ layout = dbc.Container(
         dag.AgGrid(
             enableEnterpriseModules=True,
             id="pag-linha-tabela-detalhamento-viagens-combustivel",
-            columnDefs=combustivel_linha_tabela.tbl_detalhamento_viagens_km_l,
+            columnDefs=linha_tabela.tbl_detalhamento_viagens_km_l,
             rowData=[],
             defaultColDef={"filter": True, "floatingFilter": True},
             columnSize="autoSize",
@@ -901,11 +1162,11 @@ layout = dbc.Container(
                     dbc.Row(
                         [
                             html.H4(
-                                "Mapa da Linha",
+                                "Mapa da Viagem",
                                 className="align-self-center",
                             ),
                             dmc.Space(h=5),
-                            # dbc.Col(gera_labels_inputs_veiculos("input-geral-mapa-linha"), width=True),
+                            # dbc.Col(gera_labels_inputs_veiculos("pag-linha-input-geral-mapa-linha"), width=True),
                         ]
                     ),
                     width=True,

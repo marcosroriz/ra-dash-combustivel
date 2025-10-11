@@ -11,7 +11,7 @@ import numpy as np
 import holidays
 
 # Imports auxiliares
-from modules.sql_utils import subquery_modelos_combustivel, subquery_sentido_combustivel, subquery_dia_marcado_str
+from modules.sql_utils import subquery_modelos_combustivel, subquery_sentido_combustivel, subquery_lista_dia_marcado
 
 
 class LinhaService:
@@ -36,8 +36,141 @@ class LinhaService:
         df["vec_model"] = df["vec_model"].replace(de_para_dict)
 
         return df
+    
+    def get_indicadores_linha(self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior):
+        """
+        Função para obter os indicadores da linha
+        """
+        # Extraí a data inicial e final
+        data_inicio_str, data_fim_str = datas[0], datas[1]
 
-    def get_combustivel_por_linha(
+        # Subqueries
+        subquery_dia_marcado = subquery_lista_dia_marcado(lista_dia_semana)
+        subquery_modelos = subquery_modelos_combustivel(lista_modelos)
+        subquery_sentido = subquery_sentido_combustivel(lista_sentido)
+
+        query = f"""
+            WITH rmtc_viagens_analise_mix_padronizado AS (
+                SELECT 
+                    CASE
+                        WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
+                        WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
+                        WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
+                        WHEN vec_model ILIKE 'O500%%' THEN 'O500'
+                        WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
+                        WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
+                        WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
+                        ELSE vec_model
+                    END AS vec_model_padronizado,
+                    r.*
+                FROM rmtc_viagens_analise_mix r
+                WHERE 
+                    "encontrou_numero_linha" = '{linha}'
+                    AND "encontrou_linha" = TRUE
+                    AND "dia" >= '{data_inicio_str}'
+                    AND "dia" <= '{data_fim_str}'
+                    AND "km_por_litro" >= {limite_km_l_menor}
+                    AND "km_por_litro" <= {limite_km_l_maior}
+                    {subquery_dia_marcado}
+                    {subquery_sentido}
+                    {subquery_modelos}
+            )
+            SELECT
+                COUNT(*) as total_num_viagens,
+                COUNT(DISTINCT vec_model) AS total_num_modelos,
+			    COUNT(DISTINCT vec_num_id) AS total_num_veiculos,
+				AVG(3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos)) AS velocidade_media_kmh,
+				AVG(total_comb_l) AS "media_consumo_viagem",
+                SUM(
+					CASE 
+						WHEN analise_status_90_dias = 'BAIXA PERFOMANCE (<= 2 STD)' THEN ABS(total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias))
+						ELSE 0
+					END
+	            ) AS total_litros_excedentes
+            FROM
+                rmtc_viagens_analise_mix_padronizado r
+        """
+        df = pd.read_sql(query, self.pgEngine)
+
+        # Arredonda os valores
+        df["velocidade_media_kmh"] = df["velocidade_media_kmh"].round(2)
+        df["media_consumo_viagem"] = df["media_consumo_viagem"].round(2)
+        df["total_litros_excedentes"] = df["total_litros_excedentes"].round(2)
+
+        return df
+    
+    def get_consumo_por_time_slot_linha(self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior):
+        """
+        Função para obter os dados do combustível por linha por horário (que será usado para gerar o gráfico)
+        """
+        # Extraí a data inicial e final
+        data_inicio_str, data_fim_str = datas[0], datas[1]
+
+        # Subqueries
+        subquery_dia_marcado = subquery_lista_dia_marcado(lista_dia_semana)
+        subquery_modelos = subquery_modelos_combustivel(lista_modelos)
+        subquery_sentido = subquery_sentido_combustivel(lista_sentido)
+
+        query = f"""
+            WITH rmtc_viagens_analise_mix_padronizado AS (
+                SELECT 
+                    CASE
+                        WHEN vec_model ILIKE 'MB OF 1721%%' THEN 'MB OF 1721 MPOLO TORINO U'
+                        WHEN vec_model ILIKE 'IVECO/MASCA%%' THEN 'IVECO/MASCA GRAN VIA'
+                        WHEN vec_model ILIKE 'VW 17230 APACHE VIP%%' THEN 'VW 17230 APACHE VIP-SC'
+                        WHEN vec_model ILIKE 'O500%%' THEN 'O500'
+                        WHEN vec_model ILIKE 'ELETRA INDUSCAR MILLENNIUM%%' THEN 'ELETRA INDUSCAR MILLENNIUM'
+                        WHEN vec_model ILIKE 'Induscar%%' THEN 'INDUSCAR'
+                        WHEN vec_model ILIKE 'VW 22.260 CAIO INDUSCAR%%' THEN 'VW 22.260 CAIO INDUSCAR'
+                        ELSE vec_model
+                    END AS vec_model_padronizado,
+                    r.*
+                FROM rmtc_viagens_analise_mix r
+                WHERE 
+                    "encontrou_numero_linha" = '{linha}'
+                    AND "encontrou_linha" = TRUE
+                    AND "dia" >= '{data_inicio_str}'
+                    AND "dia" <= '{data_fim_str}'
+                    AND "km_por_litro" >= {limite_km_l_menor}
+                    AND "km_por_litro" <= {limite_km_l_maior}
+                    {subquery_dia_marcado}
+                    {subquery_sentido}
+                    {subquery_modelos}
+            )
+            SELECT
+                r."time_slot",
+                r."vec_model",
+                AVG("km_por_litro") AS "mean",
+                MIN("km_por_litro") AS "min",
+                MAX("km_por_litro") AS "max",
+                STDDEV_POP("km_por_litro") AS "std"
+            FROM
+                rmtc_viagens_analise_mix_padronizado r
+            GROUP BY r."time_slot", r."vec_model"
+            HAVING
+			    COUNT("km_por_litro") FILTER (WHERE "km_por_litro" IS NOT NULL) > 0
+			    AND r."vec_model" IS NOT NULL
+            ORDER BY r."time_slot"
+        """
+        df = pd.read_sql(query, self.pgEngine)
+
+        # Normaliza os modelos
+        df = self.normaliza_modelos(df)
+
+        # Converte para DT
+        df["time_slot_dt"] = pd.to_datetime(df["time_slot"].astype(str), format="%H:%M")
+
+        # Arredonda os valores
+        df["mean"] = df["mean"].round(2)
+        df["std"] = df["std"].round(2)
+        df["min"] = df["min"].round(2)
+        df["max"] = df["max"].round(2)
+
+        return df
+        
+
+
+    def get_viagens_realizada_na_linha(
         self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior
     ):
         """
@@ -48,13 +181,13 @@ class LinhaService:
         data_inicio_str, data_fim_str = datas[0], datas[1]
 
         # Subqueries
-        subquery_dia_marcado = subquery_dia_marcado_str(lista_dia_semana)
+        subquery_dia_marcado = subquery_lista_dia_marcado(lista_dia_semana)
         subquery_modelos = subquery_modelos_combustivel(lista_modelos)
         subquery_sentido = subquery_sentido_combustivel(lista_sentido)
 
         query = f"""
         SELECT
-            *,
+            r.*,
             ABS(total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)) AS litros_excedentes,
             3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos) AS velocidade_media_kmh,
             m."Name" AS nome_motorista
@@ -74,8 +207,6 @@ class LinhaService:
             {subquery_modelos}
             {subquery_sentido}
         """
-
-        print(query)
         df = pd.read_sql(query, self.pgEngine)
 
         # Normaliza os modelos
@@ -104,69 +235,3 @@ class LinhaService:
         df["nome_motorista"] = df["nome_motorista"].fillna("Não informado")
         return df
 
-    def filtra_combustivel_por_dia_semana(self, df_linha, lista_dia_semana):
-        """
-        Função que filtra o dataframe de acordo com os dias da semana escolhido
-        """
-        df_linha_filtrado = df_linha
-
-        # Converte a coluna "dia" para o tipo datetime
-        df_linha_filtrado["dia_dt"] = pd.to_datetime(df_linha_filtrado["dia"])
-
-        # Cria a coluna "DIA_SEMANA" com o nome do dia da semana
-        df_linha_filtrado["WEEKDAY_CATEGORY"] = df_linha_filtrado["dia_dt"].dt.dayofweek.apply(
-            lambda x: "SATURDAY" if x == 5 else ("SUNDAY" if x == 6 else "WEEKDAY")
-        )
-        df_linha_filtrado["WEEKDAY_NUMBER"] = df_linha_filtrado["dia_dt"].dt.dayofweek
-
-        # Remove as linhas que não estão na lista de dias da semana
-        dias_para_filtrar = set()
-
-        if "SEG_SEX" in lista_dia_semana:
-            dias_para_filtrar.update(range(0, 5))  # segunda (0) a sexta (4)
-
-        if "SABADO" in lista_dia_semana:
-            dias_para_filtrar.add(5)  # sábado
-
-        if "DOMINGO" in lista_dia_semana:
-            dias_para_filtrar.add(6)  # domingo
-
-        df_linha_filtrado = df_linha_filtrado[df_linha_filtrado["WEEKDAY_NUMBER"].isin(dias_para_filtrar)]
-
-        # # Verifica se o filtro de feriados está ativo
-        # if "FERIADO" in lista_dia_semana:
-        # Cria uma instância do objeto de feriados
-        feriados = holidays.Brazil(years=df_linha_filtrado["dia_dt"].dt.year.unique())
-
-        # Filtra os feriados
-        df_linha_filtrado = df_linha_filtrado[~df_linha_filtrado["dia_dt"].isin(feriados)]
-
-        return df_linha_filtrado
-
-    # def agrupa_combustivel_por_linha(self, df, periodo_agrupar="30T"):
-    #     """
-    #     Função para agrupar os dados do combustível por linha e dia da semana
-    #     """
-
-    #         # Agrupa por tempo bin
-    # df_agg = df.groupby("time_bin_only_time")["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
-    # df_agg["time_bin_only_time"] = pd.to_datetime(df_agg["time_bin_only_time"]).dt.time
-
-    def get_todas_linhas_combustivel(self):
-        """
-        Retorn todas as linhas de ônibus com informações de combustível.
-        """
-        query = f"""
-            SELECT 
-                DISTINCT "encontrou_numero_linha" as "LABEL"
-            FROM 
-                rmtc_viagens_analise rva 
-            WHERE 
-                "encontrou_numero_linha" IS NOT NULL
-            ORDER BY
-                "encontrou_numero_linha"
-        """
-
-        df = pd.read_sql(query, self.pgEngine)
-
-        return df

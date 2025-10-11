@@ -17,7 +17,7 @@ import plotly.express as px
 import tema
 
 
-def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="30T"):
+def gerar_grafico_consumo_combustivel_por_linha(df):
     """
     Função que gera o gráfico de consumo de combustível por linha
     """
@@ -25,12 +25,12 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
     fig = go.Figure()
 
     # Obtem os modelos
-    modelos = df_linha_agg["vec_model"].unique()
+    modelos = df["vec_model"].unique()
 
     # Plota o intervalo (buffer) para cada modelo
     for i, modelo in enumerate(modelos):
         # Filtra df_linha_agg para o modelo atual
-        df_linha_modelo = df_linha_agg[df_linha_agg["vec_model"] == modelo]
+        df_linha_modelo = df[df["vec_model"] == modelo]
 
         # Cor do modelo
         i_cor_hex = tema.PALETA_CORES_DISCRETA[i % len(tema.PALETA_CORES_DISCRETA)]
@@ -52,7 +52,7 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
     # Plota a linha média do modelo
     for i, modelo in enumerate(modelos):
         # Filtra df_linha_agg para o modelo atual
-        df_linha_modelo = df_linha_agg[df_linha_agg["vec_model"] == modelo]
+        df_linha_modelo = df[df["vec_model"] == modelo]
 
         # Cor do modelo
         i_cor_hex = tema.PALETA_CORES_DISCRETA[i % len(tema.PALETA_CORES_DISCRETA)]
@@ -94,6 +94,12 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
             tickformat="%H:%M",
             dtick=1800000,  # 30 minutos em milissegundos,
         )
+    )
+
+    # Aumenta a altura para melhorar a visualização, tira algumas margens
+    fig.update_layout(
+        height=400,
+        margin=dict(t=50, b=50),
     )
 
     return fig

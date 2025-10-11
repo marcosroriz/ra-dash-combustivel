@@ -104,11 +104,4 @@ tbl_detalhamento_viagens_km_l = [
         "maxWidth": 160,
         "type": ["numericColumn"],
     },
-    {
-        "field": "vec_asset_id",
-        "headerName": "ASSET ID (MIX)",
-        "wrapHeaderText": True,
-        "autoHeaderHeight": True,
-        "maxWidth": 140,
-    },
 ]
