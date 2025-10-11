@@ -187,6 +187,16 @@ def get_regras_padronizadas(dbEngine):
         dbEngine,
     )
 
+def get_regras_monitoramento_combustivel(dbEngine):
+    # Lista de regras
+    return pd.read_sql(
+        """
+        SELECT nome_regra as "label", id as "value" FROM regra_monitoramento_combustivel
+        ORDER BY nome_regra;
+        """,
+        dbEngine,
+    )
+
 
 def get_tipos_eventos_telemetria_mix_com_data(dbEngine):
     # Retorna os tipos de eventos de telemetria que possuem StartDateTime

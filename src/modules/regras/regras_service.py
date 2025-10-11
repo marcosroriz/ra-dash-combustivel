@@ -278,6 +278,41 @@ class RegrasService:
             return False
 
 
+    def get_ultima_data_regra(self, id_regra):
+        """Função para obter a última data de uma regra de monitoramento"""
+        query = f"""
+            SELECT id_regra, MAX(dia) AS ultimo_dia
+            FROM relatorio_regra_monitoramento_combustivel
+            WHERE id_regra = {id_regra}
+            GROUP BY id_regra
+        """
+        df = pd.read_sql(query, self.dbEngine)
+        return df
+    
+    def existe_execucao_regra_no_dia(self, id_regra, dia):
+        """Função para verificar se uma regra já foi executada no dia"""
+        query = f"""
+            SELECT 1 AS "EXISTE" FROM relatorio_regra_monitoramento_combustivel WHERE id_regra = {id_regra} AND dia = '{dia}'
+        """
+        df = pd.read_sql(query, self.dbEngine)
+
+        if df.empty:
+            return False
+        else:
+            return True
+
+    def get_resultado_regra(self, id_regra, dia_execucao):
+        """Função para obter o resultado de uma regra de monitoramento"""
+        query = f"""
+            SELECT *
+            FROM relatorio_regra_monitoramento_combustivel r 
+            WHERE r.id_regra = {id_regra} AND r.dia = '{dia_execucao}'
+        """
+        df = pd.read_sql(query, self.dbEngine)
+
+        return df
+
+
     def get_subquery_dias(self, dias_marcados):
         dias_subquery = ""
 

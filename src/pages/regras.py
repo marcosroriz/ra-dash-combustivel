@@ -143,7 +143,14 @@ def acoes_tabela(linha, linha_virtual):
     dados_regra = linha_virtual[linha["rowIndex"]]
     nome_regra, id_regra = dados_regra["nome_regra"], dados_regra["id"]
     acao = linha["colId"]
+    dia_ultimo_relatorio = dados_regra["dia_ultimo_relatorio"]
 
+    if acao == "acao_relatorio":
+        return (
+            f"/regra-relatorio?id_regra={id_regra}&data_relatorio={dia_ultimo_relatorio}",
+            dash.no_update,
+            dash.no_update,
+        )
     if acao == "acao_editar":
         return f"/regra-editar?id_regra={id_regra}", dash.no_update, dash.no_update
     if acao == "acao_apagar":

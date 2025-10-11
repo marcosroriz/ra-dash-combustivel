@@ -792,7 +792,7 @@ layout = dbc.Container(
                                         dbc.Col(
                                             html.H1(
                                                 [
-                                                    "Consumo do \u00a0",
+                                                    "Combustível por \u00a0",
                                                     html.Strong("Veículo"),
                                                 ],
                                                 className="align-self-center",

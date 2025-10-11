@@ -45,7 +45,7 @@ from modules.entities_utils import (
     get_modelos_veiculos_com_combustivel,
     get_tipos_eventos_telemetria_mix_com_data,
     get_tipos_eventos_telemetria_mix_com_gps,
-    gerar_excel
+    gerar_excel,
 )
 
 # Imports específicos
@@ -176,13 +176,13 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, 
 
     if lista_dias_semana is None or not lista_dias_semana:
         return False
-    
+
     if limite_km_l_menor is None or limite_km_l_menor < 0:
         return False
 
     if limite_km_l_maior is None or limite_km_l_maior < 0:
         return False
-    
+
     return True
 
 
@@ -314,7 +314,9 @@ def cb_pag_linha_atualiza_indicadores_combustivel_por_linha(
     datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
 ):
     # Valida
-    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+    if not input_valido(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    ):
         return ["", "", "", "", "", ""]
 
     # Obtém os dados
@@ -365,7 +367,9 @@ def cb_pag_linha_plota_grafico_combustivel_linha_por_hora(
     datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
 ):
     # Valida
-    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+    if not input_valido(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    ):
         return go.Figure()
 
     # Obtém os dados
@@ -403,7 +407,9 @@ def cb_pag_veiculo_tabela_lista_viagens(
     datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
 ):
     # Valida
-    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+    if not input_valido(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    ):
         return []
 
     # Obtém os dados
@@ -446,7 +452,9 @@ def cb_download_excel_tabela_consumo_veiculos_visal_geral(
         return dash.no_update
 
     # Valida input
-    if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior):
+    if not input_valido(
+        datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
+    ):
         return dash.no_update
 
     # Obtém os dados
@@ -638,7 +646,8 @@ layout = dbc.Container(
                                         dbc.Col(
                                             html.H1(
                                                 [
-                                                    html.Strong("Combustível por Linha"),
+                                                    "Combustível por \u00a0",
+                                                    html.Strong("Linha"),
                                                 ],
                                                 className="align-self-center",
                                             ),
