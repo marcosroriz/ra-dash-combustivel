@@ -32,7 +32,7 @@ import locale_utils
 from db import PostgresSingleton
 
 # Imports gerais
-from modules.entities_utils import get_modelos_veiculos_regras
+from modules.entities_utils import get_modelos_veiculos_com_combustivel
 
 # Imports específicos
 from modules.regras.regras_service import RegrasService
@@ -52,8 +52,9 @@ pgEngine = pgDB.get_engine()
 regra_service = RegrasService(pgEngine)
 
 # Modelos de veículos
-df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
-lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
+df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
+df_modelos_veiculos_latest = df_modelos_veiculos.drop_duplicates(subset="LABEL", keep="first")
+lista_todos_modelos_veiculos = df_modelos_veiculos_latest.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
 # Pega o preço do diesel via API

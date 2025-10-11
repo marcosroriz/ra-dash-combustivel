@@ -37,7 +37,7 @@ from modules.regras.regras_service import RegrasService
 import modules.regras.tabela as regras_tabela
 
 # Imports gerais
-from modules.entities_utils import get_modelos_veiculos_regras
+from modules.entities_utils import get_modelos_veiculos_com_combustivel
 
 # Preço do diesel
 from modules.preco_combustivel_api import get_preco_diesel
@@ -54,8 +54,9 @@ pgEngine = pgDB.get_engine()
 regra_service = RegrasService(pgEngine)
 
 # Modelos de veículos
-df_modelos_veiculos = get_modelos_veiculos_regras(pgEngine)
-lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
+df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
+df_modelos_veiculos_latest = df_modelos_veiculos.drop_duplicates(subset="LABEL", keep="first")
+lista_todos_modelos_veiculos = df_modelos_veiculos_latest.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
 # Pega o preço do diesel via API
@@ -260,7 +261,7 @@ def cb_criar_regra_preview_regra(
     # Valida input
     if not input_valido(dias_monitoramento, qtd_min_motoristas, qtd_min_viagens, lista_modelos):
         return [], 0, 0, 0, 0
-    
+
     df = regra_service.get_preview_regra(
         dias_monitoramento,
         lista_modelos,

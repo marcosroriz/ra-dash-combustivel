@@ -57,7 +57,8 @@ lista_todas_linhas.insert(0, {"LABEL": "TODAS"})
 
 # Modelos de veículos
 df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
-lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
+df_modelos_veiculos_latest = df_modelos_veiculos.drop_duplicates(subset="LABEL", keep="first")
+lista_todos_modelos_veiculos = df_modelos_veiculos_latest.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
 # Pega o preço do diesel via API
