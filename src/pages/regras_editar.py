@@ -547,7 +547,7 @@ def editar_mostra_input_email_destino(email_ativo):
         Output("nome-regra-atualizar-gerenciar-regra", "children"),
     ],
     Input("pag-editar-regra-btn-atualizar-regra-monitoramento", "n_clicks"),
-    State("pag-editar-regra-input-nome-regra-monitoramento", "value"),
+    Input("pag-editar-regra-input-nome-regra-monitoramento", "value"),
     prevent_initial_call=True,
 )
 def abrir_modal_confirmacao_atualizar(n_clicks, nome_regra):

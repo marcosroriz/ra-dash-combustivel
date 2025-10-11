@@ -86,10 +86,6 @@ def get_linhas_possui_info_combustivel(dbEngine):
             rmtc_viagens_analise_mix rva 
         WHERE 
             "encontrou_numero_linha" IS NOT NULL
-            AND 
-            (
-            	vec_model LIKE '%%IVECO%%'
-            )
         ORDER BY
             "encontrou_numero_linha"
         """,

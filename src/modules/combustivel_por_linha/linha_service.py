@@ -11,10 +11,10 @@ import numpy as np
 import holidays
 
 # Imports auxiliares
-from modules.sql_utils import subquery_modelos_combustivel, subquery_sentido_combustivel
+from modules.sql_utils import subquery_modelos_combustivel, subquery_sentido_combustivel, subquery_dia_marcado_str
 
 
-class CombustivelPorLinhaService:
+class LinhaService:
     def __init__(self, pgEngine):
         self.pgEngine = pgEngine
 
@@ -37,45 +37,6 @@ class CombustivelPorLinhaService:
 
         return df
 
-    def get_percentual_encontros_linha(
-        self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior
-    ):
-        """
-        Funçao que otem o percentual de encontros por linha que nosso modelo achou
-        """
-
-        # Extraí a data inicial e final
-        data_inicio_str, data_fim_str = datas[0], datas[1]
-
-        # Subqueries
-        subquery_modelos = subquery_modelos_combustivel(lista_modelos)
-        subquery_sentido = subquery_sentido_combustivel(lista_sentido)
-
-        query = f"""
-            SELECT 
-                rmtc_linha_prevista,
-                COUNT(*) FILTER (WHERE encontrou_linha IS FALSE) AS nao_encontrou,
-                COUNT(*) AS total_por_linha,
-                ROUND(100.0 * COUNT(*) FILTER (WHERE encontrou_linha IS FALSE) / COUNT(*), 2) AS percentual_nao_encontrou
-            FROM 
-                rmtc_viagens_analise
-            WHERE 
-                "encontrou_numero_linha" = '{linha}'
-                AND "dia" >= '{data_inicio_str}'
-                AND "dia" <= '{data_fim_str}'
-                AND "km_por_litro" >= {limite_km_l_menor}
-                AND "km_por_litro" <= {limite_km_l_maior}
-                {subquery_modelos}
-                {subquery_sentido}
-            GROUP BY 
-                rmtc_linha_prevista
-                rmtc_viagens_analise rva 
-        """
-
-        df = pd.read_sql(query, self.pgEngine)
-
-        return df
-
     def get_combustivel_por_linha(
         self, datas, lista_modelos, linha, lista_sentido, lista_dia_semana, limite_km_l_menor, limite_km_l_maior
     ):
@@ -87,14 +48,21 @@ class CombustivelPorLinhaService:
         data_inicio_str, data_fim_str = datas[0], datas[1]
 
         # Subqueries
+        subquery_dia_marcado = subquery_dia_marcado_str(lista_dia_semana)
         subquery_modelos = subquery_modelos_combustivel(lista_modelos)
         subquery_sentido = subquery_sentido_combustivel(lista_sentido)
 
         query = f"""
         SELECT
-            *
+            *,
+            ABS(total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias)) AS litros_excedentes,
+            3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos) AS velocidade_media_kmh,
+            m."Name" AS nome_motorista
         FROM
-            rmtc_viagens_analise
+            rmtc_viagens_analise_mix r
+        LEFT JOIN 
+            motoristas_api m 
+            ON r."DriverId" = m."DriverId"
         WHERE
             "encontrou_numero_linha" = '{linha}'
             AND "encontrou_linha"
@@ -102,20 +70,39 @@ class CombustivelPorLinhaService:
             AND "dia" <= '{data_fim_str}'
             AND "km_por_litro" >= {limite_km_l_menor}
             AND "km_por_litro" <= {limite_km_l_maior}
+            {subquery_dia_marcado}
             {subquery_modelos}
             {subquery_sentido}
         """
 
         print(query)
-        df_linha = pd.read_sql(query, self.pgEngine)
+        df = pd.read_sql(query, self.pgEngine)
 
         # Normaliza os modelos
-        df_linha = self.normaliza_modelos(df_linha)
+        df = self.normaliza_modelos(df)
 
-        # Filtra os dados de acordo com os dias da semana
-        df_linha_filtrado = self.filtra_combustivel_por_dia_semana(df_linha, lista_dia_semana)
+        # Força string nos asset_id
+        df["vec_asset_id"] = df["vec_asset_id"].astype(str)
 
-        return df_linha_filtrado
+        # Ajusta datas
+        df["encontrou_tempo_viagem_segundos"] = df["encontrou_tempo_viagem_segundos"].astype(int)
+        df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_segundos"] / 60
+        df["timestamp_br_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"]) - pd.Timedelta(hours=3)
+        df["timestamp_br_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"]) - pd.Timedelta(hours=3)
+        df["dia_dt"] = pd.to_datetime(df["dia"]).dt.date
+        df["dia_label"] = pd.to_datetime(df["dia"]).dt.strftime("%d/%m/%Y")
+
+        # Formatar alguns dados (arredonda)
+        df["encontrou_tempo_viagem_minutos"] = df["encontrou_tempo_viagem_minutos"].round(2)
+        df["tamanho_linha_km_sobreposicao"] = df["tamanho_linha_km_sobreposicao"].round(2)
+        df["total_comb_l"] = df["total_comb_l"].round(2)
+        df["km_por_litro"] = df["km_por_litro"].round(2)
+        df["analise_diff_mediana_90_dias"] = df["analise_diff_mediana_90_dias"].round(2)
+        df["velocidade_media_kmh"] = df["velocidade_media_kmh"].round(2)
+
+        # Ajusta NaN
+        df["nome_motorista"] = df["nome_motorista"].fillna("Não informado")
+        return df
 
     def filtra_combustivel_por_dia_semana(self, df_linha, lista_dia_semana):
         """

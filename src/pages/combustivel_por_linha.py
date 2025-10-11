@@ -7,12 +7,17 @@
 # IMPORTS ####################################################################
 ##############################################################################
 # Bibliotecas básicas
-from datetime import date
 import pandas as pd
+import json
+from datetime import date, datetime
+
+# Importar bibliotecas para manipulação de URL
+import ast
+from urllib.parse import urlparse, parse_qs
 
 # Importar bibliotecas do dash básicas e plotly
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State
+from dash import Dash, html, dcc, callback, Input, Output, State, callback_context
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -24,6 +29,9 @@ import dash_ag_grid as dag
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 
+# Imports de mapa
+import dash_leaflet as dl
+
 # Importar nossas constantes e funções utilitárias
 import tema
 import locale_utils
@@ -32,13 +40,24 @@ import locale_utils
 from db import PostgresSingleton
 
 # Imports gerais
-from modules.entities_utils import get_linhas_possui_info_combustivel, get_modelos_veiculos_com_combustivel
+from modules.entities_utils import (
+    get_linhas_possui_info_combustivel,
+    get_modelos_veiculos_com_combustivel,
+    get_tipos_eventos_telemetria_mix_com_data,
+    get_tipos_eventos_telemetria_mix_com_gps,
+)
 
 # Imports específicos
-from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
+from modules.combustivel_por_linha.linha_service import LinhaService
+from modules.combustivel_por_veiculo.veiculo_service import VeiculoService
 import modules.combustivel_por_linha.graficos as combustivel_graficos
 import modules.combustivel_por_linha.tabela as combustivel_linha_tabela
 
+# Preço do diesel
+from modules.preco_combustivel_api import get_preco_diesel
+
+# Mapa
+from modules.mapa_utils import getMapaFundo, gera_layer_posicao, gera_layer_eventos_mix
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
@@ -48,7 +67,8 @@ pgDB = PostgresSingleton.get_instance()
 pgEngine = pgDB.get_engine()
 
 # Cria o serviço
-comb_por_linha_service = CombustivelPorLinhaService(pgEngine)
+linha_service = LinhaService(pgEngine)
+veiculo_service = VeiculoService(pgEngine)
 
 # Linhas que possuem informações de combustível
 df_todas_linhas = get_linhas_possui_info_combustivel(pgEngine)
@@ -59,10 +79,88 @@ df_modelos_veiculos = get_modelos_veiculos_com_combustivel(pgEngine)
 lista_todos_modelos_veiculos = df_modelos_veiculos.to_dict(orient="records")
 lista_todos_modelos_veiculos.insert(0, {"LABEL": "TODOS"})
 
+# Lista de eventos com data e gps
+df_eventos_com_data = get_tipos_eventos_telemetria_mix_com_data(pgEngine)
+df_eventos_com_data = df_eventos_com_data.sort_values(by="label")
+
+df_eventos_com_gps = get_tipos_eventos_telemetria_mix_com_gps(pgEngine)
+df_eventos_com_gps = df_eventos_com_gps.sort_values(by="label")
+lista_eventos_com_gps = df_eventos_com_gps["EventTypeId"].unique()
+
+# Pega o preço do diesel via API
+preco_diesel = get_preco_diesel()
+
 
 ##############################################################################
 # CALLBACKS ##################################################################
 ##############################################################################
+
+##############################################################################
+# Callbacks para os inputs via URL ###########################################
+##############################################################################
+
+
+# Função auxiliar para transformar string '[%27A%27,%20%27B%27]' → ['A', 'B']
+def parse_list_param_pag_linha(param):
+    if isinstance(param, list):
+        return param
+    elif isinstance(param, str):
+        try:
+            return ast.literal_eval(param)
+        except:
+            return []
+    return []
+
+
+# Preenche os dados via URL
+@callback(
+    Output("input-select-linhas-combustivel", "value"),
+    Output("input-intervalo-datas-combustivel-linha", "value"),
+    Output("input-select-modelos-combustivel-linha", "value"),
+    Output("input-select-sentido-da-linha-combustivel", "value"),
+    Output("input-select-dia-linha-combustivel", "value"),
+    Output("input-linha-combustivel-remover-outliers-menor-que", "value"),
+    Output("input-linha-combustivel-remover-outliers-maior-que", "value"),
+    Input("url", "href"),
+)
+def cb_receber_campos_via_url_pag_linha(href):
+    if not href or "/combustivel-por-linha" not in href:
+        raise dash.exceptions.PreventUpdate
+
+    # Faz o parse dos parâmetros da url
+    parsed_url = urlparse(href)
+    query_params = parse_qs(parsed_url.query)
+
+    # Pega os parâmetros
+    linha = str(query_params.get("linha", ["020"])[0])
+
+    # Datas
+    data_hoje = datetime.now().strftime("%Y-%m-%d")
+    datas = [query_params.get("data_inicio", ["2025-01-01"])[0], query_params.get("data_fim", [data_hoje])[0]]
+
+    # Lista de modelos
+    lista_modelos = parse_list_param_pag_linha(query_params.get("lista_modelos", [["TODOS"]])[0])
+
+    # Sentido (por padrão coloca IDA e VOLTA, usuário pode modificar depois)
+    sentido = ["IDA", "VOLTA"]
+
+    # Dias marcados (por padrão SEG a SEX, pode modificar depois)
+    dia_marcado = "SEG_SEX"
+
+    # Velocidade
+    km_l_min = int(query_params.get("km_l_min", [1])[0])
+    km_l_max = int(query_params.get("km_l_max", [10])[0])
+
+    print("PARAMETROS RECEBIDOS")
+    print("LINHA", linha)
+    print("DATAS", datas)
+    print("MODELOS", lista_modelos)
+    print("SENTIDO", sentido)
+    print("DIA_MARCADO", dia_marcado)
+    print("KM_L_MIN", km_l_min)
+    print("KM_L_MAX", km_l_max)
+    return linha, datas, lista_modelos, sentido, dia_marcado, km_l_min, km_l_max
+
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
@@ -83,7 +181,7 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
     if lista_sentido is None or not lista_sentido or None in lista_sentido:
         return False
 
-    if lista_dias_semana is None or not lista_dias_semana or None in lista_dias_semana:
+    if lista_dias_semana is None or not lista_dias_semana:
         return False
 
     return True
@@ -106,25 +204,24 @@ def input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
         Input("input-linha-combustivel-remover-outliers-maior-que", "value"),
     ],
 )
-def computa_dados_combustivel_por_linha(
+def cb_pag_linha_computa_dados_combustivel_por_linha(
     datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
 ):
     # Valida input
-    print("Resultado de input válido:", input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana))
     if not input_valido(datas, lista_modelos, linha, lista_sentido, lista_dias_semana):
         return {
             "valid": False,
             "dados": [],
         }
 
-    if limite_km_l_menor is None or limite_km_l_menor < 0:
-        limite_km_l_menor = 0
+    if limite_km_l_menor is None or limite_km_l_menor <= 0:
+        limite_km_l_menor = 1
 
-    if limite_km_l_maior is None or limite_km_l_maior < 0:
+    if limite_km_l_maior is None or limite_km_l_maior >= 10:
         limite_km_l_maior = 10
 
     # Obtém os dados
-    df = comb_por_linha_service.get_combustivel_por_linha(
+    df = linha_service.get_combustivel_por_linha(
         datas, lista_modelos, linha, lista_sentido, lista_dias_semana, limite_km_l_menor, limite_km_l_maior
     )
 
@@ -143,7 +240,7 @@ def computa_dados_combustivel_por_linha(
     ],
     Input("dash-combustivel-por-linha-store", "data"),
 )
-def atualiza_indicadores_combustivel_por_linha(payload_linhas):
+def cb_pag_linha_atualiza_indicadores_combustivel_por_linha(payload_linhas):
     if not payload_linhas["valid"]:
         return ["", "", ""]
 
@@ -159,7 +256,6 @@ def atualiza_indicadores_combustivel_por_linha(payload_linhas):
     num_veiculos = df["vec_num_id"].nunique()
     num_modelos = df["vec_model"].nunique()
 
-
     return [f"{num_viagens}", f"{num_veiculos}", f"{num_modelos}"]
 
 
@@ -167,29 +263,21 @@ def atualiza_indicadores_combustivel_por_linha(payload_linhas):
     Output("graph-combustivel-linha-por-hora", "figure"),
     Input("dash-combustivel-por-linha-store", "data"),
 )
-def plota_grafico_combustivel_linha_por_hora(payload_linhas):
+def cb_pag_linha_plota_grafico_combustivel_linha_por_hora(payload_linha):
     # Valida
-    if not payload_linhas["valid"]:
+    if not payload_linha["valid"]:
         return go.Figure()
 
     # Obtém os dados
-    df = pd.DataFrame(payload_linhas["dados"])
+    df = pd.DataFrame(payload_linha["dados"])
 
     # Verifica se o dataframe está vazio
     if df.empty:
         return go.Figure()
 
-    # Prepara os dados para agrupa pelo período de análise (30 minutos é o padrão)
-    df["rmtc_timestamp_inicio"] = pd.to_datetime(df["rmtc_timestamp_inicio"])
-    df["time_bin"] = df["rmtc_timestamp_inicio"].dt.floor("30T")
-    df["time_bin_only_time"] = df["time_bin"].dt.time
-    # df_agg = df.groupby("time_bin_only_time")["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
-
     # Agrupa por modelo e período
-    df_agg = (
-        df.groupby(["time_bin_only_time", "vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
-    )
-    df_agg["time_bin_formatado"] = pd.to_datetime(df_agg["time_bin_only_time"].astype(str), format="%H:%M:%S")
+    df_agg = df.groupby(["time_slot", "vec_model"])["km_por_litro"].agg(["mean", "std", "min", "max"]).reset_index()
+    df_agg["time_slot_dt"] = pd.to_datetime(df_agg["time_slot"].astype(str), format="%H:%M")
 
     # Arredonda os valores
     df_agg["mean"] = df_agg["mean"].round(2)
@@ -203,13 +291,181 @@ def plota_grafico_combustivel_linha_por_hora(payload_linhas):
 
 
 ##############################################################################
+# Callbacks para as tabelas ##################################################
+##############################################################################
+
+
+@callback(
+    Output("pag-linha-tabela-detalhamento-viagens-combustivel", "rowData"),
+    Input("dash-combustivel-por-linha-store", "data"),
+)
+def cb_pag_veiculo_tabela_lista_viagens(payload_linha):
+    # Valida
+    if not payload_linha["valid"]:
+        return go.Figure()
+
+    # Obtém os dados
+    df = pd.DataFrame(payload_linha["dados"])
+
+    # Verifica se o dataframe está vazio
+    if df.empty:
+        return go.Figure()
+
+    # Preço
+    df["custo_excedente"] = df["litros_excedentes"] * preco_diesel
+
+    # Ação de visualização
+    df["acao"] = "🔍 Detalhar"
+
+    return df.to_dict(orient="records")
+
+
+##############################################################################
+# Callbacks para o mapa de viagem ############################################
+##############################################################################
+
+
+# Callback para detalhar viagem no mapa
+@callback(
+    Output("pag-linha-layer-control-eventos-detalhe-viagem", "children"),
+    Input("pag-linha-tabela-detalhamento-viagens-combustivel", "cellRendererData"),
+    Input("pag-linha-tabela-detalhamento-viagens-combustivel", "virtualRowData"),
+    Input("dash-combustivel-por-linha-store", "data"),
+    prevent_initial_call=True,
+)
+def cb_pag_linha_botao_detalhar_viagem(tabela_linha, tabela_linha_virtual, payload_linha):
+    ctx = callback_context  # Obtém o contexto do callback
+    if not ctx.triggered:
+        return dash.no_update  # Evita execução desnecessária
+
+    # Verifica se o callback foi acionado pelo botão de visualização
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[1]
+
+    if triggered_id != "cellRendererData":
+        return dash.no_update
+
+    tabela_linha_alvo = tabela_linha_virtual[tabela_linha["rowIndex"]]
+
+    inicio_viagem = (pd.to_datetime(tabela_linha_alvo["timestamp_br_inicio"])).strftime("%Y-%m-%d %H:%M:%S")
+    fim_viagem = (pd.to_datetime(tabela_linha_alvo["timestamp_br_fim"])).strftime("%Y-%m-%d %H:%M:%S")
+    viagem_linha = tabela_linha_alvo["encontrou_numero_sublinha"]
+    viagem_sentido = tabela_linha_alvo["encontrou_sentido_linha"]
+    vec_asset_id = tabela_linha_alvo["vec_asset_id"]
+
+    # Lista com as overlays que colocaremos no mapa
+    lista_overlays = []
+
+    # Obtem o shape da linha
+    df_shape_linha = veiculo_service.get_shape_linha(inicio_viagem, viagem_linha, viagem_sentido)
+    linha_geojson_str = df_shape_linha["geojsondata"].values[0]
+    linha_geojson = json.loads(linha_geojson_str)
+
+    # Gera a camada
+    lista_overlays.append(
+        dl.Pane(
+            dl.Overlay(
+                dl.LayerGroup(
+                    dl.GeoJSON(
+                        data=linha_geojson,
+                        options=dict(
+                            style=dict(
+                                color=tema.PALETA_CORES_DISCRETA[1],
+                                weight=20,  # border thickness
+                                opacity=0.8,  # border opacity
+                                zIndex=220,
+                            )
+                        ),
+                    ),
+                ),
+                checked=True,
+                id=f"overlay-{viagem_linha}{viagem_sentido}",
+                name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido}",
+            ),
+            name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} Panel",
+            style=dict(zIndex=220),
+        )
+    )
+    lista_overlays.append(
+        dl.Pane(
+            dl.Overlay(
+                dl.LayerGroup(
+                    dl.GeoJSON(
+                        data=linha_geojson,
+                        options=dict(
+                            style=dict(
+                                color="#FFFFFF",
+                                weight=4,  # border thickness
+                                opacity=0.8,  # border opacity
+                                zIndex=250,
+                            )
+                        ),
+                    ),
+                ),
+                checked=True,
+                id=f"overlay-{viagem_linha}{viagem_sentido}-borda",
+                name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} (BORDA)",
+            ),
+            name=f"<span class='mapa-icone-linha'></span>Linha {viagem_linha} / Sentido {viagem_sentido} (BORDA) Panel",
+            style=dict(zIndex=250),
+        )
+    )
+
+    # Obtem os eventos que ocorreram na viagem
+    df_eventos_viagem = veiculo_service.get_agg_eventos_ocorreram_viagem(inicio_viagem, fim_viagem, vec_asset_id)
+
+    # Adiciona as posições GPS
+    df_posicoes_gps = veiculo_service.get_posicao_gps_veiculo(inicio_viagem, fim_viagem, vec_asset_id)
+    cor_icone = tema.PALETA_CORES_DISCRETA[2]
+    layer_lista_marcadores = gera_layer_posicao(df_posicoes_gps, cor_icone)
+
+    # Gera a camada e salva lat e lon
+    lista_overlays.append(
+        dl.Overlay(
+            dl.LayerGroup(layer_lista_marcadores),
+            id=f"overlay-{viagem_linha}{viagem_sentido}-pos-gps",
+            name="<span class='mapa-icone mapa-icone-pos-gps'></span>Posição GPS",
+            checked=True,
+        )
+    )
+
+    # Agora, processa cada tipo de evento que ocorreu na viagem
+    for i, evt in df_eventos_viagem.iterrows():
+        evt_label = evt["event_label"]
+        evt_value = evt["event_value"]
+        evt_type_id = evt["event_type_id"]
+
+        cor_idx = (i + 3) % len(tema.PALETA_CORES_DISCRETA)
+        cor_icone = tema.PALETA_CORES_DISCRETA[cor_idx]
+
+        if evt_type_id in lista_eventos_com_gps:
+            df_eventos_viagem_com_gps = veiculo_service.get_detalhamento_evento_mix_veiculo(
+                inicio_viagem, fim_viagem, vec_asset_id, evt_value
+            )
+
+            layer_lista_marcadores = gera_layer_eventos_mix(df_eventos_viagem_com_gps, evt_label, cor_icone)
+
+            # Gera a camada
+            lista_overlays.append(
+                dl.Overlay(
+                    dl.LayerGroup(layer_lista_marcadores),
+                    name=f"<span class='mapa-icone mapa-icone-evt-{cor_idx}'></span>{evt_label}",
+                    id=f"overlay-mapa-icone-evt-i-{viagem_linha}{viagem_sentido}",
+                    checked=True,
+                )
+            )
+
+    return getMapaFundo() + lista_overlays
+
+
+##############################################################################
 # Registro da página #########################################################
 ##############################################################################
-dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-linha")
+dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-por-linha")
 
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
+
 layout = dbc.Container(
     [
         dcc.Store(id="dash-combustivel-por-linha-store"),
@@ -627,7 +883,7 @@ layout = dbc.Container(
         dmc.Space(h=20),
         dag.AgGrid(
             enableEnterpriseModules=True,
-            id="tabela-combustivel",
+            id="pag-linha-tabela-detalhamento-viagens-combustivel",
             columnDefs=combustivel_linha_tabela.tbl_detalhamento_viagens_km_l,
             rowData=[],
             defaultColDef={"filter": True, "floatingFilter": True},
@@ -658,6 +914,19 @@ layout = dbc.Container(
             align="center",
         ),
         dmc.Space(h=20),
+        dl.Map(
+            children=dl.LayersControl(
+                getMapaFundo(), id="pag-linha-layer-control-eventos-detalhe-viagem", collapsed=False
+            ),
+            id="pag-linha-mapa-eventos-detalhe-viagem",
+            center=(-16.665136, -49.286041),
+            zoom=11,
+            style={
+                "height": "60vh",
+                "border": "2px solid gray",
+                "borderRadius": "6px",
+            },
+        ),
         html.Div(id="mapa-linha-onibus"),
         dmc.Space(h=60),
     ]

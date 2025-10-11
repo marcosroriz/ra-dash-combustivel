@@ -111,7 +111,7 @@ def subquery_regras_monitoramento(lista_regras, prefix=""):
     return f"""{prefix} nome_regra IN ({', '.join([f"'{x}'" for x in lista_regras])})"""
 
 
-def subquery_dia_semana(dia_numerico, prefix=""):
+def subquery_dia_semana(dia_numerico):
     if not dia_numerico:
         return ""
 
@@ -124,3 +124,20 @@ def subquery_dia_semana(dia_numerico, prefix=""):
         query = "AND dia_numerico BETWEEN 2 AND 6"
 
     return query
+
+
+def subquery_dia_marcado_str(dias_marcado):
+    dias_subquery = ""
+    
+    if "SEG_SEX" in dias_marcado:
+        dias_subquery = "AND dia_numerico BETWEEN 2 AND 6"
+    elif "SABADO" in dias_marcado:
+        dias_subquery = "AND dia_numerico = 7"
+    elif "DOMINGO" in dias_marcado:
+        dias_subquery = "AND dia_numerico = 1"
+    elif "FERIADO" in dias_marcado:
+        dias_subquery = "AND dia_eh_feriado = TRUE"
+
+
+    return dias_subquery
+

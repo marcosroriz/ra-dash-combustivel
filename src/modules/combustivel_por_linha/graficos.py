@@ -39,7 +39,7 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
         # Gera o gráfico de área para o intervalo (buffer) do modelo 
         fig.add_trace(
             go.Scatter(
-                x=df_linha_modelo["time_bin_formatado"].tolist() + df_linha_modelo["time_bin_formatado"].tolist()[::-1],
+                x=df_linha_modelo["time_slot_dt"].tolist() + df_linha_modelo["time_slot_dt"].tolist()[::-1],
                 y=df_linha_modelo["max"].tolist() + df_linha_modelo["min"].tolist()[::-1],
                 connectgaps=False,
                 fill="toself",
@@ -61,12 +61,26 @@ def gerar_grafico_consumo_combustivel_por_linha(df_linha_agg, periodo_agrupar="3
         # Gera o gráfico de linha para o modelo
         fig.add_trace(
             go.Scatter(
-                x=df_linha_modelo["time_bin_formatado"],
+                x=df_linha_modelo["time_slot_dt"],
                 y=df_linha_modelo["mean"],
                 mode="lines+markers",
                 connectgaps=False,
                 line=dict(color=i_cor_hex, width=2),
                 name=modelo,
+                customdata=df_linha_modelo[
+                    [
+                        "time_slot",
+                        "mean",
+                        "min",
+                        "max",
+                    ]
+                ],
+                hovertemplate=(
+                    "<b>Horário:</b> %{customdata[0]}<br>"
+                    + "<b>km/L Médio:</b> %{customdata[1]:.2f}<br>"
+                    + "<b>km/L Mínimo:</b> %{customdata[2]:.2f} km/L<br>"
+                    + "<b>km/L Máximo:</b> %{customdata[3]:.2f} km/L<br><extra></extra>"
+                ),
             )
         )
 

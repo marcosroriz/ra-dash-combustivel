@@ -158,6 +158,9 @@ class VeiculoService:
         # Executa a query
         df = pd.read_sql(query, self.dbEngine)
 
+        # Força string nos asset_id
+        df["vec_asset_id"] = df["vec_asset_id"].astype(str)
+
         # Ajusta datas
         df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
         df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
@@ -230,6 +233,9 @@ class VeiculoService:
         # Executa a query
         df = pd.read_sql(query, self.dbEngine)
 
+        # Força string nos asset_id
+        df["vec_asset_id"] = df["vec_asset_id"].astype(str)
+
         # Ajusta datas
         df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])
         df["encontrou_timestamp_fim"] = pd.to_datetime(df["encontrou_timestamp_fim"])
@@ -291,6 +297,9 @@ class VeiculoService:
 
         # Ordena
         df = df.sort_values(by=["dia", "encontrou_timestamp_inicio"], ascending=[False, False])
+
+        # Força string nos asset_id
+        df["vec_asset_id"] = df["vec_asset_id"].astype(str)
 
         # Ajusta datas
         df["encontrou_timestamp_inicio"] = pd.to_datetime(df["encontrou_timestamp_inicio"])

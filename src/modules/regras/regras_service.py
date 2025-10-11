@@ -108,19 +108,6 @@ class RegrasService:
         df = df.sort_values("nome_regra")
         return df
     
-    def __get_subquery_dia_marcado(self, dias_marcado):
-        dias_subquery = ""
-        
-        if "SEG_SEX" in dias_marcado:
-            dias_subquery = "AND dia_numerico BETWEEN 2 AND 6"
-        elif "SABADO" in dias_marcado:
-            dias_subquery = "AND dia_numerico = 7"
-        elif "DOMINGO" in dias_marcado:
-            dias_subquery = "AND dia_numerico = 1"
-        elif "FERIADO" in dias_marcado:
-            dias_subquery = "AND dia_eh_feriado = TRUE"
-
-        return dias_subquery
 
     def get_preview_regra(
         self,
@@ -133,7 +120,7 @@ class RegrasService:
         limite_baixa_perfomance,
         limite_erro_telemetria,
     ):
-        subquery_dia_marcado_str = self.__get_subquery_dia_marcado(dias_marcados)
+        subquery_dia_marcado_str = subquery_dia_marcado_str(dias_marcados)
         subquery_modelos_str = subquery_modelos_combustivel(lista_modelos, termo_all="TODOS")
 
         # Ajusta os limites antes de executar a query

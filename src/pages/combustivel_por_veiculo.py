@@ -32,6 +32,7 @@ from dash_iconify import DashIconify
 import dash_leaflet as dl
 
 # Importar nossas constantes e funções utilitárias
+import tema
 import locale_utils
 
 # Banco de Dados
@@ -54,7 +55,9 @@ import modules.combustivel_por_veiculo.tabela as veiculo_tabela
 # Preço do diesel
 from modules.preco_combustivel_api import get_preco_diesel
 
-import tema
+# Mapa
+from modules.mapa_utils import getMapaFundo, gera_layer_posicao, gera_layer_eventos_mix
+
 
 ##############################################################################
 # LEITURA DE DADOS ###########################################################
@@ -81,7 +84,7 @@ df_modelos = get_modelos_veiculos_com_combustivel(pgEngine)
 # Pega o preço do diesel via API
 preco_diesel = get_preco_diesel()
 
-# Lista de eventos com data
+# Lista de eventos com data e gps
 df_eventos_com_data = get_tipos_eventos_telemetria_mix_com_data(pgEngine)
 df_eventos_com_data = df_eventos_com_data.sort_values(by="label")
 
@@ -731,72 +734,6 @@ def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
     return getMapaFundo() + lista_overlays
 
 
-def gera_layer_posicao(df_pos, cor_icone):
-    lista_marcadores = []
-
-    # Itera em cada evento
-    for _, row in df_pos.iterrows():
-        evt_lon = row["Longitude"]
-        evt_lat = row["Latitude"]
-        evt_timestamp = (pd.to_datetime(row["Timestamp"]) - pd.Timedelta(hours=3)).strftime("%H:%M:%S - %Y-%m-%d")
-
-        marcador = dl.CircleMarker(
-            center=[evt_lat, evt_lon],
-            radius=10,
-            color="black",
-            fillColor=cor_icone,
-            fillOpacity=0.75,
-            children=dl.Popup(
-                html.Div(
-                    [
-                        html.H6("Posição GPS"),
-                        html.Ul([html.Li(f"Hora: {evt_timestamp}")]),
-                    ]
-                )
-            ),
-        )
-
-        # Adiciona o marcador
-        lista_marcadores.append(marcador)
-
-    return lista_marcadores
-
-
-def gera_layer_eventos_mix(df_eventos_mix, evt_name, cor_icone):
-    lista_marcadores = []
-
-    # Seta nome não conhecido para os motoristas que não tiverem dado
-    df_eventos_mix["Name"] = df_eventos_mix["Name"].fillna("Não informado")
-
-    # Itera em cada evento
-    for _, row in df_eventos_mix.iterrows():
-        evt_lon = row["StartPosition_Longitude"]
-        evt_lat = row["StartPosition_Latitude"]
-        evt_driver_name = row["Name"]
-        evt_timestamp = (pd.to_datetime(row["StartDateTime"]) - pd.Timedelta(hours=3)).strftime("%H:%M:%S - %Y-%m-%d")
-
-        if pd.notna(evt_lat) and pd.notna(evt_lon):
-            marcador = dl.CircleMarker(
-                center=[evt_lat, evt_lon],
-                radius=10,
-                color="black",
-                fillColor=cor_icone,
-                fillOpacity=0.75,
-                children=dl.Popup(
-                    html.Div(
-                        [
-                            html.H6(evt_name),
-                            html.Ul([html.Li(f"Motorista: {evt_driver_name}"), html.Li(f"Hora: {evt_timestamp}")]),
-                        ]
-                    )
-                ),
-            )
-
-            # Adiciona o marcador
-            lista_marcadores.append(marcador)
-
-    return lista_marcadores
-
 
 ##############################################################################
 # Registro da página #########################################################
@@ -807,26 +744,6 @@ dash.register_page(__name__, name="Combustível por Veículo", path="/combustive
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
-def getMapaFundo():
-    return [
-        # OpenStreetMap (ruas padrão)
-        dl.BaseLayer(
-            dl.TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-            name="OpenStreetMap",
-            checked=False,
-        ),
-        # ESRI Satellite (sem nomes de rua)
-        dl.BaseLayer(
-            dl.TileLayer(
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                attribution="Tiles © Esri",
-            ),
-            name="ESRI Satellite",
-            checked=True,
-        ),
-    ]
-
-
 layout = dbc.Container(
     [
         # Estado

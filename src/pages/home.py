@@ -341,7 +341,7 @@ def cb_botao_detalhar_tabela_consumo_linha_visal_geral(
         f"linha={tabela_linha_alvo['encontrou_numero_linha']}",
         f"data_inicio={pd.to_datetime(datas[0]).strftime('%Y-%m-%d')}",
         f"data_fim={pd.to_datetime(datas[1]).strftime('%Y-%m-%d')}",
-        f"lista_linhas={lista_linha}",
+        f"lista_modelos={lista_modelos}",
         f"km_l_min={km_l_min}",
         f"km_l_max={km_l_max}",
     ]

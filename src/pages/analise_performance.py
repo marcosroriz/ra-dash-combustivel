@@ -33,7 +33,7 @@ from db import PostgresSingleton
 # Imports gerais
 
 # Imports específicos
-from modules.combustivel_por_linha.combustivel_por_linha_service import CombustivelPorLinhaService
+from modules.combustivel_por_linha.linha_service import LinhaService
 import modules.regras.tabela as regras_tabela
 from modules.regras.regras_service import RegrasService
 
