@@ -696,6 +696,7 @@ def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
     lista_overlays.append(
         dl.Overlay(
             dl.LayerGroup(layer_lista_marcadores),
+            id=f"overlay-{viagem_linha}{viagem_sentido}-pos-gps",
             name="<span class='mapa-icone mapa-icone-pos-gps'></span>Posição GPS",
             checked=True,
         )
@@ -722,6 +723,7 @@ def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
                 dl.Overlay(
                     dl.LayerGroup(layer_lista_marcadores),
                     name=f"<span class='mapa-icone mapa-icone-evt-{cor_idx}'></span>{evt_label}",
+                    id=f"overlay-mapa-icone-evt-i-{viagem_linha}{viagem_sentido}",
                     checked=True,
                 )
             )
