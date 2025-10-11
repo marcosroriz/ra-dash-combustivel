@@ -143,6 +143,42 @@ def gera_labels_inputs_visao_geral(campo):
     return dmc.Group(id=f"{campo}-labels", children=[], className="labels-filtro")
 
 
+# Corrige o input para garantir que o termo para todas ("TODAS") não seja selecionado junto com outras opções
+def corrige_input(lista, termo_all="TODAS"):
+    # Caso 1: Nenhuma opcao é selecionada, reseta para "TODAS"
+    if not lista:
+        return [termo_all]
+
+    # Caso 2: Se "TODAS" foi selecionado após outras opções, reseta para "TODAS"
+    if len(lista) > 1 and termo_all in lista[1:]:
+        return [termo_all]
+
+    # Caso 3: Se alguma opção foi selecionada após "TODAS", remove "TODAS"
+    if termo_all in lista and len(lista) > 1:
+        return [value for value in lista if value != termo_all]
+
+    # Por fim, se não caiu em nenhum caso, retorna o valor original
+    return lista
+
+
+@callback(
+    Output("pag-home-select-modelos-visao-geral", "value", allow_duplicate=True),
+    Input("pag-home-select-modelos-visao-geral", "value"),
+    prevent_initial_call=True,
+)
+def corrige_input_modelos(lista_modelos):
+    return corrige_input(lista_modelos, "TODOS")
+
+
+@callback(
+    Output("pag-home-select-linhas-monitoramento", "value", allow_duplicate=True),
+    Input("pag-home-select-linhas-monitoramento", "value"),
+    prevent_initial_call=True,
+)
+def corrige_input_linhas(lista_linhas):
+    return corrige_input(lista_linhas)
+
+
 ##############################################################################
 # Callbacks para as tabelas ##################################################
 ##############################################################################

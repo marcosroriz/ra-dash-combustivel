@@ -223,6 +223,32 @@ def gera_labels_inputs_pag_veiculo(campo):
     # Cria o componente
     return dmc.Group(id=f"{campo}-labels", children=[], className="labels-filtro")
 
+# Corrige o input para garantir que o termo para todas ("TODAS") não seja selecionado junto com outras opções
+def corrige_input(lista, termo_all="TODAS"):
+    # Caso 1: Nenhuma opcao é selecionada, reseta para "TODAS"
+    if not lista:
+        return [termo_all]
+
+    # Caso 2: Se "TODAS" foi selecionado após outras opções, reseta para "TODAS"
+    if len(lista) > 1 and termo_all in lista[1:]:
+        return [termo_all]
+
+    # Caso 3: Se alguma opção foi selecionada após "TODAS", remove "TODAS"
+    if termo_all in lista and len(lista) > 1:
+        return [value for value in lista if value != termo_all]
+
+    # Por fim, se não caiu em nenhum caso, retorna o valor original
+    return lista
+
+
+@callback(
+    Output("pag-veiculo-input-select-linhas-veiculo", "value", allow_duplicate=True),
+    Input("pag-veiculo-input-select-linhas-veiculo", "value"),
+    prevent_initial_call=True,
+)
+def corrige_input_linhas(lista_linhas):
+    return corrige_input(lista_linhas)
+
 
 ##############################################################################
 # Callbacks para o estado ####################################################
