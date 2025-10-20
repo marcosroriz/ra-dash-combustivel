@@ -112,7 +112,7 @@ tbl_consumo_veiculo_visao_geral = [
 tbl_consumo_linhas_visao_geral = [
     {
         "field": "encontrou_numero_linha",
-        "headerName": "VEÍCULO",
+        "headerName": "LINHA",
         "minWidth": 120,
         "maxWidth": 120,
         "pinned": "left",

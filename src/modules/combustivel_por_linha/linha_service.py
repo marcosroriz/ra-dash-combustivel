@@ -80,7 +80,7 @@ class LinhaService:
                 COUNT(DISTINCT vec_model) AS total_num_modelos,
 			    COUNT(DISTINCT vec_num_id) AS total_num_veiculos,
 				AVG(3600 * (tamanho_linha_km_sobreposicao / encontrou_tempo_viagem_segundos)) AS velocidade_media_kmh,
-				AVG(total_comb_l) AS "media_consumo_viagem",
+				AVG(km_por_litro) AS "media_consumo_viagem",
                 SUM(
 					CASE 
 						WHEN analise_status_90_dias = 'BAIXA PERFOMANCE (<= 2 STD)' THEN ABS(total_comb_l - (tamanho_linha_km_sobreposicao / analise_valor_mediana_90_dias))
