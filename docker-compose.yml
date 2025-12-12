@@ -1,0 +1,20 @@
+services:
+  dash-ra-combustivel:
+    build: .
+    image: ceia-ufg/dash-ra-combustivel
+    container_name: dash-ra-combustivel
+
+    env_file:
+      - src/.env
+
+    ports:
+      - "${PORT}:${PORT}"
+
+    networks:
+      - dash-ra-combustivel
+
+    restart: unless-stopped
+
+networks:
+  dash-ra-combustivel:
+    driver: bridge
