@@ -247,7 +247,7 @@ def cb_rel_regra_atualiza_dados_card_descricao(store_relatorio_regra):
 
     html_nome_regra = f"🔍 Nome da regra: {dados_regra['nome_regra']}"
     html_periodo_monitoramento = f"🕒 Período de monitoramento: {dados_regra['periodo']}"
-    html_modelos = f"🚗 Modelos: {", ".join(dados_regra['modelos_veiculos'])}"
+    html_modelos = f"🚗 Modelos: {', '.join(dados_regra['modelos_veiculos'])}"
     html_min_viagens = f"🛣️ Mínimo de viagens: {dados_regra['qtd_min_motoristas']}"
     html_min_motoristas = f"👨‍✈️ Mínimo de motoristas: {dados_regra['qtd_min_viagens']}"
     html_dias_marcados = f"📅 Dias marcados: {dados_regra['dias_marcados']}"
