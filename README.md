@@ -2,7 +2,7 @@
 
 Este repositório contém o **Painel de Combustível**, um dashboard analítico desenvolvido para monitorar a eficiência de consumo de combustível da frota, permitindo identificar padrões, anomalias e oportunidades de otimização operacional por linha, modelo e tipo de dia. 
 
-Note que o painel traz uma estimativa do custo gasto com combustível em viagens de baixa perfomance. Para tal, utiliza-se o preço do combustível gasto em viagens  
+Note que o painel traz uma estimativa do custo gasto com combustível em viagens de baixa perfomance. Para tal, utiliza-se o preço do combustível gasto em viagens (via API https://combustivelapi.com.br).
 
 O dashboard foi desenvolvido utilizando o framework **Dash**, na linguagem de programação **Python**, e consome dados previamente integrados e processados por outros componentes do sistema (telemetria, ordens de serviço, combustível, LLM, entre outros).
 
