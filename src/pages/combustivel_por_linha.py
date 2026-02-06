@@ -155,6 +155,16 @@ def cb_receber_campos_via_url_pag_linha(href):
     return linha, datas, lista_modelos, sentido, dia_marcado, km_l_min, km_l_max
 
 
+
+@callback(
+    Output("pag-linha-input-intervalo-datas-combustivel-linha", "maxDate"),
+    Output("pag-linha-input-intervalo-datas-combustivel-linha", "value"),
+    Input("url", "pathname"),  # fires on page load
+)
+def cb_input_datas_linha_dinamico(_):
+    hoje = date.today()
+    return hoje, [date(2025, 1, 1), hoje]
+
 ##############################################################################
 # Callbacks para os inputs ###################################################
 ##############################################################################

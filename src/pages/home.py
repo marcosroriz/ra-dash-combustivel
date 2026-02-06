@@ -179,6 +179,15 @@ def corrige_input_linhas(lista_linhas):
     return corrige_input(lista_linhas)
 
 
+@callback(
+    Output("pag-home-intervalo-datas-visao-geral", "maxDate"),
+    Output("pag-home-intervalo-datas-visao-geral", "value"),
+    Input("url", "pathname"),  # fires on page load
+)
+def cb_input_datas_home_dinamico(_):
+    hoje = date.today()
+    return hoje, [date(2025, 1, 1), hoje]
+
 ##############################################################################
 # Callbacks para as tabelas ##################################################
 ##############################################################################

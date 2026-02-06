@@ -152,6 +152,14 @@ def cb_receber_campos_via_url_pag_veiculo(href):
 
     return vec_num_id, datas, lista_linhas, km_l_min, km_l_max
 
+@callback(
+    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "maxDate"),
+    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "value"),
+    Input("url", "pathname"),  # fires on page load
+)
+def cb_input_datas_linha_dinamico(_):
+    hoje = date.today()
+    return hoje, [date(2025, 1, 1), hoje]
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
