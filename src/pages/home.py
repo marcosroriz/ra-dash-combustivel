@@ -181,8 +181,9 @@ def corrige_input_linhas(lista_linhas):
 
 @callback(
     Output("pag-home-intervalo-datas-visao-geral", "maxDate"),
-    Output("pag-home-intervalo-datas-visao-geral", "value"),
+    Output("pag-home-intervalo-datas-visao-geral", "value", allow_duplicate=True),
     Input("url", "pathname"),  # fires on page load
+    prevent_initial_call=True,
 )
 def cb_input_datas_home_dinamico(_):
     hoje = date.today()

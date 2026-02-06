@@ -154,8 +154,9 @@ def cb_receber_campos_via_url_pag_veiculo(href):
 
 @callback(
     Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "maxDate"),
-    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "value"),
+    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "value", allow_duplicate=True),
     Input("url", "pathname"),  # fires on page load
+    prevent_initial_call=True,
 )
 def cb_input_datas_linha_dinamico(_):
     hoje = date.today()

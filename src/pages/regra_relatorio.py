@@ -203,8 +203,9 @@ def cb_pag_rel_regra_sincroniza_input_store_relatorio_regra(id_regra, dia_execuc
 
 
 @callback(
-    Output("relatorio-input-data-relatorio-regra-retrabalho", "value"),
+    Output("relatorio-input-data-relatorio-regra-retrabalho", "value", allow_duplicate=True),
     Input("url", "pathname"),  # fires on page load
+    prevent_initial_call=True,
 )
 def cb_input_datas_linha_dinamico(_):
     return (datetime.now() - timedelta(days=10)).date()
