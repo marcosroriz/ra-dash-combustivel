@@ -179,16 +179,6 @@ def corrige_input_linhas(lista_linhas):
     return corrige_input(lista_linhas)
 
 
-@callback(
-    Output("pag-home-intervalo-datas-visao-geral", "maxDate"),
-    Output("pag-home-intervalo-datas-visao-geral", "value", allow_duplicate=True),
-    Input("url", "pathname"),  # fires on page load
-    prevent_initial_call=True,
-)
-def cb_input_datas_home_dinamico(_):
-    hoje = date.today()
-    return hoje, [date(2025, 1, 1), hoje]
-
 ##############################################################################
 # Callbacks para as tabelas ##################################################
 ##############################################################################
@@ -422,7 +412,7 @@ def cb_indicador_consumo_km_l_visao_geral(datas, lista_modelos, lista_linha, km_
 
     if df_indicador.empty:
         return ""
-    
+
     # Obtem o valor do indicador
     valor = df_indicador.iloc[0]["media_km_por_l"]
 
@@ -460,7 +450,7 @@ def cb_indicador_total_consumo_excedente_visao_geral(datas, lista_modelos, lista
     if df_indicador.empty:
         return "", "", ""
 
-    # Obtém o valor do indicador    
+    # Obtém o valor do indicador
     valor = df_indicador.iloc[0]["litros_excedentes"]
 
     if pd.isna(valor) or valor is None:
@@ -546,461 +536,465 @@ def plota_grafico_barra_consumo_modelo(datas, lista_modelos, lista_linha, km_l_m
 
 
 ##############################################################################
-# Registro da página #########################################################
-##############################################################################
-dash.register_page(__name__, name="Visão Geral", path="/")
-
-##############################################################################
 # Layout #####################################################################
 ##############################################################################
-layout = dbc.Container(
-    [
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        # Cabeçalho e Inputs
+def layout():
+    return dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            # Cabeçalho e Inputs
+                            dbc.Row(
+                                [
+                                    html.Hr(),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                DashIconify(icon="mdi:gas-station", width=45),
+                                                width="auto",
+                                            ),
+                                            dbc.Col(
+                                                html.H1(
+                                                    [
+                                                        "Visão Geral da \u00a0",
+                                                        html.Strong("Frota"),
+                                                    ],
+                                                    className="align-self-center",
+                                                ),
+                                                width=True,
+                                            ),
+                                        ],
+                                        align="center",
+                                    ),
+                                    dmc.Space(h=15),
+                                    html.Hr(),
+                                ]
+                            ),
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Data (intervalo de análise)"),
+                                                        dmc.DatePicker(
+                                                            id="pag-home-intervalo-datas-visao-geral",
+                                                            allowSingleDateInRange=True,
+                                                            minDate=date(2025, 1, 1),
+                                                            maxDate=date.today(),
+                                                            type="range",
+                                                            value=[date(2025, 1, 1), date.today()],
+                                                            # value=[date.today() - pd.DateOffset(days=30), date.today()],
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
+                                                ),
+                                            ],
+                                            body=True,
+                                        ),
+                                        md=6,
+                                        className="mb-3 mb-md-0",
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Modelos"),
+                                                        dcc.Dropdown(
+                                                            id="pag-home-select-modelos-visao-geral",
+                                                            multi=True,
+                                                            options=[
+                                                                {
+                                                                    "label": modelo["LABEL"],
+                                                                    "value": modelo["LABEL"],
+                                                                }
+                                                                for modelo in lista_todos_modelos_veiculos
+                                                            ],
+                                                            value=["TODOS"],
+                                                            placeholder="Selecione um ou mais modelos...",
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
+                                                ),
+                                            ],
+                                            body=True,
+                                        ),
+                                        md=6,
+                                        className="mb-3 mb-md-0",
+                                    ),
+                                ]
+                            ),
+                            dmc.Space(h=10),
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Linha"),
+                                                        dcc.Dropdown(
+                                                            id="pag-home-select-linhas-monitoramento",
+                                                            multi=True,
+                                                            options=[
+                                                                {
+                                                                    "label": linha["LABEL"],
+                                                                    "value": linha["LABEL"],
+                                                                }
+                                                                for linha in lista_todas_linhas
+                                                            ],
+                                                            value=["TODAS"],
+                                                            placeholder="Selecione a linha",
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
+                                                ),
+                                            ],
+                                            body=True,
+                                        ),
+                                        md=6,
+                                        className="mb-3 mb-md-0",
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Excluir km/L menor que"),
+                                                        dbc.InputGroup(
+                                                            [
+                                                                dbc.Input(
+                                                                    id="pag-home-excluir-km-l-menor-que-visao-geral",
+                                                                    type="number",
+                                                                    placeholder="km/L",
+                                                                    value=1,
+                                                                    step=0.1,
+                                                                    min=0,
+                                                                ),
+                                                                dbc.InputGroupText("km/L"),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap h-100",
+                                                ),
+                                            ],
+                                            className="h-100",
+                                            body=True,
+                                        ),
+                                        md=3,
+                                        className="mb-3 mb-md-0",
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Excluir km/L maior que"),
+                                                        dbc.InputGroup(
+                                                            [
+                                                                dbc.Input(
+                                                                    id="pag-home-excluir-km-l-maior-que-visao-geral",
+                                                                    type="number",
+                                                                    placeholder="km/L",
+                                                                    value=10,
+                                                                    step=0.1,
+                                                                    min=0,
+                                                                ),
+                                                                dbc.InputGroupText("km/L"),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap h-100",
+                                                ),
+                                            ],
+                                            className="h-100",
+                                            body=True,
+                                        ),
+                                        md=3,
+                                        className="mb-3 mb-md-0",
+                                    ),
+                                ]
+                            ),
+                        ],
+                        md=12,
+                    ),
+                ]
+            ),
+            dmc.Space(h=30),
+            dbc.Row(
+                [
+                    dbc.Col(
                         dbc.Row(
                             [
-                                html.Hr(),
                                 dbc.Row(
                                     [
                                         dbc.Col(
-                                            DashIconify(icon="mdi:gas-station", width=45),
+                                            DashIconify(icon="material-symbols:insights", width=45),
                                             width="auto",
                                         ),
                                         dbc.Col(
-                                            html.H1(
-                                                [
-                                                    "Visão Geral da \u00a0",
-                                                    html.Strong("Frota"),
-                                                ],
-                                                className="align-self-center",
-                                            ),
-                                            width=True,
+                                            html.H4("Indicadores", className="align-self-center"),
                                         ),
-                                    ],
-                                    align="center",
+                                    ]
                                 ),
-                                dmc.Space(h=15),
-                                html.Hr(),
+                                dmc.Space(h=20),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardBody(
+                                                        dmc.Group(
+                                                            [
+                                                                dmc.Title(
+                                                                    id="indicador-consumo-km-l-visao-geral",
+                                                                    order=2,
+                                                                ),
+                                                                DashIconify(
+                                                                    icon="material-symbols:speed-outline-rounded",
+                                                                    width=48,
+                                                                    color="black",
+                                                                ),
+                                                            ],
+                                                            justify="center",
+                                                            mt="md",
+                                                            mb="xs",
+                                                        ),
+                                                    ),
+                                                    dbc.CardFooter(["Consumo médio (km/L)"]),
+                                                ],
+                                                class_name="card-box-shadow",
+                                            ),
+                                            md=6,
+                                            className="mb-3 mb-md-0",
+                                        ),
+                                        dbc.Col(
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardBody(
+                                                        dmc.Group(
+                                                            [
+                                                                dmc.Title(
+                                                                    id="indicador-total-litros-excedente-visao-geral",
+                                                                    order=2,
+                                                                ),
+                                                                DashIconify(
+                                                                    icon="bi:fuel-pump-fill",
+                                                                    width=48,
+                                                                    color="black",
+                                                                ),
+                                                            ],
+                                                            justify="center",
+                                                            mt="md",
+                                                            mb="xs",
+                                                        ),
+                                                    ),
+                                                    dbc.CardFooter(["Total de litros excedentes (≤ 2 STD)"]),
+                                                ],
+                                                class_name="card-box-shadow",
+                                            ),
+                                            md=6,
+                                            className="mb-3 mb-md-0",
+                                        ),
+                                    ]
+                                ),
+                                dmc.Space(h=20),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            dbc.Card(
+                                                [
+                                                    dbc.CardBody(
+                                                        dmc.Group(
+                                                            [
+                                                                dmc.Title(
+                                                                    id="indicador-total-gasto-combustivel-excedente-visao-geral",
+                                                                    order=2,
+                                                                ),
+                                                                DashIconify(
+                                                                    icon="emojione-monotone:money-with-wings",
+                                                                    width=48,
+                                                                    color="black",
+                                                                ),
+                                                            ],
+                                                            justify="center",
+                                                            mt="md",
+                                                            mb="xs",
+                                                        ),
+                                                    ),
+                                                    dbc.CardFooter(
+                                                        ["Total gasto com combustível excedente (R$)"],
+                                                        id="card-footer-preco-diesel",
+                                                    ),
+                                                ],
+                                                class_name="card-box-shadow",
+                                            ),
+                                            md=12,
+                                            className="mb-3 mb-md-0",
+                                        ),
+                                    ]
+                                ),
                             ]
                         ),
+                        md=6,
+                    ),
+                    dbc.Col(
+                        dcc.Graph(id="graph-pizza-sintese-viagens-geral"),
+                        md=6,
+                    ),
+                ]
+            ),
+            # Grafico geral de combustível por modelo
+            dmc.Space(h=30),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
+                    dbc.Col(
                         dbc.Row(
                             [
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Data (intervalo de análise)"),
-                                                    dmc.DatePicker(
-                                                        id="pag-home-intervalo-datas-visao-geral",
-                                                        allowSingleDateInRange=True,
-                                                        minDate=date(2025, 1, 1),
-                                                        maxDate=date.today(),
-                                                        type="range",
-                                                        value=[date(2025, 1, 1), date.today()],
-                                                        # value=[date.today() - pd.DateOffset(days=30), date.today()],
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                    className="mb-3 mb-md-0",
+                                html.H4(
+                                    "Consumo de combustível por modelo",
+                                    className="align-self-center",
                                 ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Modelos"),
-                                                    dcc.Dropdown(
-                                                        id="pag-home-select-modelos-visao-geral",
-                                                        multi=True,
-                                                        options=[
-                                                            {
-                                                                "label": modelo["LABEL"],
-                                                                "value": modelo["LABEL"],
-                                                            }
-                                                            for modelo in lista_todos_modelos_veiculos
-                                                        ],
-                                                        value=["TODOS"],
-                                                        placeholder="Selecione um ou mais modelos...",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                    className="mb-3 mb-md-0",
-                                ),
+                                dmc.Space(h=5),
                             ]
                         ),
-                        dmc.Space(h=10),
+                        width=True,
+                    ),
+                ],
+                align="center",
+            ),
+            dcc.Graph(id="graph-barra-consumo-modelo-visao-geral"),
+            dmc.Space(h=40),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
+                    dbc.Col(
                         dbc.Row(
                             [
+                                html.H4(
+                                    "Detalhamento do consumo dos veículos",
+                                    className="align-self-center",
+                                ),
+                                dmc.Space(h=5),
                                 dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Linha"),
-                                                    dcc.Dropdown(
-                                                        id="pag-home-select-linhas-monitoramento",
-                                                        multi=True,
-                                                        options=[
-                                                            {
-                                                                "label": linha["LABEL"],
-                                                                "value": linha["LABEL"],
-                                                            }
-                                                            for linha in lista_todas_linhas
-                                                        ],
-                                                        value=["TODAS"],
-                                                        placeholder="Selecione a linha",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                    className="mb-3 mb-md-0",
+                                    gera_labels_inputs_visao_geral("labels-tabela-veiculos-visao-geral"), width=True
                                 ),
                                 dbc.Col(
-                                    dbc.Card(
+                                    html.Div(
                                         [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L menor que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="pag-home-excluir-km-l-menor-que-visao-geral",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=1,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
+                                            html.Button(
+                                                "Exportar para Excel",
+                                                id="btn-exportar-excel-tabela-combustivel-visao-geral",
+                                                n_clicks=0,
+                                                style={
+                                                    "background-color": "#007bff",  # Azul
+                                                    "color": "white",
+                                                    "border": "none",
+                                                    "padding": "10px 20px",
+                                                    "border-radius": "8px",
+                                                    "cursor": "pointer",
+                                                    "font-size": "16px",
+                                                    "font-weight": "bold",
+                                                },
+                                                className="btnExcel",
                                             ),
+                                            dcc.Download(id="download-excel-tabela-combustivel-visao-geral"),
                                         ],
-                                        className="h-100",
-                                        body=True,
+                                        style={"text-align": "right"},
                                     ),
-                                    md=3,
-                                    className="mb-3 mb-md-0",
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L maior que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="pag-home-excluir-km-l-maior-que-visao-geral",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=10,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
-                                    className="mb-3 mb-md-0",
+                                    width="auto",
                                 ),
                             ]
                         ),
-                    ],
-                    md=12,
-                ),
-            ]
-        ),
-        dmc.Space(h=30),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        DashIconify(icon="material-symbols:insights", width=45),
-                                        width="auto",
-                                    ),
-                                    dbc.Col(
-                                        html.H4("Indicadores", className="align-self-center"),
-                                    ),
-                                ]
-                            ),
-                            dmc.Space(h=20),
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        dbc.Card(
-                                            [
-                                                dbc.CardBody(
-                                                    dmc.Group(
-                                                        [
-                                                            dmc.Title(
-                                                                id="indicador-consumo-km-l-visao-geral",
-                                                                order=2,
-                                                            ),
-                                                            DashIconify(
-                                                                icon="material-symbols:speed-outline-rounded",
-                                                                width=48,
-                                                                color="black",
-                                                            ),
-                                                        ],
-                                                        justify="center",
-                                                        mt="md",
-                                                        mb="xs",
-                                                    ),
-                                                ),
-                                                dbc.CardFooter(["Consumo médio (km/L)"]),
-                                            ],
-                                            class_name="card-box-shadow",
-                                        ),
-                                        md=6,
-                                        className="mb-3 mb-md-0",
-                                    ),
-                                    dbc.Col(
-                                        dbc.Card(
-                                            [
-                                                dbc.CardBody(
-                                                    dmc.Group(
-                                                        [
-                                                            dmc.Title(
-                                                                id="indicador-total-litros-excedente-visao-geral",
-                                                                order=2,
-                                                            ),
-                                                            DashIconify(
-                                                                icon="bi:fuel-pump-fill",
-                                                                width=48,
-                                                                color="black",
-                                                            ),
-                                                        ],
-                                                        justify="center",
-                                                        mt="md",
-                                                        mb="xs",
-                                                    ),
-                                                ),
-                                                dbc.CardFooter(["Total de litros excedentes (≤ 2 STD)"]),
-                                            ],
-                                            class_name="card-box-shadow",
-                                        ),
-                                        md=6,
-                                        className="mb-3 mb-md-0",
-                                    ),
-                                ]
-                            ),
-                            dmc.Space(h=20),
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        dbc.Card(
-                                            [
-                                                dbc.CardBody(
-                                                    dmc.Group(
-                                                        [
-                                                            dmc.Title(
-                                                                id="indicador-total-gasto-combustivel-excedente-visao-geral",
-                                                                order=2,
-                                                            ),
-                                                            DashIconify(
-                                                                icon="emojione-monotone:money-with-wings",
-                                                                width=48,
-                                                                color="black",
-                                                            ),
-                                                        ],
-                                                        justify="center",
-                                                        mt="md",
-                                                        mb="xs",
-                                                    ),
-                                                ),
-                                                dbc.CardFooter(
-                                                    ["Total gasto com combustível excedente (R$)"],
-                                                    id="card-footer-preco-diesel",
-                                                ),
-                                            ],
-                                            class_name="card-box-shadow",
-                                        ),
-                                        md=12,
-                                        className="mb-3 mb-md-0",
-                                    ),
-                                ]
-                            ),
-                        ]
+                        width=True,
                     ),
-                    md=6,
-                ),
-                dbc.Col(
-                    dcc.Graph(id="graph-pizza-sintese-viagens-geral"),
-                    md=6,
-                ),
-            ]
-        ),
-        # Grafico geral de combustível por modelo
-        dmc.Space(h=30),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Consumo de combustível por modelo",
-                                className="align-self-center",
-                            ),
-                            dmc.Space(h=5),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dcc.Graph(id="graph-barra-consumo-modelo-visao-geral"),
-        dmc.Space(h=40),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Detalhamento do consumo dos veículos",
-                                className="align-self-center",
-                            ),
-                            dmc.Space(h=5),
-                            dbc.Col(gera_labels_inputs_visao_geral("labels-tabela-veiculos-visao-geral"), width=True),
-                            dbc.Col(
-                                html.Div(
-                                    [
-                                        html.Button(
-                                            "Exportar para Excel",
-                                            id="btn-exportar-excel-tabela-combustivel-visao-geral",
-                                            n_clicks=0,
-                                            style={
-                                                "background-color": "#007bff",  # Azul
-                                                "color": "white",
-                                                "border": "none",
-                                                "padding": "10px 20px",
-                                                "border-radius": "8px",
-                                                "cursor": "pointer",
-                                                "font-size": "16px",
-                                                "font-weight": "bold",
-                                            },
-                                            className="btnExcel"
-                                        ),
-                                        dcc.Download(id="download-excel-tabela-combustivel-visao-geral"),
-                                    ],
-                                    style={"text-align": "right"},
+                ],
+                align="center",
+            ),
+            dmc.Space(h=20),
+            dag.AgGrid(
+                # enableEnterpriseModules=True,
+                id="tabela-consumo-veiculo-visao-geral",
+                columnDefs=home_tabela.tbl_consumo_veiculo_visao_geral,
+                rowData=[],
+                defaultColDef={"filter": True, "floatingFilter": True},
+                columnSize="autoSize",
+                dashGridOptions={
+                    "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                },
+                # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+                style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+            ),
+            dmc.Space(h=40),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "Detalhamento do consumo das linhas",
+                                    className="align-self-center",
                                 ),
-                                width="auto",
-                            ),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=20),
-        dag.AgGrid(
-            # enableEnterpriseModules=True,
-            id="tabela-consumo-veiculo-visao-geral",
-            columnDefs=home_tabela.tbl_consumo_veiculo_visao_geral,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        dmc.Space(h=40),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Detalhamento do consumo das linhas",
-                                className="align-self-center",
-                            ),
-                            dmc.Space(h=5),
-                            dbc.Col(gera_labels_inputs_visao_geral("labels-tabela-linhas-visao-geral"), width=True),
-                            dbc.Col(
-                                html.Div(
-                                    [
-                                        html.Button(
-                                            "Exportar para Excel",
-                                            id="btn-exportar-excel-tabela-linhas-visao-geral",
-                                            n_clicks=0,
-                                            style={
-                                                "background-color": "#007bff",  # Azul
-                                                "color": "white",
-                                                "border": "none",
-                                                "padding": "10px 20px",
-                                                "border-radius": "8px",
-                                                "cursor": "pointer",
-                                                "font-size": "16px",
-                                                "font-weight": "bold",
-                                            },
-                                            className="btnExcel"
-                                        ),
-                                        dcc.Download(id="download-excel-tabela-linhas-visao-geral"),
-                                    ],
-                                    style={"text-align": "right"},
+                                dmc.Space(h=5),
+                                dbc.Col(gera_labels_inputs_visao_geral("labels-tabela-linhas-visao-geral"), width=True),
+                                dbc.Col(
+                                    html.Div(
+                                        [
+                                            html.Button(
+                                                "Exportar para Excel",
+                                                id="btn-exportar-excel-tabela-linhas-visao-geral",
+                                                n_clicks=0,
+                                                style={
+                                                    "background-color": "#007bff",  # Azul
+                                                    "color": "white",
+                                                    "border": "none",
+                                                    "padding": "10px 20px",
+                                                    "border-radius": "8px",
+                                                    "cursor": "pointer",
+                                                    "font-size": "16px",
+                                                    "font-weight": "bold",
+                                                },
+                                                className="btnExcel",
+                                            ),
+                                            dcc.Download(id="download-excel-tabela-linhas-visao-geral"),
+                                        ],
+                                        style={"text-align": "right"},
+                                    ),
+                                    width="auto",
                                 ),
-                                width="auto",
-                            ),
-                        ]
+                            ]
+                        ),
+                        width=True,
                     ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=20),
-        dag.AgGrid(
-            # enableEnterpriseModules=True,
-            id="tabela-consumo-linhas-visao-geral",
-            columnDefs=home_tabela.tbl_consumo_linhas_visao_geral,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        dmc.Space(h=40),
-    ]
-)
+                ],
+                align="center",
+            ),
+            dmc.Space(h=20),
+            dag.AgGrid(
+                # enableEnterpriseModules=True,
+                id="tabela-consumo-linhas-visao-geral",
+                columnDefs=home_tabela.tbl_consumo_linhas_visao_geral,
+                rowData=[],
+                defaultColDef={"filter": True, "floatingFilter": True},
+                columnSize="autoSize",
+                dashGridOptions={
+                    "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                },
+                # Permite resize --> https://community.plotly.com/t/anyone-have-better-ag-grid-resizing-scheme/78398/5
+                style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+            ),
+            dmc.Space(h=40),
+        ]
+    )
+
+
+##############################################################################
+# Registro da página #########################################################
+##############################################################################
+dash.register_page(__name__, name="Visão Geral", path="/")

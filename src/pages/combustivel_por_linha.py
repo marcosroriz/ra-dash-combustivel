@@ -155,17 +155,6 @@ def cb_receber_campos_via_url_pag_linha(href):
     return linha, datas, lista_modelos, sentido, dia_marcado, km_l_min, km_l_max
 
 
-
-@callback(
-    Output("pag-linha-input-intervalo-datas-combustivel-linha", "maxDate"),
-    Output("pag-linha-input-intervalo-datas-combustivel-linha", "value", allow_duplicate=True),
-    Input("url", "pathname"),  # fires on page load
-    prevent_initial_call=True,
-)
-def cb_input_datas_linha_dinamico(_):
-    hoje = date.today()
-    return hoje, [date(2025, 1, 1), hoje]
-
 ##############################################################################
 # Callbacks para os inputs ###################################################
 ##############################################################################
@@ -630,585 +619,592 @@ def cb_pag_linha_botao_detalhar_viagem(tabela_linha, tabela_linha_virtual):
 
 
 ##############################################################################
-# Registro da página #########################################################
-##############################################################################
-dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-por-linha")
-
-##############################################################################
 # Layout #####################################################################
 ##############################################################################
 
-layout = dbc.Container(
-    [
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        # Cabeçalho e Inputs
-                        dbc.Row(
-                            [
-                                html.Hr(),
-                                dbc.Row(
-                                    [
-                                        dbc.Col(
-                                            DashIconify(icon="mdi:gas-station", width=45),
-                                            width="auto",
-                                        ),
-                                        dbc.Col(
-                                            html.H1(
-                                                [
-                                                    "Combustível por \u00a0",
-                                                    html.Strong("Linha"),
-                                                ],
-                                                className="align-self-center",
-                                            ),
-                                            width=True,
-                                        ),
-                                    ],
-                                    align="center",
-                                ),
-                                dmc.Space(h=15),
-                                html.Hr(),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Data"),
-                                                    dmc.DatePicker(
-                                                        id="pag-linha-input-intervalo-datas-combustivel-linha",
-                                                        allowSingleDateInRange=True,
-                                                        type="range",
-                                                        minDate=date(2025, 1, 1),
-                                                        maxDate=date.today(),
-                                                        value=[
-                                                            date(2025, 1, 1),
-                                                            date.today(),
-                                                        ],
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Modelos"),
-                                                    dcc.Dropdown(
-                                                        id="pag-linha-input-select-modelos-combustivel-linha",
-                                                        multi=True,
-                                                        options=[
-                                                            {
-                                                                "label": modelo["LABEL"],
-                                                                "value": modelo["LABEL"],
-                                                            }
-                                                            for modelo in lista_todos_modelos_veiculos
-                                                        ],
-                                                        value=["TODOS"],
-                                                        placeholder="Selecione um ou mais modelos...",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                            ]
-                        ),
-                        dbc.Row(
-                            [
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Linha"),
-                                                    dcc.Dropdown(
-                                                        id="pag-linha-input-select-linhas-combustivel",
-                                                        options=[
-                                                            {
-                                                                "label": linha["LABEL"],
-                                                                "value": linha["LABEL"],
-                                                            }
-                                                            for linha in lista_todas_linhas
-                                                        ],
-                                                        value="021",
-                                                        placeholder="Selecione a linha",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Sentido"),
-                                                    dcc.Dropdown(
-                                                        id="pag-linha-input-select-sentido-da-linha-combustivel",
-                                                        options=[
-                                                            {
-                                                                "label": "IDA",
-                                                                "value": "IDA",
-                                                            },
-                                                            {
-                                                                "label": "VOLTA",
-                                                                "value": "VOLTA",
-                                                            },
-                                                        ],
-                                                        multi=True,
-                                                        value=["IDA", "VOLTA"],
-                                                        placeholder="Selecione o sentido...",
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap",
-                                            ),
-                                        ],
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                            ]
-                        ),
-                        dbc.Row(
-                            [
-                                dmc.Space(h=10),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Dias"),
-                                                    dbc.Checklist(
-                                                        id="pag-linha-input-select-dia-linha-combustivel",
-                                                        options=[
-                                                            {
-                                                                "label": "Seg-Sexta",
-                                                                "value": "SEG_SEX",
-                                                            },
-                                                            {
-                                                                "label": "Sabado",
-                                                                "value": "SABADO",
-                                                            },
-                                                            {
-                                                                "label": "Domingo",
-                                                                "value": "DOMINGO",
-                                                            },
-                                                            {
-                                                                "label": "Feriado",
-                                                                "value": "FERIADO",
-                                                            },
-                                                        ],
-                                                        value=[["SEG_SEX"]],
-                                                        inline=True,
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=6,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L menor que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="pag-linha-input-linha-combustivel-remover-outliers-menor-que",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=1,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        [
-                                            html.Div(
-                                                [
-                                                    dbc.Label("Excluir km/L maior que"),
-                                                    dbc.InputGroup(
-                                                        [
-                                                            dbc.Input(
-                                                                id="pag-linha-input-linha-combustivel-remover-outliers-maior-que",
-                                                                type="number",
-                                                                placeholder="km/L",
-                                                                value=10,
-                                                                step=0.1,
-                                                                min=0,
-                                                            ),
-                                                            dbc.InputGroupText("km/L"),
-                                                        ]
-                                                    ),
-                                                ],
-                                                className="dash-bootstrap h-100",
-                                            ),
-                                        ],
-                                        className="h-100",
-                                        body=True,
-                                    ),
-                                    md=3,
-                                ),
-                            ]
-                        ),
-                    ],
-                    md=12,
-                ),
-            ]
-        ),
-        dmc.Space(h=30),
-        dbc.Row(
-            [
-                dbc.Col(
-                    DashIconify(icon="material-symbols:insights", width=45),
-                    width="auto",
-                ),
-                dbc.Col(
-                    html.H4("Indicadores", className="align-self-center"),
-                ),
-                dmc.Space(h=20),
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            dbc.Card(
+
+def layout():
+    return dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            # Cabeçalho e Inputs
+                            dbc.Row(
                                 [
-                                    dbc.CardBody(
-                                        dmc.Group(
-                                            [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-qtd-de-viagens-comb-linha",
-                                                    order=2,
+                                    html.Hr(),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                DashIconify(icon="mdi:gas-station", width=45),
+                                                width="auto",
+                                            ),
+                                            dbc.Col(
+                                                html.H1(
+                                                    [
+                                                        "Combustível por \u00a0",
+                                                        html.Strong("Linha"),
+                                                    ],
+                                                    className="align-self-center",
                                                 ),
-                                                DashIconify(
-                                                    icon="tabler:road",
-                                                    width=48,
-                                                    color="black",
+                                                width=True,
+                                            ),
+                                        ],
+                                        align="center",
+                                    ),
+                                    dmc.Space(h=15),
+                                    html.Hr(),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Data"),
+                                                        dmc.DatePicker(
+                                                            id="pag-linha-input-intervalo-datas-combustivel-linha",
+                                                            allowSingleDateInRange=True,
+                                                            type="range",
+                                                            minDate=date(2025, 1, 1),
+                                                            maxDate=date.today(),
+                                                            value=[
+                                                                date(2025, 1, 1),
+                                                                date.today(),
+                                                            ],
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            body=True,
                                         ),
+                                        md=6,
                                     ),
-                                    dbc.CardFooter("Total de Viagens"),
-                                ],
-                                class_name="card-box-shadow",
-                            ),
-                            md=4,
-                        ),
-                        dbc.Col(
-                            dbc.Card(
-                                [
-                                    dbc.CardBody(
-                                        dmc.Group(
+                                    dbc.Col(
+                                        dbc.Card(
                                             [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-qtd-de-veiculos-diferentes-comb-linha",
-                                                    order=2,
-                                                ),
-                                                DashIconify(
-                                                    icon="mdi:bus-multiple",
-                                                    width=48,
-                                                    color="black",
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Modelos"),
+                                                        dcc.Dropdown(
+                                                            id="pag-linha-input-select-modelos-combustivel-linha",
+                                                            multi=True,
+                                                            options=[
+                                                                {
+                                                                    "label": modelo["LABEL"],
+                                                                    "value": modelo["LABEL"],
+                                                                }
+                                                                for modelo in lista_todos_modelos_veiculos
+                                                            ],
+                                                            value=["TODOS"],
+                                                            placeholder="Selecione um ou mais modelos...",
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            body=True,
                                         ),
+                                        md=6,
                                     ),
-                                    dbc.CardFooter("Veículos diferentes"),
-                                ],
-                                class_name="card-box-shadow",
+                                ]
                             ),
-                            md=4,
-                        ),
-                        dbc.Col(
-                            dbc.Card(
+                            dbc.Row(
                                 [
-                                    dbc.CardBody(
-                                        dmc.Group(
+                                    dmc.Space(h=10),
+                                    dbc.Col(
+                                        dbc.Card(
                                             [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-qtd-de-modelos-diferentes-comb-linha",
-                                                    order=2,
-                                                ),
-                                                DashIconify(
-                                                    icon="material-symbols:car-gear-rounded",
-                                                    width=48,
-                                                    color="black",
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Linha"),
+                                                        dcc.Dropdown(
+                                                            id="pag-linha-input-select-linhas-combustivel",
+                                                            options=[
+                                                                {
+                                                                    "label": linha["LABEL"],
+                                                                    "value": linha["LABEL"],
+                                                                }
+                                                                for linha in lista_todas_linhas
+                                                            ],
+                                                            value="021",
+                                                            placeholder="Selecione a linha",
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            body=True,
                                         ),
+                                        md=6,
                                     ),
-                                    dbc.CardFooter("Quantidade de modelos diferentes"),
-                                ],
-                                class_name="card-box-shadow",
-                            ),
-                            md=4,
-                        ),
-                    ]
-                ),
-                dmc.Space(h=20),
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            dbc.Card(
-                                [
-                                    dbc.CardBody(
-                                        dmc.Group(
+                                    dbc.Col(
+                                        dbc.Card(
                                             [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-consumo-medio-linha",
-                                                    order=2,
-                                                ),
-                                                DashIconify(
-                                                    icon="material-symbols:speed-outline-rounded",
-                                                    width=48,
-                                                    color="black",
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Sentido"),
+                                                        dcc.Dropdown(
+                                                            id="pag-linha-input-select-sentido-da-linha-combustivel",
+                                                            options=[
+                                                                {
+                                                                    "label": "IDA",
+                                                                    "value": "IDA",
+                                                                },
+                                                                {
+                                                                    "label": "VOLTA",
+                                                                    "value": "VOLTA",
+                                                                },
+                                                            ],
+                                                            multi=True,
+                                                            value=["IDA", "VOLTA"],
+                                                            placeholder="Selecione o sentido...",
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            body=True,
                                         ),
+                                        md=6,
                                     ),
-                                    dbc.CardFooter("Consumo médio (km/L)"),
-                                ],
-                                class_name="card-box-shadow",
+                                ]
                             ),
-                            md=4,
-                        ),
-                        dbc.Col(
-                            dbc.Card(
+                            dbc.Row(
                                 [
-                                    dbc.CardBody(
-                                        dmc.Group(
+                                    dmc.Space(h=10),
+                                    dbc.Col(
+                                        dbc.Card(
                                             [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-total-litros-excedentes",
-                                                    order=2,
-                                                ),
-                                                DashIconify(
-                                                    icon="bi:fuel-pump-fill",
-                                                    width=48,
-                                                    color="black",
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Dias"),
+                                                        dbc.Checklist(
+                                                            id="pag-linha-input-select-dia-linha-combustivel",
+                                                            options=[
+                                                                {
+                                                                    "label": "Seg-Sexta",
+                                                                    "value": "SEG_SEX",
+                                                                },
+                                                                {
+                                                                    "label": "Sabado",
+                                                                    "value": "SABADO",
+                                                                },
+                                                                {
+                                                                    "label": "Domingo",
+                                                                    "value": "DOMINGO",
+                                                                },
+                                                                {
+                                                                    "label": "Feriado",
+                                                                    "value": "FERIADO",
+                                                                },
+                                                            ],
+                                                            value=[["SEG_SEX"]],
+                                                            inline=True,
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap h-100",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            className="h-100",
+                                            body=True,
                                         ),
+                                        md=6,
                                     ),
-                                    dbc.CardFooter("Total de litros excedentes (≤ 2 STD)"),
-                                ],
-                                class_name="card-box-shadow",
-                            ),
-                            md=4,
-                        ),
-                        dbc.Col(
-                            dbc.Card(
-                                [
-                                    dbc.CardBody(
-                                        dmc.Group(
+                                    dbc.Col(
+                                        dbc.Card(
                                             [
-                                                dmc.Title(
-                                                    id="pag-linha-indicador-total-gasto-comb-excedentes",
-                                                    order=2,
-                                                ),
-                                                DashIconify(
-                                                    icon="emojione-monotone:money-with-wings",
-                                                    width=48,
-                                                    color="black",
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Excluir km/L menor que"),
+                                                        dbc.InputGroup(
+                                                            [
+                                                                dbc.Input(
+                                                                    id="pag-linha-input-linha-combustivel-remover-outliers-menor-que",
+                                                                    type="number",
+                                                                    placeholder="km/L",
+                                                                    value=1,
+                                                                    step=0.1,
+                                                                    min=0,
+                                                                ),
+                                                                dbc.InputGroupText("km/L"),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap h-100",
                                                 ),
                                             ],
-                                            justify="space-around",
-                                            mt="md",
-                                            mb="xs",
+                                            className="h-100",
+                                            body=True,
                                         ),
+                                        md=3,
                                     ),
-                                    dbc.CardFooter("Total gasto com combustível excedente (R$)"),
-                                ],
-                                class_name="card-box-shadow",
+                                    dbc.Col(
+                                        dbc.Card(
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Label("Excluir km/L maior que"),
+                                                        dbc.InputGroup(
+                                                            [
+                                                                dbc.Input(
+                                                                    id="pag-linha-input-linha-combustivel-remover-outliers-maior-que",
+                                                                    type="number",
+                                                                    placeholder="km/L",
+                                                                    value=10,
+                                                                    step=0.1,
+                                                                    min=0,
+                                                                ),
+                                                                dbc.InputGroupText("km/L"),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    className="dash-bootstrap h-100",
+                                                ),
+                                            ],
+                                            className="h-100",
+                                            body=True,
+                                        ),
+                                        md=3,
+                                    ),
+                                ]
                             ),
-                            md=4,
-                        ),
-                    ]
-                ),
-            ]
-        ),
-        dbc.Row(dmc.Space(h=40)),
-        # Grafico geral de combustível por linha
-        dmc.Space(h=30),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
-                dbc.Col(
+                        ],
+                        md=12,
+                    ),
+                ]
+            ),
+            dmc.Space(h=30),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        DashIconify(icon="material-symbols:insights", width=45),
+                        width="auto",
+                    ),
+                    dbc.Col(
+                        html.H4("Indicadores", className="align-self-center"),
+                    ),
+                    dmc.Space(h=20),
                     dbc.Row(
                         [
-                            html.H4(
-                                "Gráfico: Consumo de combustível por linha",
-                                className="align-self-center",
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-qtd-de-viagens-comb-linha",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="tabler:road",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Total de Viagens"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
                             ),
-                            dmc.Space(h=5),
-                            dbc.Col(pag_linha_gera_labels_inputs_visao_linha("pag-linha-grafico-viagens"), width=True),
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-qtd-de-veiculos-diferentes-comb-linha",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="mdi:bus-multiple",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Veículos diferentes"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
+                            ),
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-qtd-de-modelos-diferentes-comb-linha",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="material-symbols:car-gear-rounded",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Quantidade de modelos diferentes"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
+                            ),
                         ]
                     ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dcc.Graph(id="graph-combustivel-linha-por-hora"),
-        dmc.Space(h=40),
-        dbc.Alert(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(DashIconify(icon="material-symbols:info-outline-rounded", width=45), width="auto"),
-                        dbc.Col(
-                            html.P(
-                                """
+                    dmc.Space(h=20),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-consumo-medio-linha",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="material-symbols:speed-outline-rounded",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Consumo médio (km/L)"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
+                            ),
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-total-litros-excedentes",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="bi:fuel-pump-fill",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Total de litros excedentes (≤ 2 STD)"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
+                            ),
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            dmc.Group(
+                                                [
+                                                    dmc.Title(
+                                                        id="pag-linha-indicador-total-gasto-comb-excedentes",
+                                                        order=2,
+                                                    ),
+                                                    DashIconify(
+                                                        icon="emojione-monotone:money-with-wings",
+                                                        width=48,
+                                                        color="black",
+                                                    ),
+                                                ],
+                                                justify="space-around",
+                                                mt="md",
+                                                mb="xs",
+                                            ),
+                                        ),
+                                        dbc.CardFooter("Total gasto com combustível excedente (R$)"),
+                                    ],
+                                    class_name="card-box-shadow",
+                                ),
+                                md=4,
+                            ),
+                        ]
+                    ),
+                ]
+            ),
+            dbc.Row(dmc.Space(h=40)),
+            # Grafico geral de combustível por linha
+            dmc.Space(h=30),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:trending-down", width=45), width="auto"),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "Gráfico: Consumo de combustível por linha",
+                                    className="align-self-center",
+                                ),
+                                dmc.Space(h=5),
+                                dbc.Col(
+                                    pag_linha_gera_labels_inputs_visao_linha("pag-linha-grafico-viagens"), width=True
+                                ),
+                            ]
+                        ),
+                        width=True,
+                    ),
+                ],
+                align="center",
+            ),
+            dcc.Graph(id="graph-combustivel-linha-por-hora"),
+            dmc.Space(h=40),
+            dbc.Alert(
+                [
+                    dbc.Row(
+                        [
+                            dbc.Col(DashIconify(icon="material-symbols:info-outline-rounded", width=45), width="auto"),
+                            dbc.Col(
+                                html.P(
+                                    """
                                 A tabela a seguir ilustra cada viagem realizada nesta linha.
                                 Você pode clicar no botão detalhar para visualizar as posições GPS e eventos MIX gerados ao longo da viagem.
                                 """
-                            ),
-                            className="mt-2",
-                            width=True,
-                        ),
-                    ],
-                    align="center",
-                ),
-            ],
-            dismissable=True,
-            color="info",
-        ),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Detalhamento das viagens nesta linha",
-                                className="align-self-center",
-                            ),
-                            dmc.Space(h=5),
-                            dbc.Col(pag_linha_gera_labels_inputs_visao_linha("pag-linha-input-viagens"), width=True),
-                            dbc.Col(
-                                html.Div(
-                                    [
-                                        html.Button(
-                                            "Exportar para Excel",
-                                            id="pag-linha-btn-exportar-tabela-viagens",
-                                            n_clicks=0,
-                                            style={
-                                                "background-color": "#007bff",  # Azul
-                                                "color": "white",
-                                                "border": "none",
-                                                "padding": "10px 20px",
-                                                "border-radius": "8px",
-                                                "cursor": "pointer",
-                                                "font-size": "16px",
-                                                "font-weight": "bold",
-                                            },
-                                        ),
-                                        dcc.Download(id="pag-linha-download-excel-tabela-viagens"),
-                                    ],
-                                    style={"text-align": "right"},
                                 ),
-                                width="auto",
+                                className="mt-2",
+                                width=True,
                             ),
-                        ]
+                        ],
+                        align="center",
                     ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=20),
-        dag.AgGrid(
-            enableEnterpriseModules=True,
-            id="pag-linha-tabela-detalhamento-viagens-combustivel",
-            columnDefs=linha_tabela.tbl_detalhamento_viagens_km_l,
-            rowData=[],
-            defaultColDef={"filter": True, "floatingFilter": True},
-            columnSize="autoSize",
-            dashGridOptions={
-                "localeText": locale_utils.AG_GRID_LOCALE_BR,
-            },
-            style={"height": 400, "resize": "vertical", "overflow": "hidden"},
-        ),
-        dmc.Space(h=40),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:map", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Mapa da Viagem",
-                                className="align-self-center",
-                            ),
-                            dmc.Space(h=5),
-                            # dbc.Col(gera_labels_inputs_veiculos("pag-linha-input-geral-mapa-linha"), width=True),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=20),
-        dl.Map(
-            children=dl.LayersControl(
-                getMapaFundo(), id="pag-linha-layer-control-eventos-detalhe-viagem", collapsed=False
+                ],
+                dismissable=True,
+                color="info",
             ),
-            id="pag-linha-mapa-eventos-detalhe-viagem",
-            center=(-16.665136, -49.286041),
-            zoom=11,
-            style={
-                "height": "60vh",
-                "border": "2px solid gray",
-                "borderRadius": "6px",
-            },
-        ),
-        html.Div(id="mapa-linha-onibus"),
-        dmc.Space(h=60),
-    ]
-)
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:cog-outline", width=45), width="auto"),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "Detalhamento das viagens nesta linha",
+                                    className="align-self-center",
+                                ),
+                                dmc.Space(h=5),
+                                dbc.Col(
+                                    pag_linha_gera_labels_inputs_visao_linha("pag-linha-input-viagens"), width=True
+                                ),
+                                dbc.Col(
+                                    html.Div(
+                                        [
+                                            html.Button(
+                                                "Exportar para Excel",
+                                                id="pag-linha-btn-exportar-tabela-viagens",
+                                                n_clicks=0,
+                                                style={
+                                                    "background-color": "#007bff",  # Azul
+                                                    "color": "white",
+                                                    "border": "none",
+                                                    "padding": "10px 20px",
+                                                    "border-radius": "8px",
+                                                    "cursor": "pointer",
+                                                    "font-size": "16px",
+                                                    "font-weight": "bold",
+                                                },
+                                            ),
+                                            dcc.Download(id="pag-linha-download-excel-tabela-viagens"),
+                                        ],
+                                        style={"text-align": "right"},
+                                    ),
+                                    width="auto",
+                                ),
+                            ]
+                        ),
+                        width=True,
+                    ),
+                ],
+                align="center",
+            ),
+            dmc.Space(h=20),
+            dag.AgGrid(
+                enableEnterpriseModules=True,
+                id="pag-linha-tabela-detalhamento-viagens-combustivel",
+                columnDefs=linha_tabela.tbl_detalhamento_viagens_km_l,
+                rowData=[],
+                defaultColDef={"filter": True, "floatingFilter": True},
+                columnSize="autoSize",
+                dashGridOptions={
+                    "localeText": locale_utils.AG_GRID_LOCALE_BR,
+                },
+                style={"height": 400, "resize": "vertical", "overflow": "hidden"},
+            ),
+            dmc.Space(h=40),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:map", width=45), width="auto"),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "Mapa da Viagem",
+                                    className="align-self-center",
+                                ),
+                                dmc.Space(h=5),
+                                # dbc.Col(gera_labels_inputs_veiculos("pag-linha-input-geral-mapa-linha"), width=True),
+                            ]
+                        ),
+                        width=True,
+                    ),
+                ],
+                align="center",
+            ),
+            dmc.Space(h=20),
+            dl.Map(
+                children=dl.LayersControl(
+                    getMapaFundo(), id="pag-linha-layer-control-eventos-detalhe-viagem", collapsed=False
+                ),
+                id="pag-linha-mapa-eventos-detalhe-viagem",
+                center=(-16.665136, -49.286041),
+                zoom=11,
+                style={
+                    "height": "60vh",
+                    "border": "2px solid gray",
+                    "borderRadius": "6px",
+                },
+            ),
+            html.Div(id="mapa-linha-onibus"),
+            dmc.Space(h=60),
+        ]
+    )
+
+
+##############################################################################
+# Registro da página #########################################################
+##############################################################################
+dash.register_page(__name__, name="Combustível por Linha", path="/combustivel-por-linha")

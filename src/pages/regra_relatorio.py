@@ -202,14 +202,6 @@ def cb_pag_rel_regra_sincroniza_input_store_relatorio_regra(id_regra, dia_execuc
     )
 
 
-@callback(
-    Output("relatorio-input-data-relatorio-regra-retrabalho", "value", allow_duplicate=True),
-    Input("url", "pathname"),  # fires on page load
-    prevent_initial_call=True,
-)
-def cb_input_datas_linha_dinamico(_):
-    return (datetime.now() - timedelta(days=10)).date()
-
 ##############################################################################
 # Callbacks para os indicadores ##############################################
 ##############################################################################
@@ -345,13 +337,34 @@ def cb_rel_regra_atualiza_dados_card_resultado_regra_relatorio(store_relatorio_r
     html_total_veiculos = html.Div([html.Span("🚍 Total de veículos: "), html.Strong(total_veiculos)])
 
     media_km_l = str(df_resultado_regra["media_km_por_litro"].round(2).values[0])
-    html_media_km_l = html.Div([html.Span("🕒 Média km/L dos veículos: "), html.Strong(media_km_l.replace(".", ","),)])
+    html_media_km_l = html.Div(
+        [
+            html.Span("🕒 Média km/L dos veículos: "),
+            html.Strong(
+                media_km_l.replace(".", ","),
+            ),
+        ]
+    )
 
     litros_excedentes = str(df_resultado_regra["litros_excedentes"].round(2).values[0])
-    html_litros_excedentes = html.Div([html.Span("⛽ Litros Excedentes: "), html.Strong(litros_excedentes.replace(".", ","),)])
+    html_litros_excedentes = html.Div(
+        [
+            html.Span("⛽ Litros Excedentes: "),
+            html.Strong(
+                litros_excedentes.replace(".", ","),
+            ),
+        ]
+    )
 
     custo_excedente = str(round(preco_diesel * float(litros_excedentes), 2))
-    html_custo = html.Div([html.Span("💸 Custo: R$ "), html.Strong(custo_excedente.replace(".", ","),)])
+    html_custo = html.Div(
+        [
+            html.Span("💸 Custo: R$ "),
+            html.Strong(
+                custo_excedente.replace(".", ","),
+            ),
+        ]
+    )
 
     return [
         html_total_veiculos,
@@ -379,276 +392,280 @@ def cb_rel_regra_atualiza_dados_card_resultado_regra_relatorio(store_relatorio_r
 ##############################################################################
 # Layout #####################################################################
 ##############################################################################
-layout = dbc.Container(
-    [
-        # Estado
-        dcc.Store(id="store-relatorio-relatorio-regra"),
-        # Loading
-        dmc.LoadingOverlay(
-            # visible=True,
-            id="loading-overlay-guia-relatorio-regra",
-            loaderProps={"size": "xl"},
-            overlayProps={
-                "radius": "lg",
-                "blur": 2,
-                "style": {
-                    "top": 0,  # Start from the top of the viewport
-                    "left": 0,  # Start from the left of the viewport
-                    "width": "100vw",  # Cover the entire width of the viewport
-                    "height": "100vh",  # Cover the entire height of the viewport
+def layout():
+    return dbc.Container(
+        [
+            # Estado
+            dcc.Store(id="store-relatorio-relatorio-regra"),
+            # Loading
+            dmc.LoadingOverlay(
+                # visible=True,
+                id="loading-overlay-guia-relatorio-regra",
+                loaderProps={"size": "xl"},
+                overlayProps={
+                    "radius": "lg",
+                    "blur": 2,
+                    "style": {
+                        "top": 0,  # Start from the top of the viewport
+                        "left": 0,  # Start from the left of the viewport
+                        "width": "100vw",  # Cover the entire width of the viewport
+                        "height": "100vh",  # Cover the entire height of the viewport
+                    },
                 },
-            },
-            zIndex=10,
-        ),
-        # Cabeçalho e Inputs
-        html.Hr(),
-        # Título Desktop
-        dmc.Box(
+                zIndex=10,
+            ),
+            # Cabeçalho e Inputs
+            html.Hr(),
+            # Título Desktop
+            dmc.Box(
+                dbc.Row(
+                    [
+                        dbc.Col(DashIconify(icon="carbon:rule-data-quality", width=45), width="auto"),
+                        dbc.Col(
+                            html.H1(
+                                [
+                                    "Relatório da \u00a0",
+                                    html.Strong("regra"),
+                                    "\u00a0 de monitoramento do retrabalho",
+                                ],
+                                className="align-self-center",
+                            ),
+                            width=True,
+                        ),
+                    ],
+                    align="center",
+                ),
+                visibleFrom="sm",
+            ),
+            # Titulo Mobile
+            dmc.Box(
+                dbc.Row(
+                    [
+                        dbc.Col(DashIconify(icon="carbon:rule-data-quality", width=45), width="auto"),
+                        dbc.Col(
+                            html.H1(
+                                "Relatório da regra",
+                                className="align-self-center",
+                            ),
+                            width=True,
+                        ),
+                    ],
+                    align="center",
+                ),
+                hiddenFrom="sm",
+            ),
+            html.Hr(),
             dbc.Row(
                 [
-                    dbc.Col(DashIconify(icon="carbon:rule-data-quality", width=45), width="auto"),
                     dbc.Col(
-                        html.H1(
+                        dbc.Card(
+                            html.Div(
+                                [
+                                    dbc.Label("Nome da Regra de Monitoramento"),
+                                    dcc.Dropdown(
+                                        id="relatorio-input-select-regra-retrabalho",
+                                        options=[regra for regra in lista_regras_monitoramento_comb],
+                                        placeholder="Selecione uma regra...",
+                                    ),
+                                    dmc.Space(h=5),
+                                    dbc.FormText(
+                                        html.Em(
+                                            "Regra não encontrada",
+                                            id="relatorio-input-select-regra-retrabalho-error",
+                                        ),
+                                        color="secondary",
+                                    ),
+                                ],
+                                className="dash-bootstrap",
+                            ),
+                            id="relatorio-card-input-select-regra-retrabalho",
+                            body=True,
+                        ),
+                        md=6,
+                        className="mb-3 mb-md-0",
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            html.Div(
+                                [
+                                    dbc.Label("Data do relatório"),
+                                    dmc.DateInput(
+                                        id="relatorio-input-data-relatorio-regra-retrabalho",
+                                        minDate=date(2020, 8, 5),
+                                        maxDate=date.today(),
+                                        valueFormat="DD/MM/YYYY",
+                                        value=(datetime.now() - timedelta(days=10)).date(),
+                                    ),
+                                    dmc.Space(h=5),
+                                    dbc.FormText(
+                                        html.Em(
+                                            "Período inválido",
+                                            id="relatorio-input-data-relatorio-regra-retrabalho-error",
+                                        ),
+                                        color="secondary",
+                                    ),
+                                ],
+                                className="dash-bootstrap",
+                            ),
+                            id="relatorio-card-input-data-relatorio-regra-retrabalho",
+                            body=True,
+                        ),
+                        md=6,
+                        className="mb-3 mb-md-0",
+                    ),
+                ]
+            ),
+            dmc.Space(h=40),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Row(
                             [
-                                "Relatório da \u00a0",
-                                html.Strong("regra"),
-                                "\u00a0 de monitoramento do retrabalho",
+                                dbc.Row(
+                                    [
+                                        dbc.Col(DashIconify(icon="wpf:statistics", width=45), width="auto"),
+                                        dbc.Col(
+                                            dbc.Row(
+                                                [
+                                                    html.H4(
+                                                        "Resumo da Regra",
+                                                        className="align-self-center",
+                                                    ),
+                                                ]
+                                            ),
+                                            width=True,
+                                        ),
+                                    ],
+                                ),
+                                dmc.Space(h=40),
+                                dbc.Row(
+                                    [
+                                        dbc.ListGroup(
+                                            [
+                                                dbc.ListGroupItem("", id="card-regra-nome", active=True),
+                                                dbc.ListGroupItem("", id="card-regra-periodo-monitoramento"),
+                                                dbc.ListGroupItem("", id="card-regra-modelos"),
+                                                dbc.ListGroupItem("", id="card-regra-qtd-min-viagens"),
+                                                dbc.ListGroupItem("", id="card-regra-qtd-min-motoristas"),
+                                                dbc.ListGroupItem("", id="card-regra-dias-marcados"),
+                                                dbc.ListGroupItem("", id="card-regra-limite-mediana"),
+                                                dbc.ListGroupItem("", id="card-regra-limite-baixa-perfomance"),
+                                                dbc.ListGroupItem("", id="card-regra-limite-erro-telemetria"),
+                                                dbc.ListGroupItem("", id="card-regra-criar-os-automatica"),
+                                                dbc.ListGroupItem("", id="card-regra-alvos-email"),
+                                                dbc.ListGroupItem("", id="card-regra-alvos-whatsapp"),
+                                            ],
+                                            className="m-0",
+                                        ),
+                                    ],
+                                    className="m-0",
+                                ),
                             ],
-                            className="align-self-center",
+                            className="m-0 m-md-1",  # margem só no desktop
+                        ),
+                        md=6,
+                        className="mb-3 mb-md-0",
+                    ),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                dbc.Row(
+                                    [
+                                        dbc.Col(DashIconify(icon="mdi:bomb", width=45), width="auto"),
+                                        dbc.Col(
+                                            dbc.Row(
+                                                [
+                                                    html.H4(
+                                                        "Resumo do relatório",
+                                                        className="align-self-center",
+                                                    ),
+                                                ]
+                                            ),
+                                            width=True,
+                                        ),
+                                    ],
+                                ),
+                                dmc.Space(h=40),
+                                dbc.Row(
+                                    [
+                                        dbc.ListGroup(
+                                            [
+                                                dbc.ListGroupItem(
+                                                    "", id="card-relatorio-resultado-total-veiculos", active=True
+                                                ),
+                                                dbc.ListGroupItem("", id="card-relatorio-resultado-media-km-por-litro"),
+                                                dbc.ListGroupItem("", id="card-relatorio-resultado-litros-excedentes"),
+                                                dbc.ListGroupItem("", id="card-relatorio-resultado-gasto-combustivel"),
+                                            ],
+                                            className="m-0",
+                                        ),
+                                    ],
+                                    className="m-0",
+                                ),
+                            ],
+                            className="m-0 m-md-1",  # margem só no desktop
+                        ),
+                        md=6,
+                        className="mb-3 mb-md-0",
+                    ),
+                ],
+            ),
+            dmc.Space(h=40),
+            # Gráfico da Regra por Serviço
+            dmc.Space(h=30),
+            dbc.Row(
+                [
+                    dbc.Col(DashIconify(icon="mdi:fleet", width=45), width="auto"),
+                    dbc.Col(
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "Top 10 problemas detectados pela regra",
+                                    className="align-self-center",
+                                ),
+                            ]
                         ),
                         width=True,
                     ),
                 ],
                 align="center",
             ),
-            visibleFrom="sm",
-        ),
-        # Titulo Mobile
-        dmc.Box(
+            dcc.Graph(id="graph-relatorio-regra-por-servico"),
+            dmc.Space(h=40),
             dbc.Row(
                 [
-                    dbc.Col(DashIconify(icon="carbon:rule-data-quality", width=45), width="auto"),
+                    dbc.Col(DashIconify(icon="mdi:car-search-outline", width=45), width="auto"),
                     dbc.Col(
-                        html.H1(
-                            "Relatório da regra",
-                            className="align-self-center",
+                        dbc.Row(
+                            [
+                                html.H4(
+                                    "OSs detectadas pela regra",
+                                    className="align-self-center",
+                                ),
+                            ]
                         ),
                         width=True,
                     ),
                 ],
                 align="center",
             ),
-            hiddenFrom="sm",
-        ),
-        html.Hr(),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Card(
-                        html.Div(
-                            [
-                                dbc.Label("Nome da Regra de Monitoramento"),
-                                dcc.Dropdown(
-                                    id="relatorio-input-select-regra-retrabalho",
-                                    options=[regra for regra in lista_regras_monitoramento_comb],
-                                    placeholder="Selecione uma regra...",
-                                ),
-                                dmc.Space(h=5),
-                                dbc.FormText(
-                                    html.Em(
-                                        "Regra não encontrada",
-                                        id="relatorio-input-select-regra-retrabalho-error",
-                                    ),
-                                    color="secondary",
-                                ),
-                            ],
-                            className="dash-bootstrap",
-                        ),
-                        id="relatorio-card-input-select-regra-retrabalho",
-                        body=True,
-                    ),
-                    md=6,
-                    className="mb-3 mb-md-0",
-                ),
-                dbc.Col(
-                    dbc.Card(
-                        html.Div(
-                            [
-                                dbc.Label("Data do relatório"),
-                                dmc.DateInput(
-                                    id="relatorio-input-data-relatorio-regra-retrabalho",
-                                    minDate=date(2020, 8, 5),
-                                    valueFormat="DD/MM/YYYY",
-                                    value=(datetime.now() - timedelta(days=10)).date(),
-                                ),
-                                dmc.Space(h=5),
-                                dbc.FormText(
-                                    html.Em(
-                                        "Período inválido",
-                                        id="relatorio-input-data-relatorio-regra-retrabalho-error",
-                                    ),
-                                    color="secondary",
-                                ),
-                            ],
-                            className="dash-bootstrap",
-                        ),
-                        id="relatorio-card-input-data-relatorio-regra-retrabalho",
-                        body=True,
-                    ),
-                    md=6,
-                    className="mb-3 mb-md-0",
-                ),
-            ]
-        ),
-        dmc.Space(h=40),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            dbc.Row(
-                                [
-                                    dbc.Col(DashIconify(icon="wpf:statistics", width=45), width="auto"),
-                                    dbc.Col(
-                                        dbc.Row(
-                                            [
-                                                html.H4(
-                                                    "Resumo da Regra",
-                                                    className="align-self-center",
-                                                ),
-                                            ]
-                                        ),
-                                        width=True,
-                                    ),
-                                ],
-                            ),
-                            dmc.Space(h=40),
-                            dbc.Row(
-                                [
-                                    dbc.ListGroup(
-                                        [
-                                            dbc.ListGroupItem("", id="card-regra-nome", active=True),
-                                            dbc.ListGroupItem("", id="card-regra-periodo-monitoramento"),
-                                            dbc.ListGroupItem("", id="card-regra-modelos"),
-                                            dbc.ListGroupItem("", id="card-regra-qtd-min-viagens"),
-                                            dbc.ListGroupItem("", id="card-regra-qtd-min-motoristas"),
-                                            dbc.ListGroupItem("", id="card-regra-dias-marcados"),
-                                            dbc.ListGroupItem("", id="card-regra-limite-mediana"),
-                                            dbc.ListGroupItem("", id="card-regra-limite-baixa-perfomance"),
-                                            dbc.ListGroupItem("", id="card-regra-limite-erro-telemetria"),
-                                            dbc.ListGroupItem("", id="card-regra-criar-os-automatica"),
-                                            dbc.ListGroupItem("", id="card-regra-alvos-email"),
-                                            dbc.ListGroupItem("", id="card-regra-alvos-whatsapp"),
-                                        ],
-                                        className="m-0",
-                                    ),
-                                ],
-                                className="m-0",
-                            ),
-                        ],
-                        className="m-0 m-md-1",  # margem só no desktop
-                    ),
-                    md=6,
-                    className="mb-3 mb-md-0",
-                ),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            dbc.Row(
-                                [
-                                    dbc.Col(DashIconify(icon="mdi:bomb", width=45), width="auto"),
-                                    dbc.Col(
-                                        dbc.Row(
-                                            [
-                                                html.H4(
-                                                    "Resumo do relatório",
-                                                    className="align-self-center",
-                                                ),
-                                            ]
-                                        ),
-                                        width=True,
-                                    ),
-                                ],
-                            ),
-                            dmc.Space(h=40),
-                            dbc.Row(
-                                [
-                                    dbc.ListGroup(
-                                        [
-                                            dbc.ListGroupItem("", id="card-relatorio-resultado-total-veiculos", active=True),
-                                            dbc.ListGroupItem("", id="card-relatorio-resultado-media-km-por-litro"),
-                                            dbc.ListGroupItem("", id="card-relatorio-resultado-litros-excedentes"),
-                                            dbc.ListGroupItem("", id="card-relatorio-resultado-gasto-combustivel"),
-                                        ],
-                                        className="m-0",
-                                    ),
-                                ],
-                                className="m-0",
-                            ),
-                        ],
-                        className="m-0 m-md-1",  # margem só no desktop
-                    ),
-                    md=6,
-                    className="mb-3 mb-md-0",
-                ),
-            ],
-        ),
-        dmc.Space(h=40),
-        # Gráfico da Regra por Serviço
-        dmc.Space(h=30),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:fleet", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "Top 10 problemas detectados pela regra",
-                                className="align-self-center",
-                            ),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dcc.Graph(id="graph-relatorio-regra-por-servico"),
-        dmc.Space(h=40),
-        dbc.Row(
-            [
-                dbc.Col(DashIconify(icon="mdi:car-search-outline", width=45), width="auto"),
-                dbc.Col(
-                    dbc.Row(
-                        [
-                            html.H4(
-                                "OSs detectadas pela regra",
-                                className="align-self-center",
-                            ),
-                        ]
-                    ),
-                    width=True,
-                ),
-            ],
-            align="center",
-        ),
-        dmc.Space(h=40),
-        # dag.AgGrid(
-        #     id="tabela-relatorio-regra",
-        #     columnDefs=crud_regra_tabelas.tbl_detalhamento_relatorio_regra,
-        #     rowData=[],
-        #     defaultColDef={"filter": True, "floatingFilter": True},
-        #     columnSize="autoSize",
-        #     dashGridOptions={
-        #         "localeText": locale_utils.AG_GRID_LOCALE_BR,
-        #         "enableCellTextSelection": True,
-        #         "ensureDomOrder": True,
-        #     },
-        #     style={"height": 500, "resize": "vertical", "overflow": "hidden"},  # -> permite resize
-        # ),
-        dmc.Space(h=40),
-    ]
-)
+            dmc.Space(h=40),
+            # dag.AgGrid(
+            #     id="tabela-relatorio-regra",
+            #     columnDefs=crud_regra_tabelas.tbl_detalhamento_relatorio_regra,
+            #     rowData=[],
+            #     defaultColDef={"filter": True, "floatingFilter": True},
+            #     columnSize="autoSize",
+            #     dashGridOptions={
+            #         "localeText": locale_utils.AG_GRID_LOCALE_BR,
+            #         "enableCellTextSelection": True,
+            #         "ensureDomOrder": True,
+            #     },
+            #     style={"height": 500, "resize": "vertical", "overflow": "hidden"},  # -> permite resize
+            # ),
+            dmc.Space(h=40),
+        ]
+    )
 
 
 ##############################################################################

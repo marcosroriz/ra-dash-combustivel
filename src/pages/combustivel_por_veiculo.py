@@ -152,15 +152,7 @@ def cb_receber_campos_via_url_pag_veiculo(href):
 
     return vec_num_id, datas, lista_linhas, km_l_min, km_l_max
 
-@callback(
-    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "maxDate"),
-    Output("pag-veiculo-input-intervalo-datas-visao-veiculo", "value", allow_duplicate=True),
-    Input("url", "pathname"),  # fires on page load
-    prevent_initial_call=True,
-)
-def cb_input_datas_linha_dinamico(_):
-    hoje = date.today()
-    return hoje, [date(2025, 1, 1), hoje]
+
 
 ##############################################################################
 # Callbacks para os inputs ###################################################
@@ -771,15 +763,10 @@ def cb_pag_veiculo_mapa_eventos_mix_viagem(data, ponto_selecionado):
 
 
 ##############################################################################
-# Registro da página #########################################################
-##############################################################################
-dash.register_page(__name__, name="Combustível por Veículo", path="/combustivel-por-veiculo")
-
-
-##############################################################################
 # Layout #####################################################################
 ##############################################################################
-layout = dbc.Container(
+def layout():
+    return dbc.Container(
     [
         # Estado
         dcc.Store(id="pag-veiculo-store-input-dados-veiculo"),
@@ -1204,3 +1191,10 @@ layout = dbc.Container(
         dmc.Space(h=40),
     ]
 )
+
+
+
+##############################################################################
+# Registro da página #########################################################
+##############################################################################
+dash.register_page(__name__, name="Combustível por Veículo", path="/combustivel-por-veiculo")
